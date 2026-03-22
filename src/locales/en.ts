@@ -89,6 +89,11 @@ const en = {
     card3Sub: "Buy & sell used equipment",
     popularSuppliers: "Popular Suppliers",
     recentMarketplace: "Buy & Sell",
+    ourServices: "Our Services",
+    findSuppliers: "Find suppliers",
+    findSuppliersSub: "Discover new suppliers for ingredients & equipment",
+    buyAndSell: "Buy & sell",
+    buyAndSellSub: "Trade pre-owned equipment with other professionals",
   },
 
   // ── Suppliers ────────────────────────────────────────────────────────────

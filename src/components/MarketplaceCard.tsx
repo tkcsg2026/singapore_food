@@ -39,7 +39,7 @@ export function MarketplaceCard({ item, onRequireLogin }: MarketplaceCardProps) 
 
   return (
     <Link href={`/marketplace/${item.slug}`} className="group block h-full min-w-0" onClick={handleClick}>
-      <div className="bg-card overflow-hidden shadow-card card-hover card-lift border border-border h-full flex flex-col min-w-0">
+      <div className="bg-card overflow-hidden rounded-2xl shadow-card card-hover card-lift border border-border h-full flex flex-col min-w-0">
         <div className="aspect-square overflow-hidden bg-muted flex-shrink-0">
           <img
             src={item.image}

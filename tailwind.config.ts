@@ -80,9 +80,9 @@ export default {
         DEFAULT: "4px",
         md: "4px",
         lg: "4px",
-        xl: "5px",
-        "2xl": "5px",
-        "3xl": "5px",
+        xl: "8px",
+        "2xl": "16px",
+        "3xl": "24px",
         full: "9999px",
       },
       boxShadow: {

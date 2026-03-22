@@ -342,6 +342,14 @@
 .animate-float-subtle {
   animation: float-subtle 4s ease-in-out infinite;
 }
+/* Subtle section title entrance */
+@keyframes section-reveal {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-section-reveal {
+  animation: section-reveal 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
 .animate-stagger-1 { animation-delay: 0.05s; }
 .animate-stagger-2 { animation-delay: 0.1s; }
 .animate-stagger-3 { animation-delay: 0.15s; }

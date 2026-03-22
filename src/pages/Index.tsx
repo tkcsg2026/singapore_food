@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Search, ArrowRight, ShoppingBag, TrendingUp, Sparkles, Newspaper, Globe, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ArrowRight, ShoppingBag, TrendingUp, Sparkles, Newspaper, Globe, ExternalLink, ChevronLeft, ChevronRight, Users2, Repeat } from "lucide-react";
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
@@ -14,7 +14,7 @@ import type { SupplierRow, MarketplaceItemRow, CategoryRow, NewsArticleRow } fro
 
 function SupplierSkeleton() {
   return (
-    <div className="bg-card border p-5 animate-pulse">
+    <div className="bg-card border rounded-2xl p-5 animate-pulse">
       <div className="flex items-start gap-3 mb-3">
         <div className="w-14 h-14 rounded-xl bg-muted flex-shrink-0" />
         <div className="flex-1 space-y-2 pt-1">
@@ -126,7 +126,7 @@ const Index = () => {
         </div>
         <div className="container relative z-10 py-10 sm:py-14 md:py-20 w-full min-w-0">
           <div className="max-w-2xl min-w-0">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-sm text-white text-xs font-medium mb-6 animate-fade-in">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-sm text-white text-xs font-medium mb-6 animate-fade-in animate-float-subtle">
               <Sparkles className="h-3.5 w-3.5" />
               {t.home.badge}
             </div>
@@ -138,31 +138,31 @@ const Index = () => {
             <p className="mt-4 text-white/85 text-base md:text-lg animate-fade-in max-w-lg break-words-safe" style={{ animationDelay: "0.1s" }}>
               {t.home.heroSub}
             </p>
-            {/* メインメニュー: カテゴリーで探す・人気サプライヤー・Buy & Sell を横並び（スマホでも3列） */}
+            {/* メインメニュー: カテゴリーで探す・人気サプライヤー・Buy & Sell を横並び（④縦に大きめ） */}
             <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3 animate-fade-in min-w-0" style={{ animationDelay: "0.15s" }}>
               <Link
                 href="/suppliers"
-                className="inline-flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2.5 sm:px-5 sm:py-3 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-[10px] sm:text-sm border border-white/30 transition-all duration-200 backdrop-blur-sm min-w-0 break-words-safe text-center"
+                className="inline-flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 px-3 py-4 sm:px-5 sm:py-5 rounded-xl bg-white/15 hover:bg-white/25 hover:scale-[1.02] text-white font-semibold text-[10px] sm:text-sm border border-white/30 transition-all duration-300 backdrop-blur-sm min-w-0 break-words-safe text-center"
               >
-                <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                <Search className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                 <span className="text-center leading-tight">{t.home.card1Title}</span>
               </Link>
               <Link
                 href="/suppliers"
-                className="inline-flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2.5 sm:px-5 sm:py-3 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-[10px] sm:text-sm border border-white/30 transition-all duration-200 backdrop-blur-sm min-w-0 break-words-safe text-center"
+                className="inline-flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 px-3 py-4 sm:px-5 sm:py-5 rounded-xl bg-white/15 hover:bg-white/25 hover:scale-[1.02] text-white font-semibold text-[10px] sm:text-sm border border-white/30 transition-all duration-300 backdrop-blur-sm min-w-0 break-words-safe text-center"
               >
-                <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                 <span className="text-center leading-tight">{t.home.popularSuppliers}</span>
               </Link>
               <Link
                 href="/marketplace"
-                className="inline-flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2.5 sm:px-5 sm:py-3 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-[10px] sm:text-sm border border-white/30 transition-all duration-200 backdrop-blur-sm min-w-0 break-words-safe text-center"
+                className="inline-flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 px-3 py-4 sm:px-5 sm:py-5 rounded-xl bg-white/15 hover:bg-white/25 hover:scale-[1.02] text-white font-semibold text-[10px] sm:text-sm border border-white/30 transition-all duration-300 backdrop-blur-sm min-w-0 break-words-safe text-center"
               >
-                <ShoppingBag className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                 <span className="text-center leading-tight">{t.home.card3Title}</span>
               </Link>
             </div>
-            <div className="mt-6 bg-white p-4 md:p-5 shadow-card-hover animate-fade-in min-w-0 overflow-hidden" style={{ animationDelay: "0.2s" }}>
+            <div className="mt-6 bg-white p-4 md:p-5 rounded-2xl shadow-card-hover animate-fade-in min-w-0 overflow-hidden" style={{ animationDelay: "0.2s" }}>
               <div className="flex flex-col sm:flex-row gap-3 min-w-0">
                 <select
                   value={selectedCategory}
@@ -196,35 +196,29 @@ const Index = () => {
         </div>
       </section>
 
-      {/* 1. 3 main menu cards: カテゴリー / 人気サプライヤー / Buy & Sell (shokuzai-pro style: card-lift + stagger) */}
-      <section className="bg-muted py-10 md:py-12 overflow-hidden w-full">
+      {/* ③ Our Services: Find suppliers & Buy & sell — 2 illustrations side by side */}
+      <section className="bg-muted py-10 md:py-14 overflow-hidden w-full">
         <div className="container min-w-0">
-          <div className="grid grid-cols-3 gap-2 sm:gap-5 min-w-0">
-            <Link href="/suppliers" className="group block opacity-0-init animate-fade-in-up reveal-stagger-0">
-              <div className="bg-card border border-border p-3 sm:p-6 shadow-card card-lift text-center h-full">
-                <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2 sm:mb-4 group-hover:bg-primary/20 transition-colors duration-300">
-                  <Search className="h-4 w-4 sm:h-6 sm:w-6 text-primary" />
-                </div>
-                <h3 className="font-bold text-foreground text-xs sm:text-base leading-tight">{t.home.card1Title}</h3>
-                <p className="text-[10px] sm:text-sm text-muted-foreground mt-1 sm:mt-2 line-clamp-2">{t.home.card1Sub}</p>
-              </div>
-            </Link>
+          <h2 className="text-xl md:text-2xl font-bold text-foreground mb-8 md:mb-10 text-center opacity-0-init animate-fade-in-up reveal-stagger-0">
+            {t.home.ourServices}
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-10 max-w-3xl mx-auto min-w-0">
             <Link href="/suppliers" className="group block opacity-0-init animate-fade-in-up reveal-stagger-1">
-              <div className="bg-card border border-border p-3 sm:p-6 shadow-card card-lift text-center h-full">
-                <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2 sm:mb-4 group-hover:bg-primary/20 transition-colors duration-300">
-                  <TrendingUp className="h-4 w-4 sm:h-6 sm:w-6 text-primary" />
+              <div className="bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-card card-lift text-center h-full flex flex-col items-center justify-center transition-all duration-300 hover:border-primary/30">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center mx-auto mb-4 sm:mb-5 group-hover:scale-105 transition-transform duration-300">
+                  <Users2 className="h-12 w-12 sm:h-16 sm:w-16 text-primary" strokeWidth={1.5} />
                 </div>
-                <h3 className="font-bold text-foreground text-xs sm:text-base leading-tight">{t.home.popularSuppliers}</h3>
-                <p className="text-[10px] sm:text-sm text-muted-foreground mt-1 sm:mt-2 line-clamp-2">{t.home.card2Sub}</p>
+                <h3 className="font-bold text-foreground text-base sm:text-lg leading-tight">{t.home.findSuppliers}</h3>
+                <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{t.home.findSuppliersSub}</p>
               </div>
             </Link>
             <Link href="/marketplace" className="group block opacity-0-init animate-fade-in-up reveal-stagger-2">
-              <div className="bg-card border border-border p-3 sm:p-6 shadow-card card-lift text-center h-full">
-                <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2 sm:mb-4 group-hover:bg-primary/20 transition-colors duration-300">
-                  <ShoppingBag className="h-4 w-4 sm:h-6 sm:w-6 text-primary" />
+              <div className="bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-card card-lift text-center h-full flex flex-col items-center justify-center transition-all duration-300 hover:border-primary/30">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center mx-auto mb-4 sm:mb-5 group-hover:scale-105 transition-transform duration-300">
+                  <Repeat className="h-12 w-12 sm:h-16 sm:w-16 text-primary" strokeWidth={1.5} />
                 </div>
-                <h3 className="font-bold text-foreground text-xs sm:text-base leading-tight">{t.home.card3Title}</h3>
-                <p className="text-[10px] sm:text-sm text-muted-foreground mt-1 sm:mt-2 line-clamp-2">{t.home.card3Sub}</p>
+                <h3 className="font-bold text-foreground text-base sm:text-lg leading-tight">{t.home.buyAndSell}</h3>
+                <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{t.home.buyAndSellSub}</p>
               </div>
             </Link>
           </div>
@@ -234,7 +228,7 @@ const Index = () => {
       {/* 2. Popular Suppliers (section-title + link-more style) */}
       <section className="container py-10 md:py-12 opacity-0-init animate-fade-in-up reveal-stagger-2 min-w-0 overflow-hidden">
         <div className="flex items-center justify-between mb-6 gap-4 min-w-0">
-          <h2 className="section-title text-xl md:text-2xl flex items-center gap-2 min-w-0">
+          <h2 className="section-title text-xl md:text-2xl flex items-center gap-2 min-w-0 transition-transform duration-300 hover:translate-x-1">
             <TrendingUp className="h-5 w-5 text-primary flex-shrink-0" /> <span className="truncate">{t.home.popularSuppliers}</span>
           </h2>
           <Link href="/suppliers" className="link-more flex-shrink-0 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 hover:text-white">
@@ -253,7 +247,7 @@ const Index = () => {
       <section className="bg-muted py-10 md:py-14 overflow-hidden w-full opacity-0-init animate-fade-in-up reveal-stagger-3">
         <div className="container min-w-0">
           <div className="flex items-center justify-between mb-6 gap-4 min-w-0">
-            <h2 className="section-title text-xl md:text-2xl flex items-center gap-2 min-w-0">
+            <h2 className="section-title text-xl md:text-2xl flex items-center gap-2 min-w-0 transition-transform duration-300 hover:translate-x-1">
               <ShoppingBag className="h-5 w-5 text-primary flex-shrink-0" /> <span className="truncate">{t.home.recentMarketplace}</span>
             </h2>
             <Link href="/marketplace" className="link-more flex-shrink-0 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 hover:text-white">

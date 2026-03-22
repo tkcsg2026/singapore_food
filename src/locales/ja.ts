@@ -91,6 +91,11 @@ const ja: Translations = {
     card3Sub: "中古機器を売買",
     popularSuppliers: "人気サプライヤー",
     recentMarketplace: "売り&買い",
+    ourServices: "私たちのサービス",
+    findSuppliers: "Find suppliers",
+    findSuppliersSub: "食材・機器の新しいサプライヤーを見つける",
+    buyAndSell: "Buy & sell",
+    buyAndSellSub: "業者同士で中古機器を売買",
   },
 
   // ── Suppliers ────────────────────────────────────────────────────────────
