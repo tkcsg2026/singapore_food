@@ -39,12 +39,12 @@ export function MarketplaceCard({ item, onRequireLogin }: MarketplaceCardProps) 
 
   return (
     <Link href={`/marketplace/${item.slug}`} className="group block h-full min-w-0" onClick={handleClick}>
-      <div className="bg-card overflow-hidden rounded-2xl shadow-card card-hover card-lift border border-border h-full flex flex-col min-w-0">
+      <div className="bg-card overflow-hidden shadow-card card-hover card-lift border border-border h-full flex flex-col min-w-0 transition-shadow duration-300 group-hover:shadow-[0_12px_28px_rgba(0,0,0,0.12),0_0_0_1px_hsl(var(--primary)/0.1)]">
         <div className="aspect-square overflow-hidden bg-muted flex-shrink-0">
           <img
             src={item.image}
             alt={displayTitle}
-            className="w-full h-full object-cover transition-transform duration-300 ease-smooth group-hover:scale-[1.03]"
+            className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.07]"
           />
         </div>
         <div className="p-3 flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
@@ -52,7 +52,7 @@ export function MarketplaceCard({ item, onRequireLogin }: MarketplaceCardProps) 
           <p className="text-xs sm:text-[15px] font-medium text-foreground truncate mt-1 leading-snug min-w-0" title={displayTitle}>{displayTitle}</p>
           <div className="flex items-center gap-2 mt-2 flex-shrink-0 min-w-0">
             <span className="text-[10px] sm:text-xs text-muted-foreground truncate min-w-0">{displayArea}</span>
-            <span className="text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground flex-shrink-0">{displayCondition}</span>
+            <span className="text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/15 flex-shrink-0 transition-transform duration-300 group-hover:scale-105">{displayCondition}</span>
           </div>
         </div>
       </div>

@@ -163,7 +163,9 @@
   }
   .card-lift:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
+    box-shadow:
+      0 12px 28px rgba(0, 0, 0, 0.14),
+      0 0 0 1px hsl(var(--primary) / 0.1);
   }
 
   /* Section title with left accent (B2B portal style, like shokuzai-pro.com) */
@@ -196,6 +198,14 @@
 
   .tag-badge {
     @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary break-words;
+    transition:
+      transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.28s ease,
+      background-color 0.28s ease;
+  }
+  .tag-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 10px hsl(var(--primary) / 0.18);
   }
   .tag-badge-fixed {
     @apply shrink-0;
@@ -342,14 +352,6 @@
 .animate-float-subtle {
   animation: float-subtle 4s ease-in-out infinite;
 }
-/* Subtle section title entrance */
-@keyframes section-reveal {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-section-reveal {
-  animation: section-reveal 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
 .animate-stagger-1 { animation-delay: 0.05s; }
 .animate-stagger-2 { animation-delay: 0.1s; }
 .animate-stagger-3 { animation-delay: 0.15s; }
@@ -362,6 +364,97 @@
 .animate-stagger-10 { animation-delay: 0.5s; }
 .opacity-0-init {
   opacity: 0;
+}
+
+/* ── Grid stagger (supplier / marketplace listings) ─────────────────────── */
+@keyframes grid-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-grid-item-in {
+  opacity: 0;
+  animation: grid-item-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: var(--grid-delay, 0ms);
+}
+
+/* ── Hero: soft professional fade (clean + slight upward motion) ─────────── */
+@keyframes hero-soft-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-hero-soft {
+  opacity: 0;
+  animation: hero-soft-in 0.72s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ── Section headings on scroll / page load ─────────────────────────────── */
+@keyframes section-heading-fade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.section-heading-enter {
+  opacity: 0;
+  animation: section-heading-fade 0.62s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ── Mobile filter drawer + backdrop ─────────────────────────────────────── */
+@keyframes filter-drawer-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0.92;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes filter-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-filter-backdrop {
+  animation: filter-backdrop-in 0.28s ease-out forwards;
+}
+.animate-filter-drawer {
+  animation: filter-drawer-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ── Filter / form controls: quick category-style transition ───────────── */
+.ui-filter-control {
+  transition:
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    background-color 0.22s ease,
+    transform 0.2s ease;
+}
+.ui-filter-control:hover {
+  border-color: hsl(var(--primary) / 0.35);
+}
+.ui-filter-control:focus {
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.12);
 }
 
 /* ── Premium card: subtle shimmer across badge ──────────────────────────── */
@@ -389,4 +482,66 @@
   animation: premium-shimmer 4s ease-in-out infinite;
   pointer-events: none;
   border-radius: inherit;
+}
+
+/* ── Our Services (2-card home section): clean sans, match editorial cards ─ */
+.our-services-section h2,
+.our-services-section h3,
+.our-services-section p {
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif !important;
+  letter-spacing: -0.02em;
+}
+.our-services-section h2 {
+  color: #000000;
+  font-weight: 700;
+}
+.our-services-section h3 {
+  color: #000000;
+  font-weight: 700;
+}
+.our-services-section p {
+  color: #666666;
+  font-weight: 400;
+}
+
+/* Photo cards: override section title/body colours — white text on darkened image */
+.our-services-section .our-services-photo-card h3 {
+  color: #ffffff !important;
+}
+.our-services-section .our-services-photo-card p {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* ── Accessibility: respect reduced motion ───────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .animate-grid-item-in,
+  .animate-hero-soft,
+  .section-heading-enter,
+  .animate-fade-in-up,
+  .animate-fade-in-up-slow,
+  .animate-fade-in-scale,
+  .animate-float-subtle,
+  .animate-filter-backdrop,
+  .animate-filter-drawer,
+  .premium-badge-shimmer::after {
+    animation: none !important;
+    animation-delay: 0s !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .opacity-0-init {
+    opacity: 1 !important;
+  }
+  .card-lift:hover,
+  .card-hover:hover {
+    transform: none !important;
+  }
 }

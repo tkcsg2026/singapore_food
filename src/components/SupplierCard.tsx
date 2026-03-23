@@ -48,7 +48,7 @@ function PlanBadge({ plan, lang }: { plan?: string | null; lang: string }) {
       <Link
         href="/plans"
         onClick={(e) => e.stopPropagation()}
-        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] hover:opacity-90 transition-opacity ${cfg.badgeClass}`}
+        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] hover:opacity-90 transition-all duration-300 hover:scale-[1.03] ${cfg.badgeClass}`}
       >
         <ShieldCheck className="h-3 w-3 text-amber-600 dark:text-amber-300" />
         <span className="tracking-wide">{label}</span>
@@ -60,7 +60,7 @@ function PlanBadge({ plan, lang }: { plan?: string | null; lang: string }) {
     <Link
       href="/plans"
       onClick={(e) => e.stopPropagation()}
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] hover:opacity-80 transition-opacity ${cfg.badgeClass}`}
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] hover:opacity-80 transition-all duration-300 hover:scale-[1.03] ${cfg.badgeClass}`}
     >
       <Star className="h-2.5 w-2.5" />
       {label}
@@ -129,7 +129,7 @@ export function SupplierCard({ supplier, variant = "grid", rank }: SupplierCardP
           <img
             src={supplier.logo}
             alt={displayName}
-            className="w-full h-full object-cover transition-transform duration-300 ease-smooth group-hover:scale-[1.03]"
+            className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06]"
           />
         </Link>
         <div className="min-w-0 flex-1">
@@ -199,7 +199,7 @@ export function SupplierCard({ supplier, variant = "grid", rank }: SupplierCardP
   const cardBg = !isList && cfg.cardBgClass ? cfg.cardBgClass : "bg-card";
 
   return (
-    <div className={`group ${cardBg} overflow-hidden rounded-2xl shadow-card card-hover card-lift border relative flex flex-col h-full min-h-0 min-w-0 ${wrapperClass} ${isList ? "flex-row items-center" : ""}`}>
+    <div className={`group ${cardBg} overflow-hidden shadow-card card-hover card-lift border relative flex flex-col h-full min-h-0 min-w-0 transition-shadow duration-300 hover:shadow-[0_12px_28px_rgba(0,0,0,0.12),0_0_0_1px_hsl(var(--primary)/0.1)] ${wrapperClass} ${isList ? "flex-row items-center" : ""}`}>
       {cfg.accentBarClass && !isList && (
         <div className={cfg.accentBarClass} />
       )}

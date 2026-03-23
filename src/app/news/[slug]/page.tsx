@@ -21,18 +21,19 @@ async function getArticle(slug: string) {
 export async function generateMetadata({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const article = await getArticle(params.slug);
+  const { slug } = await params;
+  const article = await getArticle(slug);
 
   if (!article) {
     return { title: "Article Not Found" };
   }
 
-  const title: string = article.title || params.slug;
+  const title: string = article.title || slug;
   const description: string = (article.excerpt || `${title} — Singapore F&B Portal News`).slice(0, 160);
   const image: string | undefined = (article as any).image;
-  const pageUrl = `${siteUrl}/news/${params.slug}`;
+  const pageUrl = `${siteUrl}/news/${slug}`;
   const publishedTime: string | undefined = (article as any).published_at || article.created_at;
 
   return {
@@ -63,7 +64,7 @@ export default async function NewsDetailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const { slug } = await params as any;
+  const { slug } = await params;
   const article = await getArticle(slug);
 
   const jsonLd = article

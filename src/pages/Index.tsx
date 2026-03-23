@@ -1,6 +1,9 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { Search, ArrowRight, ShoppingBag, TrendingUp, Sparkles, Newspaper, Globe, ExternalLink, ChevronLeft, ChevronRight, Users2, Repeat } from "lucide-react";
+import s1 from "@/assets/s1.jpg";
+import s2 from "@/assets/s2.jpg";
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
@@ -9,12 +12,13 @@ import { MarketplaceCard } from "@/components/MarketplaceCard";
 import { useFetch } from "@/hooks/useSupabaseData";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { AnimatedGridItem } from "@/components/AnimatedGridItem";
 import { sortSuppliersByPlan } from "@/lib/plans";
 import type { SupplierRow, MarketplaceItemRow, CategoryRow, NewsArticleRow } from "@/types/database";
 
 function SupplierSkeleton() {
   return (
-    <div className="bg-card border rounded-2xl p-5 animate-pulse">
+    <div className="bg-card border p-5 animate-pulse">
       <div className="flex items-start gap-3 mb-3">
         <div className="w-14 h-14 rounded-xl bg-muted flex-shrink-0" />
         <div className="flex-1 space-y-2 pt-1">
@@ -126,48 +130,57 @@ const Index = () => {
         </div>
         <div className="container relative z-10 py-10 sm:py-14 md:py-20 w-full min-w-0">
           <div className="max-w-2xl min-w-0">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-sm text-white text-xs font-medium mb-6 animate-fade-in animate-float-subtle">
-              <Sparkles className="h-3.5 w-3.5" />
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-sm text-white text-xs font-medium mb-6 animate-hero-soft">
+              <Sparkles className="h-3.5 w-3.5 animate-float-subtle shrink-0" style={{ animationDuration: "5s" }} />
               {t.home.badge}
             </div>
-            <h1 className="text-3xl md:text-5xl font-bold text-white leading-[1.15] tracking-tight animate-fade-in break-words-safe">
+            <h1
+              className="text-3xl md:text-5xl font-bold text-white leading-[1.15] tracking-tight animate-hero-soft break-words-safe"
+              style={{ animationDelay: "90ms" }}
+            >
               {t.home.heroTitle1}<br />
               <span className="text-primary">{t.home.heroTitle2}</span><br />
               {t.home.heroTitle3}
             </h1>
-            <p className="mt-4 text-white/85 text-base md:text-lg animate-fade-in max-w-lg break-words-safe" style={{ animationDelay: "0.1s" }}>
+            <p
+              className="mt-4 text-white/85 text-base md:text-lg animate-hero-soft max-w-lg break-words-safe"
+              style={{ animationDelay: "160ms" }}
+            >
               {t.home.heroSub}
             </p>
-            {/* メインメニュー: カテゴリーで探す・人気サプライヤー・Buy & Sell を横並び（④縦に大きめ） */}
-            <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3 animate-fade-in min-w-0" style={{ animationDelay: "0.15s" }}>
+            {/* メインメニュー: カテゴリーで探す・人気サプライヤー・Buy & Sell を横並び（スマホでも3列） */}
+            <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3 animate-hero-soft min-w-0" style={{ animationDelay: "220ms" }}>
               <Link
                 href="/suppliers"
-                className="inline-flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 px-3 py-4 sm:px-5 sm:py-5 rounded-xl bg-white/15 hover:bg-white/25 hover:scale-[1.02] text-white font-semibold text-[10px] sm:text-sm border border-white/30 transition-all duration-300 backdrop-blur-sm min-w-0 break-words-safe text-center"
+                className="group/hero-btn inline-flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2.5 sm:px-5 sm:py-3 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-[10px] sm:text-sm border border-white/30 transition-all duration-300 ease-out backdrop-blur-sm min-w-0 break-words-safe text-center hover:scale-[1.02] active:scale-[0.98]"
               >
-                <Search className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 transition-transform duration-300 group-hover/hero-btn:scale-110" />
                 <span className="text-center leading-tight">{t.home.card1Title}</span>
               </Link>
               <Link
                 href="/suppliers"
-                className="inline-flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 px-3 py-4 sm:px-5 sm:py-5 rounded-xl bg-white/15 hover:bg-white/25 hover:scale-[1.02] text-white font-semibold text-[10px] sm:text-sm border border-white/30 transition-all duration-300 backdrop-blur-sm min-w-0 break-words-safe text-center"
+                className="group/hero-btn2 inline-flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2.5 sm:px-5 sm:py-3 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-[10px] sm:text-sm border border-white/30 transition-all duration-300 ease-out backdrop-blur-sm min-w-0 break-words-safe text-center hover:scale-[1.02] active:scale-[0.98]"
               >
-                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 transition-transform duration-300 group-hover/hero-btn2:scale-110" />
                 <span className="text-center leading-tight">{t.home.popularSuppliers}</span>
               </Link>
               <Link
                 href="/marketplace"
-                className="inline-flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 px-3 py-4 sm:px-5 sm:py-5 rounded-xl bg-white/15 hover:bg-white/25 hover:scale-[1.02] text-white font-semibold text-[10px] sm:text-sm border border-white/30 transition-all duration-300 backdrop-blur-sm min-w-0 break-words-safe text-center"
+                className="group/hero-btn3 inline-flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2.5 sm:px-5 sm:py-3 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-[10px] sm:text-sm border border-white/30 transition-all duration-300 ease-out backdrop-blur-sm min-w-0 break-words-safe text-center hover:scale-[1.02] active:scale-[0.98]"
               >
-                <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                <ShoppingBag className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 transition-transform duration-300 group-hover/hero-btn3:scale-110" />
                 <span className="text-center leading-tight">{t.home.card3Title}</span>
               </Link>
             </div>
-            <div className="mt-6 bg-white p-4 md:p-5 rounded-2xl shadow-card-hover animate-fade-in min-w-0 overflow-hidden" style={{ animationDelay: "0.2s" }}>
+            <div
+              className="mt-6 bg-white p-4 md:p-5 shadow-card-hover animate-hero-soft min-w-0 overflow-hidden rounded-2xl border border-white/10"
+              style={{ animationDelay: "280ms" }}
+            >
               <div className="flex flex-col sm:flex-row gap-3 min-w-0">
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="h-12 px-4 rounded-xl border border-border bg-white text-sm font-medium text-foreground sm:w-48 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+                  className="h-12 px-4 rounded-xl border border-border bg-white text-sm font-medium text-foreground sm:w-48 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary ui-filter-control"
                 >
                   <option value="">{t.home.categoryPlaceholder}</option>
                   {(categories || []).map((cat) => (
@@ -184,7 +197,7 @@ const Index = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                    className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+                    className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary ui-filter-control"
                   />
                 </div>
                 <Button onClick={handleSearch} className="h-12 px-6 rounded-xl font-bold bg-primary hover:bg-primary/90 active:scale-[0.97]">
@@ -196,29 +209,65 @@ const Index = () => {
         </div>
       </section>
 
-      {/* ③ Our Services: Find suppliers & Buy & sell — 2 illustrations side by side */}
-      <section className="bg-muted py-10 md:py-14 overflow-hidden w-full">
-        <div className="container min-w-0">
-          <h2 className="text-xl md:text-2xl font-bold text-foreground mb-8 md:mb-10 text-center opacity-0-init animate-fade-in-up reveal-stagger-0">
+      {/* Our Services — two cards (Find suppliers · Buy & sell), sans-serif typography */}
+      <section className="our-services-section bg-muted py-10 md:py-14 overflow-hidden w-full">
+        <div className="container min-w-0 max-w-3xl mx-auto">
+          <h2 className="text-center text-xl md:text-2xl mb-8 md:mb-10 opacity-0-init animate-fade-in-up reveal-stagger-0">
             {t.home.ourServices}
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-10 max-w-3xl mx-auto min-w-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8 min-w-0">
             <Link href="/suppliers" className="group block opacity-0-init animate-fade-in-up reveal-stagger-1">
-              <div className="bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-card card-lift text-center h-full flex flex-col items-center justify-center transition-all duration-300 hover:border-primary/30">
-                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center mx-auto mb-4 sm:mb-5 group-hover:scale-105 transition-transform duration-300">
-                  <Users2 className="h-12 w-12 sm:h-16 sm:w-16 text-primary" strokeWidth={1.5} />
+              <div className="our-services-photo-card relative overflow-hidden rounded-2xl border border-black/15 shadow-lg card-lift min-h-[260px] sm:min-h-[300px] h-full transition-shadow duration-300 group-hover:shadow-xl group-hover:border-black/25 isolate">
+                <Image
+                  src={s1}
+                  alt=""
+                  fill
+                  className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.05]"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
+                />
+                {/* Strong bottom gradient for text; balances busy + mixed lighting in photo */}
+                <div
+                  className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/55 to-black/25 pointer-events-none"
+                  aria-hidden
+                />
+                <div className="absolute inset-0 flex flex-col justify-end items-center text-center p-6 sm:p-8 pt-20 sm:pt-24">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white/20 backdrop-blur-sm border border-white/35 flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg transition-transform duration-300 group-hover:scale-105 group-hover:bg-white/25">
+                    <Users2 className="h-6 w-6 sm:h-7 sm:w-7 text-white" strokeWidth={1.75} />
+                  </div>
+                  <h3 className="text-base sm:text-lg md:text-xl leading-snug text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.65)]">
+                    {t.home.findSuppliers}
+                  </h3>
+                  <p className="text-xs sm:text-sm mt-2 sm:mt-2.5 leading-relaxed max-w-[260px] mx-auto text-white/95 [text-shadow:0_1px_8px_rgba(0,0,0,0.55)]">
+                    {t.home.findSuppliersSub}
+                  </p>
                 </div>
-                <h3 className="font-bold text-foreground text-base sm:text-lg leading-tight">{t.home.findSuppliers}</h3>
-                <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{t.home.findSuppliersSub}</p>
               </div>
             </Link>
             <Link href="/marketplace" className="group block opacity-0-init animate-fade-in-up reveal-stagger-2">
-              <div className="bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-card card-lift text-center h-full flex flex-col items-center justify-center transition-all duration-300 hover:border-primary/30">
-                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center mx-auto mb-4 sm:mb-5 group-hover:scale-105 transition-transform duration-300">
-                  <Repeat className="h-12 w-12 sm:h-16 sm:w-16 text-primary" strokeWidth={1.5} />
+              <div className="our-services-photo-card relative overflow-hidden rounded-2xl border border-black/15 shadow-lg card-lift min-h-[260px] sm:min-h-[300px] h-full transition-shadow duration-300 group-hover:shadow-xl group-hover:border-black/25 isolate">
+                <Image
+                  src={s2}
+                  alt=""
+                  fill
+                  className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.05]"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
+                />
+                {/* Slightly stronger overlay — s2 is high-key / bright */}
+                <div
+                  className="absolute inset-0 bg-gradient-to-t from-black/94 via-black/60 to-black/35 pointer-events-none"
+                  aria-hidden
+                />
+                <div className="absolute inset-0 flex flex-col justify-end items-center text-center p-6 sm:p-8 pt-20 sm:pt-24">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white/20 backdrop-blur-sm border border-white/35 flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg transition-transform duration-300 group-hover:scale-105 group-hover:bg-white/25">
+                    <Repeat className="h-6 w-6 sm:h-7 sm:w-7 text-white" strokeWidth={1.75} />
+                  </div>
+                  <h3 className="text-base sm:text-lg md:text-xl leading-snug text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.65)]">
+                    {t.home.buyAndSell}
+                  </h3>
+                  <p className="text-xs sm:text-sm mt-2 sm:mt-2.5 leading-relaxed max-w-[280px] mx-auto text-white/95 [text-shadow:0_1px_8px_rgba(0,0,0,0.55)]">
+                    {t.home.buyAndSellSub}
+                  </p>
                 </div>
-                <h3 className="font-bold text-foreground text-base sm:text-lg leading-tight">{t.home.buyAndSell}</h3>
-                <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{t.home.buyAndSellSub}</p>
               </div>
             </Link>
           </div>
@@ -228,7 +277,7 @@ const Index = () => {
       {/* 2. Popular Suppliers (section-title + link-more style) */}
       <section className="container py-10 md:py-12 opacity-0-init animate-fade-in-up reveal-stagger-2 min-w-0 overflow-hidden">
         <div className="flex items-center justify-between mb-6 gap-4 min-w-0">
-          <h2 className="section-title text-xl md:text-2xl flex items-center gap-2 min-w-0 transition-transform duration-300 hover:translate-x-1">
+          <h2 className="section-title text-xl md:text-2xl flex items-center gap-2 min-w-0">
             <TrendingUp className="h-5 w-5 text-primary flex-shrink-0" /> <span className="truncate">{t.home.popularSuppliers}</span>
           </h2>
           <Link href="/suppliers" className="link-more flex-shrink-0 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 hover:text-white">
@@ -238,7 +287,11 @@ const Index = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5 min-w-0">
           {suppliersLoading
             ? Array.from({ length: 6 }).map((_, i) => <SupplierSkeleton key={i} />)
-            : popularSuppliers.map((s) => <SupplierCard key={s.id} supplier={s} />)
+            : popularSuppliers.map((s, i) => (
+                <AnimatedGridItem key={s.id} index={i}>
+                  <SupplierCard supplier={s} />
+                </AnimatedGridItem>
+              ))
           }
         </div>
       </section>
@@ -247,7 +300,7 @@ const Index = () => {
       <section className="bg-muted py-10 md:py-14 overflow-hidden w-full opacity-0-init animate-fade-in-up reveal-stagger-3">
         <div className="container min-w-0">
           <div className="flex items-center justify-between mb-6 gap-4 min-w-0">
-            <h2 className="section-title text-xl md:text-2xl flex items-center gap-2 min-w-0 transition-transform duration-300 hover:translate-x-1">
+            <h2 className="section-title text-xl md:text-2xl flex items-center gap-2 min-w-0">
               <ShoppingBag className="h-5 w-5 text-primary flex-shrink-0" /> <span className="truncate">{t.home.recentMarketplace}</span>
             </h2>
             <Link href="/marketplace" className="link-more flex-shrink-0 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 hover:text-white">
@@ -255,7 +308,11 @@ const Index = () => {
             </Link>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 items-stretch min-w-0">
-            {recentItems.map((item) => <MarketplaceCard key={item.id} item={item} />)}
+            {recentItems.map((item, i) => (
+              <AnimatedGridItem key={item.id} index={i}>
+                <MarketplaceCard item={item} />
+              </AnimatedGridItem>
+            ))}
           </div>
         </div>
       </section>

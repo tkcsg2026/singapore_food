@@ -22,20 +22,21 @@ async function getItem(slug: string) {
 export async function generateMetadata({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const item = await getItem(params.slug);
+  const { slug } = await params;
+  const item = await getItem(slug);
 
   if (!item) {
     return { title: "Item Not Found" };
   }
 
-  const title: string = item.title_en || item.title || params.slug;
+  const title: string = item.title_en || item.title || slug;
   const description: string =
     (item.description_en || item.description || `${title} — Available on Singapore F&B Marketplace`)
       .slice(0, 160);
   const image: string | undefined = item.image;
-  const pageUrl = `${siteUrl}/marketplace/${params.slug}`;
+  const pageUrl = `${siteUrl}/marketplace/${slug}`;
 
   return {
     title,
@@ -64,7 +65,7 @@ export default async function MarketplaceItemRoute({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const { slug } = await params as any;
+  const { slug } = await params;
   const item = await getItem(slug);
 
   const jsonLd = item

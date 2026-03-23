@@ -2,6 +2,7 @@
 import { useState, useMemo } from "react";
 import { Search } from "lucide-react";
 import Layout from "@/components/Layout";
+import { AnimatedGridItem } from "@/components/AnimatedGridItem";
 import { MarketplaceCard } from "@/components/MarketplaceCard";
 import { useFetch } from "@/hooks/useSupabaseData";
 import { useTranslation } from "@/contexts/LanguageContext";
@@ -61,7 +62,7 @@ const Marketplace = () => {
   return (
     <Layout>
       <div className="container py-8 min-w-0 overflow-hidden w-full">
-        <div className="mb-8 min-w-0">
+        <div className="mb-8 min-w-0 section-heading-enter">
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight break-words-safe">{t.marketplace.title}</h1>
           <p className="text-sm text-muted-foreground mt-1">{t.marketplace.subtitle}</p>
         </div>
@@ -69,9 +70,9 @@ const Marketplace = () => {
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <div className="flex-1 relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input type="text" placeholder={t.marketplace.searchPlaceholder} value={query} onChange={(e) => setQuery(e.target.value)} className="w-full h-12 pl-10 pr-4 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <input type="text" placeholder={t.marketplace.searchPlaceholder} value={query} onChange={(e) => setQuery(e.target.value)} className="w-full h-12 pl-10 pr-4 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 ui-filter-control" />
           </div>
-          <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="h-12 px-4 rounded-xl border bg-background text-sm">
+          <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="h-12 px-4 rounded-xl border bg-background text-sm ui-filter-control">
             <option value="">{t.common.allCategories}</option>
             {(categories || []).map((c) => (
               <option key={c.value} value={c.value}>
@@ -79,11 +80,11 @@ const Marketplace = () => {
               </option>
             ))}
           </select>
-          <select value={selectedCondition} onChange={(e) => setSelectedCondition(e.target.value)} className="h-12 px-4 rounded-xl border bg-background text-sm">
+          <select value={selectedCondition} onChange={(e) => setSelectedCondition(e.target.value)} className="h-12 px-4 rounded-xl border bg-background text-sm ui-filter-control">
             <option value="">{t.marketplace.allConditions}</option>
             {conditions.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
-          <select value={sort} onChange={(e) => setSort(e.target.value as SortOption)} className="h-12 px-4 rounded-xl border bg-background text-sm">
+          <select value={sort} onChange={(e) => setSort(e.target.value as SortOption)} className="h-12 px-4 rounded-xl border bg-background text-sm ui-filter-control">
             <option value="newest">{t.marketplace.sort.newest}</option>
             <option value="price-asc">{t.marketplace.sort.priceAsc}</option>
             <option value="price-desc">{t.marketplace.sort.priceDesc}</option>
@@ -91,9 +92,14 @@ const Marketplace = () => {
         </div>
 
         <p className="text-sm text-muted-foreground mb-4 font-medium">{t.marketplace.resultCount(filtered.length)}</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 min-w-0">
-          {filtered.map((item) => (
-            <MarketplaceCard key={item.id} item={item} onRequireLogin={requireLogin} />
+        <div
+          key={`${selectedCategory}-${selectedCondition}-${sort}`}
+          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 min-w-0 transition-opacity duration-300"
+        >
+          {filtered.map((item, i) => (
+            <AnimatedGridItem key={item.id} index={i}>
+              <MarketplaceCard item={item} onRequireLogin={requireLogin} />
+            </AnimatedGridItem>
           ))}
         </div>
         {filtered.length === 0 && (
