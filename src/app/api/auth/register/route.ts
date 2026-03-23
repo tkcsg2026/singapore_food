@@ -51,10 +51,18 @@ export async function POST(req: NextRequest) {
     });
 
   if (authError) {
+    const msg = authError.message.toLowerCase();
+    if (msg.includes("invalid api key") || msg.includes("invalid_api_key")) {
+      return NextResponse.json(
+        {
+          error:
+            "Supabase API keys are missing or incorrect. In .env.local, set NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY from Supabase Dashboard → Settings → API.",
+        },
+        { status: 500 },
+      );
+    }
     const isDuplicate =
-      authError.message.toLowerCase().includes("already") ||
-      authError.message.toLowerCase().includes("exist") ||
-      authError.message.toLowerCase().includes("duplicate");
+      msg.includes("already") || msg.includes("exist") || msg.includes("duplicate");
     return NextResponse.json(
       {
         error: isDuplicate

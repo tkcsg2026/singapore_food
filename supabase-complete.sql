@@ -877,41 +877,108 @@ END $$;
 
 -- ──────────────────────────────────────────────────────────────
 -- 11. ADMIN USER SETUP
--- Confirms email + creates admin profile for Admin@gmail.com
--- (Create the user first: Supabase Dashboard → Auth → Users → Add user,
---  or register at /register with Admin@gmail.com and your password, then run this.)
+-- Creates admin user Admin@gmail.com with password "Admin@gmail.com"
+-- (or updates profile if user already exists).
 -- Avatar: Japanese woman in her 20s (professional portrait).
 -- ──────────────────────────────────────────────────────────────
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 DO $$
 DECLARE
   v_uid uuid;
   v_avatar text := 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&h=200&fit=crop&facepad=2';
+  v_encrypted_pw text;
 BEGIN
   SELECT id INTO v_uid FROM auth.users WHERE email = 'Admin@gmail.com';
 
   IF v_uid IS NULL THEN
-    RAISE NOTICE 'Admin user not found in auth.users. Create Admin@gmail.com in Dashboard (Auth → Users → Add user) or register at /register first, then re-run this script.';
+    -- Create new admin user in auth.users (password: Admin@gmail.com)
+    v_uid := gen_random_uuid();
+    v_encrypted_pw := crypt('Admin@gmail.com', gen_salt('bf'));
+
+    INSERT INTO auth.users (
+      id,
+      instance_id,
+      aud,
+      role,
+      email,
+      encrypted_password,
+      email_confirmed_at,
+      raw_app_meta_data,
+      raw_user_meta_data,
+      created_at,
+      updated_at,
+      confirmation_token,
+      email_change,
+      email_change_token_new,
+      recovery_token
+    )
+    VALUES (
+      v_uid,
+      '00000000-0000-0000-0000-000000000000',
+      'authenticated',
+      'authenticated',
+      'Admin@gmail.com',
+      v_encrypted_pw,
+      now(),
+      '{"provider":"email","providers":["email"]}',
+      '{"name":"Admin","username":"admin"}',
+      now(),
+      now(),
+      '',
+      '',
+      '',
+      ''
+    );
+
+    -- Link identity so the user can sign in
+    INSERT INTO auth.identities (
+      id,
+      user_id,
+      identity_data,
+      provider,
+      provider_id,
+      last_sign_in_at,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      v_uid,
+      v_uid,
+      format('{"sub": "%s", "email": "Admin@gmail.com"}', v_uid)::jsonb,
+      'email',
+      v_uid,
+      now(),
+      now(),
+      now()
+    );
+
+    RAISE NOTICE 'Admin user created. Email: Admin@gmail.com, Password: Admin@gmail.com';
   ELSE
-    -- Confirm the email so login works without clicking an email link
+    -- User exists: fix NULL token columns (causes "Database error querying schema" on login)
+    -- and confirm email
     UPDATE auth.users
     SET
-      email_confirmed_at = COALESCE(email_confirmed_at, now()),
-      confirmation_token = '',
-      updated_at         = now()
+      email_confirmed_at       = COALESCE(email_confirmed_at, now()),
+      confirmation_token       = COALESCE(confirmation_token, ''),
+      email_change             = COALESCE(email_change, ''),
+      email_change_token_new   = COALESCE(email_change_token_new, ''),
+      recovery_token           = COALESCE(recovery_token, ''),
+      updated_at               = now()
     WHERE id = v_uid;
-
-    -- Create / update the profile with admin role and avatar (Japanese woman in her 20s)
-    INSERT INTO public.profiles (id, email, name, username, avatar_url, role, whatsapp, company, banned)
-    VALUES (v_uid, 'Admin@gmail.com', 'Admin', 'admin', v_avatar, 'admin', '', '', false)
-    ON CONFLICT (id) DO UPDATE SET
-      email     = 'Admin@gmail.com',
-      name      = 'Admin',
-      username  = 'admin',
-      avatar_url = v_avatar,
-      role      = 'admin';
-
-    RAISE NOTICE 'Admin setup complete. User ID: %', v_uid;
   END IF;
+
+  -- Create / update the profile with admin role and avatar
+  INSERT INTO public.profiles (id, email, name, username, avatar_url, role, whatsapp, company, banned)
+  VALUES (v_uid, 'Admin@gmail.com', 'Admin', 'admin', v_avatar, 'admin', '', '', false)
+  ON CONFLICT (id) DO UPDATE SET
+    email      = 'Admin@gmail.com',
+    name       = 'Admin',
+    username   = 'admin',
+    avatar_url = v_avatar,
+    role       = 'admin';
+
+  RAISE NOTICE 'Admin setup complete. User ID: %', v_uid;
 END $$;
 
 -- ──────────────────────────────────────────────────────────────
