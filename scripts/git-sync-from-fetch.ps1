@@ -1,11 +1,13 @@
 #Requires -Version 5.1
 <#
-  Sync working tree to origin/main when this drive blocks Git from updating refs
-  ("couldn't set refs/heads/main" / "couldn't set refs/remotes/origin/main").
+  Sync to origin/main when this drive blocks updating remote-tracking refs.
 
-  Uses ls-remote (no local ref writes except refs/heads/main) then reset --hard.
+  1) git fetch origin main (objects download even if updating origin/main ref fails on this drive)
+  2) Read commit hash from FETCH_HEAD
+  3) Write refs/heads/main manually
+  4) git reset --hard HEAD
 
-  Run from repo root:  .\scripts\git-sync-from-fetch.ps1
+  Run:  .\scripts\git-sync-from-fetch.ps1
 #>
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
@@ -13,15 +15,24 @@ Set-Location $RepoRoot
 
 $GitExe = if (Test-Path "C:\Program Files\Git\bin\git.exe") { "C:\Program Files\Git\bin\git.exe" } else { "git" }
 
-$remoteLine = & $GitExe ls-remote origin refs/heads/main
-if ($LASTEXITCODE -ne 0 -or -not $remoteLine) { throw "git ls-remote failed" }
+$prevEa = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+& $GitExe fetch origin main
+$ErrorActionPreference = $prevEa
 
-$hash = ($remoteLine.ToString().Trim() -split "\s+")[0]
-if (-not $hash -or $hash.Length -lt 7) { throw "Could not parse commit hash from ls-remote" }
+$fetchHead = Join-Path $RepoRoot ".git\FETCH_HEAD"
+if (-not (Test-Path $fetchHead)) { throw "No .git/FETCH_HEAD after fetch" }
+
+$line = Get-Content $fetchHead -TotalCount 1
+$hash = ($line -split "\s+")[0]
+if (-not $hash -or $hash.Length -lt 7) { throw "Could not parse hash from FETCH_HEAD" }
+
+& $GitExe cat-file -t $hash 2>$null
+if ($LASTEXITCODE -ne 0) { throw "Commit $hash not in local repo after fetch (network error?)" }
 
 $mainRef = Join-Path $RepoRoot ".git\refs\heads\main"
 Set-Content -Path $mainRef -Value $hash -NoNewline -Encoding ascii
-Write-Host "Set main -> $hash"
+Write-Host "Set refs/heads/main -> $hash"
 
 & $GitExe reset --hard HEAD
 if ($LASTEXITCODE -ne 0) { throw "git reset --hard failed" }
