@@ -99,13 +99,9 @@ try {
   Write-Host ""
   Write-Host "Next: sync your real folder (no new commit):"
   Write-Host ('  cd "{0}"' -f $RepoRoot)
-  Write-Host "  git fetch origin"
-  Write-Host ('  git reset --hard origin/{0}' -f $Branch)
+  Write-Host "  .\scripts\git-sync-from-fetch.ps1"
   Write-Host ""
-  Write-Host "If ref updates fail on this drive, after fetch run sync-from-fetch.ps1 or:"
-  Write-Host '  $h = (Get-Content .git/FETCH_HEAD -TotalCount 1) -split "\s+" | Select-Object -First 1'
-  Write-Host '  Set-Content .git/refs/heads/main -Value $h -NoNewline -Encoding ascii'
-  Write-Host "  git reset --hard HEAD"
+  Write-Host "Or if refs work normally: git fetch origin && git reset --hard origin/main"
 }
 finally {
   Remove-Item $bundle -Force -ErrorAction SilentlyContinue
