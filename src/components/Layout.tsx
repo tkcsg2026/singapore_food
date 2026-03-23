@@ -12,6 +12,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { FooterSocialLinks } from "@/components/FooterSocialLinks";
+import { ChatbotWidget } from "@/components/chatbot/ChatbotWidget";
 
 /** Circular avatar or default icon */
 function AvatarBadge({ src, alt, size = 32 }: { src?: string | null; alt: string; size?: number }) {
@@ -180,6 +182,8 @@ export function Header() {
     { label: t.nav.suppliers,   path: "/suppliers" },
     { label: t.nav.marketplace, path: "/marketplace" },
     { label: t.nav.news,        path: "/news" },
+    { label: t.nav.jobs,        path: "/jobs" },
+    { label: t.nav.kitchenware, path: "/kitchenware" },
     { label: t.nav.about,       path: "/about" },
     { label: t.nav.contact,     path: "/contact" },
   ];
@@ -338,6 +342,7 @@ export function Footer() {
               
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed break-words-safe">{t.footer.tagline}</p>
+            <FooterSocialLinks />
           </div>
           <div className="min-w-0">
             <h4 className="font-semibold mb-4 text-sm text-primary uppercase tracking-wider">{t.footer.services}</h4>
@@ -346,6 +351,8 @@ export function Footer() {
               <li><Link href="/suppliers?plan=premium" className="block py-2 -my-1 hover:text-primary transition-colors duration-200">{t.footer.premiumListings}</Link></li>
               <li><Link href="/marketplace" className="block py-2 -my-1 hover:text-primary transition-colors duration-200">{t.footer.marketplace}</Link></li>
               <li><Link href="/news" className="block py-2 -my-1 hover:text-primary transition-colors duration-200">{t.footer.news}</Link></li>
+              <li><Link href="/jobs" className="block py-2 -my-1 hover:text-primary transition-colors duration-200">{t.footer.jobs}</Link></li>
+              <li><Link href="/kitchenware" className="block py-2 -my-1 hover:text-primary transition-colors duration-200">{t.footer.kitchenware}</Link></li>
               <li><Link href="/links" className="block py-2 -my-1 hover:text-primary transition-colors duration-200">{t.footer.links}</Link></li>
               <li><Link href="/about" className="block py-2 -my-1 hover:text-primary transition-colors duration-200">{t.about.pageTitle}</Link></li>
             </ul>
@@ -420,6 +427,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 w-full min-w-0 pt-20 md:pt-[4.55rem] overflow-x-hidden">{children}</main>
       <Footer />
       <BackToTop />
+      <ChatbotWidget />
     </div>
   );
 }

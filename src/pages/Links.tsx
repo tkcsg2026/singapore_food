@@ -232,6 +232,179 @@ export const LINKS_DATA = [
       },
     ],
   },
+  {
+    category: "platform",
+    items: [
+      {
+        name: "TableCheck Singapore",
+        nameJa: "TableCheck（シンガポール）",
+        description: "Restaurant reservation and guest management platform used by many F&B operators.",
+        descriptionJa: "多くの飲食店で使われる予約・顧客管理プラットフォーム。",
+        url: "https://www.tablecheck.com/en/",
+        icon: "📅",
+        bgImage: "https://logo.clearbit.com/tablecheck.com",
+      },
+      {
+        name: "Chope",
+        nameJa: "Chope",
+        description: "Reservation and demand-generation tools for restaurants in Singapore.",
+        descriptionJa: "シンガポールの飲食店向け予約・集客ツール。",
+        url: "https://www.chope.co/singapore-restaurants",
+        icon: "🍴",
+        bgImage: "https://logo.clearbit.com/chope.co",
+      },
+      {
+        name: "OpenRice Singapore",
+        nameJa: "OpenRice シンガポール",
+        description: "Restaurant discovery and listing platform used by diners across Asia.",
+        descriptionJa: "アジアで利用されるレストラン検索・掲載プラットフォーム。",
+        url: "https://sg.openrice.com/en/singapore",
+        icon: "🧭",
+        bgImage: "https://logo.clearbit.com/openrice.com",
+      },
+      {
+        name: "Japan Foodie (JNTO)",
+        nameJa: "Japan Foodie（JNTO）",
+        description: "Official Japan travel food guide and culinary discovery content.",
+        descriptionJa: "日本政府観光局による公式グルメ・食文化ガイド。",
+        url: "https://www.japan.travel/en/food/",
+        icon: "🍜",
+        bgImage: "https://logo.clearbit.com/japan.travel",
+      },
+      {
+        name: "Tabelog",
+        nameJa: "食べログ",
+        description: "Major Japanese restaurant discovery and review platform.",
+        descriptionJa: "日本最大級のレストラン検索・口コミプラットフォーム。",
+        url: "https://tabelog.com/en/",
+        icon: "⭐",
+        bgImage: "https://logo.clearbit.com/tabelog.com",
+      },
+    ],
+  },
+  {
+    category: "association",
+    items: [
+      {
+        name: "Food and Beverage Management Association Singapore (FBMA)",
+        nameJa: "シンガポールF&Bマネジメント協会（FBMA）",
+        description: "Professional F&B networking and management development association.",
+        descriptionJa: "F&B業界のネットワーキングと人材育成を行う専門団体。",
+        url: "https://www.fbma.sg/",
+        icon: "🤝",
+        bgImage: "https://logo.clearbit.com/fbma.sg",
+      },
+      {
+        name: "Japan Foodservice Association (JF)",
+        nameJa: "日本フードサービス協会（JF）",
+        description: "Industry body for Japan's restaurant and foodservice sector.",
+        descriptionJa: "日本の外食・フードサービス業界を代表する団体。",
+        url: "https://www.jfnet.or.jp/",
+        icon: "🏮",
+        bgImage: "https://logo.clearbit.com/jfnet.or.jp",
+      },
+      {
+        name: "Food Industry Center (Japan)",
+        nameJa: "食品産業センター（日本）",
+        description: "Supports Japanese food manufacturing, standards and policy development.",
+        descriptionJa: "日本の食品製造、基準整備、政策連携を支援する団体。",
+        url: "http://shokusan.or.jp/",
+        icon: "🏢",
+        bgImage: "https://logo.clearbit.com/shokusan.or.jp",
+      },
+      {
+        name: "All Japan Coffee Association",
+        nameJa: "全日本コーヒー協会",
+        description: "Coffee trade and standards information in Japan.",
+        descriptionJa: "日本のコーヒー流通・基準に関する情報。",
+        url: "https://coffee.ajca.or.jp/",
+        icon: "☕",
+        bgImage: "https://logo.clearbit.com/ajca.or.jp",
+      },
+    ],
+  },
+  {
+    category: "government",
+    items: [
+      {
+        name: "Ministry of Manpower (MOM)",
+        nameJa: "人材開発省（MOM）",
+        description: "Work pass, hiring, and employment requirements relevant to F&B operations.",
+        descriptionJa: "F&B事業に関わる雇用・就労ビザ・採用要件情報。",
+        url: "https://www.mom.gov.sg/",
+        icon: "🧾",
+        bgImage: "https://logo.clearbit.com/mom.gov.sg",
+      },
+      {
+        name: "Singapore Government Procurement (GeBIZ)",
+        nameJa: "シンガポール政府調達（GeBIZ）",
+        description: "Public procurement opportunities and tenders, including food-related sectors.",
+        descriptionJa: "食品関連を含む公共調達案件・入札情報。",
+        url: "https://www.gebiz.gov.sg/",
+        icon: "📦",
+        bgImage: "https://logo.clearbit.com/gebiz.gov.sg",
+      },
+      {
+        name: "Ministry of Agriculture, Forestry and Fisheries (Japan)",
+        nameJa: "農林水産省（日本）",
+        description: "Food industry policies, standards and agriculture-linked initiatives in Japan.",
+        descriptionJa: "日本の食品産業政策・基準・農業連携施策の公式情報。",
+        url: "https://www.maff.go.jp/e/",
+        icon: "🌱",
+        bgImage: "https://logo.clearbit.com/maff.go.jp",
+      },
+      {
+        name: "Japan External Trade Organization (JETRO)",
+        nameJa: "日本貿易振興機構（JETRO）",
+        description: "Export and market-entry support for food businesses in Japan and overseas.",
+        descriptionJa: "食品関連企業の輸出・海外展開支援情報。",
+        url: "https://www.jetro.go.jp/en/",
+        icon: "🌐",
+        bgImage: "https://logo.clearbit.com/jetro.go.jp",
+      },
+    ],
+  },
+  {
+    category: "resource",
+    items: [
+      {
+        name: "JFOODO",
+        nameJa: "JFOODO（日本食品海外プロモーション）",
+        description: "Official Japanese food overseas promotion organization and market insights.",
+        descriptionJa: "日本食品の海外プロモーション機関と市場情報。",
+        url: "https://www.jfoodo.go.jp/",
+        icon: "🍣",
+        bgImage: "https://logo.clearbit.com/jfoodo.go.jp",
+      },
+      {
+        name: "Sake & Shochu Information Center",
+        nameJa: "日本酒・焼酎情報センター",
+        description: "Educational resources for Japanese beverages, quality and export information.",
+        descriptionJa: "日本酒・焼酎の品質や海外展開に関する情報。",
+        url: "https://www.japansake.or.jp/",
+        icon: "🍶",
+        bgImage: "https://logo.clearbit.com/japansake.or.jp",
+      },
+      {
+        name: "TasteAtlas Singapore Food Guide",
+        nameJa: "TasteAtlas シンガポール料理ガイド",
+        description: "Global food reference with cuisine and dish discovery content for Singapore.",
+        descriptionJa: "シンガポール料理の発見に使えるグローバル食文化リファレンス。",
+        url: "https://www.tasteatlas.com/singapore",
+        icon: "📖",
+        bgImage: "https://logo.clearbit.com/tasteatlas.com",
+      },
+      {
+        name: "Tokyo Metropolitan Food Safety Portal",
+        nameJa: "東京都 食の安全ポータル",
+        description: "Food safety and hygiene guidance from Tokyo's official public resources.",
+        descriptionJa: "東京都の公式食品安全・衛生情報。",
+        url: "https://www.fukushihoken.metro.tokyo.lg.jp/shokuhin/",
+        icon: "🛡️",
+        bgImage: "https://logo.clearbit.com/metro.tokyo.lg.jp",
+      },
+    ],
+  },
 ];
 
 const Links = () => {
@@ -250,24 +423,34 @@ const Links = () => {
         </div>
 
         <div className="space-y-12">
-          {LINKS_DATA.map(({ category, items }) => (
-            <section key={category}>
+          {LINKS_DATA.map(({ category, items }, sectionIdx) => (
+            <section key={`${category}-${sectionIdx}`}>
               <h2 className="text-lg font-bold mb-5 flex items-center gap-2 text-foreground">
                 <span className="w-1 h-5 bg-primary rounded-full inline-block" />
                 {tl.categories[category]}
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {items.map((link) => (
+                {items.map((link, linkIdx) => (
                   <a
-                    key={link.url}
+                    key={`${sectionIdx}-${linkIdx}-${link.url}`}
                     href={link.url}
                     target={link.url.startsWith("http") ? "_blank" : "_self"}
                     rel="noopener noreferrer"
                     className="group bg-card border border-border p-5 card-hover flex flex-col gap-3 hover:border-primary/40 transition-colors"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-2xl leading-none">{link.icon}</span>
-                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 mt-0.5" />
+                    <div className="relative h-28 -m-5 mb-3 overflow-hidden border-b border-border rounded-t-sm">
+                      <img
+                        src={link.bgImage}
+                        alt={lang === "ja" ? link.nameJa : link.name}
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                      <div className="absolute left-3 top-3 rounded-md bg-white/90 px-2 py-1 text-xl leading-none shadow-sm">
+                        {link.icon}
+                      </div>
+                      <ExternalLink className="absolute right-3 top-3 h-3.5 w-3.5 text-white/90 group-hover:text-white transition-colors" />
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-sm leading-snug group-hover:text-primary transition-colors">

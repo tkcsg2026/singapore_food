@@ -2,6 +2,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Search, ArrowRight, ShoppingBag, TrendingUp, Sparkles, Newspaper, Globe, ExternalLink, ChevronLeft, ChevronRight, Users2, Repeat } from "lucide-react";
+import { KITCHENWARE_RETAILERS } from "@/data/kitchenwareRetailers";
 import s1 from "@/assets/s1.jpg";
 import s2 from "@/assets/s2.jpg";
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
@@ -270,6 +271,49 @@ const Index = () => {
                 </div>
               </div>
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Kitchenware retailers — curated external links */}
+      <section className="bg-gradient-to-b from-background to-muted/25 py-10 md:py-12 border-y border-border/50 opacity-0-init animate-fade-in-up reveal-stagger-2 min-w-0 overflow-hidden">
+        <div className="container min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6 min-w-0">
+            <div className="min-w-0">
+              <h2 className="section-title text-xl md:text-2xl flex items-center gap-2 min-w-0">
+                <ShoppingBag className="h-5 w-5 text-primary flex-shrink-0" />
+                <span className="truncate">{t.kitchenware.homeTitle}</span>
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1 max-w-xl">{t.kitchenware.homeSub}</p>
+            </div>
+            <Link
+              href="/kitchenware"
+              className="link-more flex-shrink-0 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 hover:text-white inline-flex items-center gap-1.5"
+            >
+              {t.kitchenware.homeCta} <ArrowRight className="h-3.5 w-3.5 link-more-arrow" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {KITCHENWARE_RETAILERS.slice(0, 4).map((r) => (
+              <a
+                key={r.id}
+                href={r.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group relative overflow-hidden rounded-xl border border-border bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all min-h-[120px]"
+              >
+                <img src={r.cardImage} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
+                <div className="relative p-3 flex flex-col justify-end h-full min-h-[120px]">
+                  <p className="text-xs font-bold text-white leading-tight line-clamp-2 drop-shadow-sm">
+                    {lang === "ja" ? r.nameJa : r.name}
+                  </p>
+                  <span className="text-[10px] font-semibold text-white/85 mt-1 inline-flex items-center gap-0.5">
+                    <ExternalLink className="h-3 w-3" /> {t.links.visitSite}
+                  </span>
+                </div>
+              </a>
+            ))}
           </div>
         </div>
       </section>

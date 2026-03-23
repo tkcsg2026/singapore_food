@@ -54,6 +54,8 @@ const en = {
     favoriteSuppliers: "Favorite Suppliers",
     about: "About",
     contact: "Contact",
+    jobs: "Jobs",
+    kitchenware: "Kitchenware",
   },
   footer: {
     tagline: "The Kitchen Connection",
@@ -68,8 +70,12 @@ const en = {
     privacy: "Privacy Policy",
     contact: "Contact",
     contactForm: "Contact Form",
+    jobs: "Job Vacancies",
+    kitchenware: "Kitchenware & tableware",
     adminLogin: "Login",
     copyright: "The Kitchen Connection",
+    followUs: "Follow us",
+    socialAddUrlHint: "Add your profile URL in .env.local (NEXT_PUBLIC_SOCIAL_*)",
   },
 
   // ── Home (Index) ─────────────────────────────────────────────────────────
@@ -240,7 +246,7 @@ const en = {
   // ── Our Links ─────────────────────────────────────────────────────────────
   links: {
     pageTitle: "Our Links",
-    pageSubtitle: "Useful resources for Singapore's F&B industry",
+    pageSubtitle: "Useful resources for Singapore & Japan's F&B industry",
     homeSectionTitle: "Our Links",
     homeSectionSubtitle: "Useful industry resources & partners",
     visitSite: "Visit Site",
@@ -595,6 +601,134 @@ const en = {
   newsDetail: {
     backToList: "News",
     notFound: "Article not found.",
+  },
+
+  // ── Job vacancies (bulletin-style notice) ────────────────────────────────
+  jobs: {
+    pageTitle: "Job Vacancies",
+    pageSubtitle:
+      "Post a simple F&B job notice and send it to us via WhatsApp. Use the options below to keep your ad structured and compliant-minded.",
+    bulletinLabel: "Notice board",
+    disclaimer:
+      "This page is a free notice-style tool only. Employers remain responsible for complying with Singapore employment advertising rules (including MOM / Fair Consideration Framework where applicable), accurate job information, and fair hiring practices. We do not verify listings.",
+    jobTitle: "Job title",
+    jobTitlePh: "e.g. Line Cook, Restaurant Manager",
+    company: "Company / outlet name (optional)",
+    companyPh: "e.g. ABC Pte Ltd — Orchard",
+    employment: "Employment type",
+    roleCategory: "Role category",
+    region: "Work location (Singapore)",
+    compensation: "Salary / compensation",
+    experience: "Experience level",
+    eligibility: "Candidate eligibility (summary)",
+    description: "Role description & requirements",
+    descriptionPh:
+      "Hours, duties, languages, certifications (e.g. Food Hygiene), start date, and how applicants should follow up.",
+    selectPlaceholder: "Select…",
+    preview: "WhatsApp message preview",
+    whatsappHelp:
+      "Opens WhatsApp with your notice pre-filled. You can edit the message before sending.",
+    whatsappMissing:
+      "WhatsApp handoff is not configured. Add NEXT_PUBLIC_JOBS_WHATSAPP in .env.local (digits only, country code, e.g. 6581234567) or use the contact form.",
+    contactInstead: "Go to contact form",
+    requiredHint: "Job title and description are required before sending.",
+    employmentOpts: {
+      fullTime: "Full-time",
+      partTime: "Part-time",
+      contract: "Contract",
+      temp: "Temporary",
+      intern: "Internship",
+    },
+    roleOpts: {
+      kitchen: "Kitchen / culinary",
+      service: "Service / FOH",
+      management: "Management",
+      ops: "Operations / logistics",
+      delivery: "Delivery / driver",
+      other: "Other F&B",
+    },
+    regionOpts: {
+      central: "Central",
+      east: "East",
+      west: "West",
+      north: "North",
+      northEast: "North-East",
+      islandwide: "Islandwide / multiple",
+      other: "Other (state in description)",
+    },
+    compensationOpts: {
+      negotiate: "Negotiable / discuss",
+      range1800_2500: "Approx. S$1,800 – S$2,500",
+      range2500_4000: "Approx. S$2,500 – S$4,000",
+      range4000plus: "S$4,000+ (state in description)",
+      commission: "Commission-based (explain below)",
+      undisclosed: "Not stated in ad (MOM rules may require disclosure)",
+    },
+    experienceOpts: {
+      entry: "Entry / no experience required",
+      y1_2: "1–2 years",
+      y3_5: "3–5 years",
+      y5plus: "5+ years",
+    },
+    eligibilityOpts: {
+      scPr: "Singaporeans & PRs only",
+      open: "Open to all qualified applicants",
+      inDesc: "See description (work pass / eligibility)",
+    },
+    msgHeader: "[F&B Portal — Job notice]",
+    msgTitle: "Title",
+    msgCompany: "Company",
+    msgType: "Type",
+    msgCategory: "Category",
+    msgRegion: "Location",
+    msgPay: "Compensation",
+    msgExp: "Experience",
+    msgEligibility: "Eligibility",
+    msgBody: "Description",
+    howItWorks: "How it works",
+    step1: "Enter the job title, optional company name, and a clear role description.",
+    step2: "Choose employment type, location, pay band, and eligibility — they are merged into the WhatsApp draft.",
+    step3: "Open WhatsApp, review the message, and send. If WhatsApp is not configured, use the contact form instead.",
+    formCardTitle: "Job listing form",
+  },
+
+  // ── Site assistant (floating chatbot) ─────────────────────────────────────
+  chatbot: {
+    title: "Need help?",
+    subtitle:
+      "Ask me about suppliers, Buy & Sell, registration, or how to use the platform.",
+    placeholder: "Ask about the site…",
+    send: "Send",
+    openAssistant: "Open help chat",
+    closeAssistant: "Close help chat",
+    thinking: "Thinking…",
+    error: "Something went wrong. Please try again.",
+    starters: [
+      "How do I find suppliers?",
+      "How do I post an item?",
+      "How do I contact a supplier?",
+      "How does Buy & Sell work?",
+    ],
+  },
+
+  // ── Kitchenware hub (external retailers) ──────────────────────────────────
+  kitchenware: {
+    pageTitle: "Kitchenware & tableware in Singapore",
+    pageSubtitle:
+      "Trusted places to buy cookware, tableware, and kitchen tools — with a clean, retail-style layout. All purchases happen on each retailer's own website.",
+    badge: "Curated retailers",
+    backHome: "Back to Home",
+    disclaimer:
+      "Trademarks and product images belong to their respective owners. F&B Portal is not affiliated with these retailers. We do not sell these products; links open official third-party sites. Inspiration tiles use royalty-free stock photos and are not copies of retailer catalogues.",
+    retailersTitle: "Shop official stores",
+    retailersSub: "Cards use brand logos when available (via public logo services) and decorative stock photography — not scraped product shots.",
+    visitStore: "Visit store",
+    showcaseTitle: "Ideas & inspiration",
+    showcaseSub:
+      "Generic kitchen themes with stock imagery. Each tile links to a relevant retailer category so you can browse real products on their site.",
+    homeTitle: "Kitchenware & tableware",
+    homeSub: "ToTT, IKEA, department stores, and more — curated for F&B teams.",
+    homeCta: "Browse retailers",
   },
 
   // ── Contact ──────────────────────────────────────────────────────────────

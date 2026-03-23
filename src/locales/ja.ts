@@ -56,6 +56,8 @@ const ja: Translations = {
     favoriteSuppliers: "お気に入りサプライヤー",
     about: "このサイトについて",
     contact: "お問い合わせ",
+    jobs: "求人",
+    kitchenware: "キッチン用品",
   },
   footer: {
     tagline: "The Kitchen Connection",
@@ -70,8 +72,12 @@ const ja: Translations = {
     privacy: "プライバシーポリシー",
     contact: "お問い合わせ",
     contactForm: "お問い合わせフォーム",
+    jobs: "求人情報",
+    kitchenware: "キッチン・食器",
     adminLogin: "ログイン",
     copyright: "The Kitchen Connection",
+    followUs: "フォローする",
+    socialAddUrlHint: ".env.local に URL を設定してください（NEXT_PUBLIC_SOCIAL_*）",
   },
 
   // ── Home (Index) ─────────────────────────────────────────────────────────
@@ -241,7 +247,7 @@ const ja: Translations = {
   // ── Our Links ─────────────────────────────────────────────────────────────
   links: {
     pageTitle: "リンク集",
-    pageSubtitle: "シンガポールF&B業界の便利なリソース",
+    pageSubtitle: "シンガポール・日本のF&B業界に役立つリソース",
     homeSectionTitle: "リンク集",
     homeSectionSubtitle: "業界の便利なリソース・パートナー",
     visitSite: "サイトを見る",
@@ -596,6 +602,135 @@ const ja: Translations = {
   newsDetail: {
     backToList: "ニュース",
     notFound: "記事が見つかりません。",
+  },
+
+  // ── Job vacancies ────────────────────────────────────────────────────────
+  jobs: {
+    pageTitle: "求人情報（掲示板）",
+    pageSubtitle:
+      "F&B向けの簡易求人告知を作成し、WhatsAppで送信できます。シンガポールの求人広告に関する考慮事項に沿うよう、項目を選んでください。",
+    bulletinLabel: "掲示板",
+    disclaimer:
+      "本ページは無料の簡易ツールです。雇用主はシンガポールの雇用・求人広告関連法令（MOM・Fair Consideration Framework 等の該当時）の遵守、正確な情報、公正な採用について責任を負います。当サイトは内容を審査しません。",
+    jobTitle: "職種・ポジション名",
+    jobTitlePh: "例：ラインクック、店長",
+    company: "会社・店舗名（任意）",
+    companyPh: "例：ABC Pte Ltd — オーチャード",
+    employment: "雇用形態",
+    roleCategory: "職種カテゴリ",
+    region: "勤務地（シンガポール）",
+    compensation: "給与・待遇",
+    experience: "経験年数",
+    eligibility: "応募資格（概要）",
+    description: "仕事内容・要件",
+    descriptionPh:
+      "勤務時間、業務内容、語学、資格（食品衛生など）、開始時期、応募方法などを記載してください。",
+    selectPlaceholder: "選択…",
+    preview: "WhatsApp送信文のプレビュー",
+    whatsappHelp:
+      "求人内容が入力されたWhatsAppが開きます。送信前に編集できます。",
+    whatsappMissing:
+      "WhatsApp連携が未設定です。.env.local に NEXT_PUBLIC_JOBS_WHATSAPP（国番号付き数字のみ、例 6581234567）を設定するか、お問い合わせフォームをご利用ください。",
+    contactInstead: "お問い合わせフォームへ",
+    requiredHint: "送信には職種名と説明の入力が必要です。",
+    employmentOpts: {
+      fullTime: "正社員",
+      partTime: "パート",
+      contract: "契約",
+      temp: "短期・臨時",
+      intern: "インターン",
+    },
+    roleOpts: {
+      kitchen: "キッチン・調理",
+      service: "サービス・ホール",
+      management: "管理職",
+      ops: "運用・物流",
+      delivery: "配達・ドライバー",
+      other: "その他F&B",
+    },
+    regionOpts: {
+      central: "セントラル",
+      east: "イースト",
+      west: "ウェスト",
+      north: "ノース",
+      northEast: "ノースイースト",
+      islandwide: "複数エリア・全域",
+      other: "その他（説明欄に記載）",
+    },
+    compensationOpts: {
+      negotiate: "応相談",
+      range1800_2500: "目安 S$1,800 – S$2,500",
+      range2500_4000: "目安 S$2,500 – S$4,000",
+      range4000plus: "S$4,000以上（説明欄に記載）",
+      commission: "歩合中心（説明欄で詳述）",
+      undisclosed: "広告に記載なし（MOMの開示要件にご注意）",
+    },
+    experienceOpts: {
+      entry: "未経験可",
+      y1_2: "1～2年",
+      y3_5: "3～5年",
+      y5plus: "5年以上",
+    },
+    eligibilityOpts: {
+      scPr: "シンガポール市民・PRのみ",
+      open: "条件を満たす応募者すべて",
+      inDesc: "説明欄を参照（ワークパス等）",
+    },
+    msgHeader: "[F&B Portal — 求人告知]",
+    msgTitle: "職種",
+    msgCompany: "会社",
+    msgType: "雇用形態",
+    msgCategory: "カテゴリ",
+    msgRegion: "勤務地",
+    msgPay: "待遇",
+    msgExp: "経験",
+    msgEligibility: "応募資格",
+    msgBody: "内容",
+    howItWorks: "ご利用の流れ",
+    step1: "職種名・任意の会社名・仕事内容を入力します。",
+    step2: "雇用形態・勤務地・待遇・応募資格を選ぶと、WhatsApp用の文面に反映されます。",
+    step3: "WhatsAppで文面を確認して送信してください。未設定の場合はお問い合わせフォームをご利用ください。",
+    formCardTitle: "求人入力フォーム",
+  },
+
+  // ── Site assistant (floating chatbot) ─────────────────────────────────────
+  chatbot: {
+    title: "ご不明な点はありますか？",
+    subtitle:
+      "サプライヤー検索、Buy & Sell、登録方法、サイトの使い方などをご案内します。",
+    placeholder: "サイトについて質問してください…",
+    send: "送信",
+    openAssistant: "ヘルプチャットを開く",
+    closeAssistant: "チャットを閉じる",
+    thinking: "考えています…",
+    error: "エラーが発生しました。もう一度お試しください。",
+    starters: [
+      "サプライヤーはどう探しますか？",
+      "商品の出品方法を教えてください",
+      "サプライヤーへの連絡方法は？",
+      "Buy & Sellの使い方を教えてください",
+    ],
+  },
+
+  // ── Kitchenware hub ────────────────────────────────────────────────────────
+  kitchenware: {
+    pageTitle: "シンガポールのキッチン用品・食器",
+    pageSubtitle:
+      "鍋・食器・調理小物を買える信頼できる店へのリンク集です。購入は各公式サイトで行われます。",
+    badge: "厳選リンク",
+    backHome: "ホームに戻る",
+    disclaimer:
+      "商標・商品画像は各権利者に帰属します。F&B Portalはこれらの小売と提携していません。商品の販売は行わず、公式第三者サイトへ遷移します。インスピレーション枠は著作権フリーのストック写真であり、各店のカタログ画像の複製ではありません。",
+    retailersTitle: "公式ストアで見る",
+    retailersSub:
+      "ロゴは公開ロゴサービス経由で表示（取得できない場合は略称）。カード背景はストック写真です。",
+    visitStore: "ストアへ",
+    showcaseTitle: "アイデア・インスピレーション",
+    showcaseSub:
+      "一般的なキッチンテーマのストック画像です。タイルから関連カテゴリの公式ページへ進めます。",
+    homeTitle: "キッチン用品・食器",
+    homeSub: "ToTT、IKEA、百貨店など — 飲食向けに厳選。",
+    homeCta: "店舗一覧へ",
   },
 
   // ── Contact ──────────────────────────────────────────────────────────────
