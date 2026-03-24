@@ -199,7 +199,7 @@ export function SupplierCard({ supplier, variant = "grid", rank }: SupplierCardP
   const cardBg = !isList && cfg.cardBgClass ? cfg.cardBgClass : "bg-card";
 
   return (
-    <div className={`group ${cardBg} overflow-hidden shadow-card card-hover card-lift border relative flex flex-col h-full min-h-0 min-w-0 transition-shadow duration-300 hover:shadow-[0_12px_28px_rgba(0,0,0,0.12),0_0_0_1px_hsl(var(--primary)/0.1)] ${wrapperClass} ${isList ? "flex-row items-center" : ""}`}>
+    <div className={`group ${cardBg} rounded-xl overflow-hidden shadow-card card-hover card-lift border relative flex flex-col h-full min-h-0 min-w-0 transition-shadow duration-300 hover:shadow-[0_12px_28px_rgba(0,0,0,0.12),0_0_0_1px_hsl(var(--primary)/0.1)] ${wrapperClass} ${isList ? "flex-row items-center" : ""}`}>
       {cfg.accentBarClass && !isList && (
         <div className={cfg.accentBarClass} />
       )}

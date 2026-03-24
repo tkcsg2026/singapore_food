@@ -153,21 +153,21 @@ const Index = () => {
             <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3 animate-hero-soft min-w-0" style={{ animationDelay: "220ms" }}>
               <Link
                 href="/suppliers"
-                className="group/hero-btn inline-flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2.5 sm:px-5 sm:py-3 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-[10px] sm:text-sm border border-white/30 transition-all duration-300 ease-out backdrop-blur-sm min-w-0 break-words-safe text-center hover:scale-[1.02] active:scale-[0.98]"
+                className="group/hero-btn inline-flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-3 sm:px-5 sm:py-3.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-[10px] sm:text-sm border border-white/30 transition-all duration-300 ease-out backdrop-blur-sm min-w-0 break-words-safe text-center hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 transition-transform duration-300 group-hover/hero-btn:scale-110" />
                 <span className="text-center leading-tight">{t.home.card1Title}</span>
               </Link>
               <Link
                 href="/suppliers"
-                className="group/hero-btn2 inline-flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2.5 sm:px-5 sm:py-3 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-[10px] sm:text-sm border border-white/30 transition-all duration-300 ease-out backdrop-blur-sm min-w-0 break-words-safe text-center hover:scale-[1.02] active:scale-[0.98]"
+                className="group/hero-btn2 inline-flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-3 sm:px-5 sm:py-3.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-[10px] sm:text-sm border border-white/30 transition-all duration-300 ease-out backdrop-blur-sm min-w-0 break-words-safe text-center hover:scale-[1.02] active:scale-[0.98]"
               >
                 <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 transition-transform duration-300 group-hover/hero-btn2:scale-110" />
                 <span className="text-center leading-tight">{t.home.popularSuppliers}</span>
               </Link>
               <Link
                 href="/marketplace"
-                className="group/hero-btn3 inline-flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2.5 sm:px-5 sm:py-3 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-[10px] sm:text-sm border border-white/30 transition-all duration-300 ease-out backdrop-blur-sm min-w-0 break-words-safe text-center hover:scale-[1.02] active:scale-[0.98]"
+                className="group/hero-btn3 inline-flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-3 sm:px-5 sm:py-3.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-[10px] sm:text-sm border border-white/30 transition-all duration-300 ease-out backdrop-blur-sm min-w-0 break-words-safe text-center hover:scale-[1.02] active:scale-[0.98]"
               >
                 <ShoppingBag className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 transition-transform duration-300 group-hover/hero-btn3:scale-110" />
                 <span className="text-center leading-tight">{t.home.card3Title}</span>

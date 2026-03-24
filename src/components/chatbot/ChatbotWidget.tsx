@@ -111,10 +111,9 @@ export function ChatbotWidget() {
     <>
       <div
         className={cn(
-          "fixed z-[56] flex flex-col items-end gap-2 pointer-events-none",
-          "right-[max(1rem,env(safe-area-inset-right))]",
-          // Stack above the back-to-top control (≈44px + margin)
-          "bottom-[max(5.75rem,env(safe-area-inset-bottom))]",
+          "fixed z-[56] flex flex-col items-start gap-2 pointer-events-none",
+          "left-[max(1rem,env(safe-area-inset-left))]",
+          "bottom-[max(1rem,env(safe-area-inset-bottom))]",
         )}
       >
         <div
@@ -123,7 +122,7 @@ export function ChatbotWidget() {
           aria-label={c.title}
           aria-hidden={!open}
           className={cn(
-            "pointer-events-auto w-[min(100vw-2rem,22rem)] sm:w-[24rem] origin-bottom-right transition-all duration-200 ease-out motion-reduce:transition-none",
+            "pointer-events-auto w-[min(100vw-2rem,22rem)] sm:w-[24rem] origin-bottom-left transition-all duration-200 ease-out motion-reduce:transition-none",
             open
               ? "opacity-100 scale-100 translate-y-0"
               : "opacity-0 scale-95 translate-y-2 pointer-events-none h-0 overflow-hidden",
