@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, ArrowRight, ShoppingBag, TrendingUp, Sparkles, Newspaper, Globe, ExternalLink, ChevronLeft, ChevronRight, Users2, Repeat } from "lucide-react";
+import { Search, ArrowRight, ShoppingBag, TrendingUp, Sparkles, Newspaper, Globe, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 import { KITCHENWARE_RETAILERS } from "@/data/kitchenwareRetailers";
 import s1 from "@/assets/s1.jpg";
 import s2 from "@/assets/s2.jpg";
@@ -210,62 +210,50 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Our Services — two cards (Find suppliers · Buy & sell), sans-serif typography */}
+      {/* Our Services — two white cards: image on top, title + subtext below (no overlay / no icon) */}
       <section className="our-services-section bg-muted py-10 md:py-14 overflow-hidden w-full">
         <div className="container min-w-0 max-w-3xl mx-auto">
           <h2 className="text-center text-xl md:text-2xl mb-8 md:mb-10 opacity-0-init animate-fade-in-up reveal-stagger-0">
             {t.home.ourServices}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8 min-w-0">
-            <Link href="/suppliers" className="group block opacity-0-init animate-fade-in-up reveal-stagger-1">
-              <div className="our-services-photo-card relative overflow-hidden rounded-2xl border border-black/15 shadow-lg card-lift min-h-[260px] sm:min-h-[300px] h-full transition-shadow duration-300 group-hover:shadow-xl group-hover:border-black/25 isolate">
-                <Image
-                  src={s1}
-                  alt=""
-                  fill
-                  className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.05]"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
-                />
-                {/* Strong bottom gradient for text; balances busy + mixed lighting in photo */}
-                <div
-                  className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/55 to-black/25 pointer-events-none"
-                  aria-hidden
-                />
-                <div className="absolute inset-0 flex flex-col justify-end items-center text-center p-6 sm:p-8 pt-20 sm:pt-24">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white/20 backdrop-blur-sm border border-white/35 flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg transition-transform duration-300 group-hover:scale-105 group-hover:bg-white/25">
-                    <Users2 className="h-6 w-6 sm:h-7 sm:w-7 text-white" strokeWidth={1.75} />
-                  </div>
-                  <h3 className="text-base sm:text-lg md:text-xl leading-snug text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.65)]">
+            <Link href="/suppliers" className="group block h-full opacity-0-init animate-fade-in-up reveal-stagger-1">
+              <div className="flex h-full min-h-[320px] sm:min-h-[340px] flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-md transition-shadow duration-300 card-lift group-hover:shadow-xl group-hover:border-black/18">
+                <div className="relative w-full aspect-[4/3] shrink-0 overflow-hidden bg-muted">
+                  <Image
+                    src={s1}
+                    alt=""
+                    fill
+                    className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
+                  />
+                </div>
+                <div className="flex flex-1 flex-col items-center justify-center text-center px-5 py-6 sm:px-6 sm:py-7">
+                  <h3 className="text-base sm:text-lg md:text-xl leading-snug">
                     {t.home.findSuppliers}
                   </h3>
-                  <p className="text-xs sm:text-sm mt-2 sm:mt-2.5 leading-relaxed max-w-[260px] mx-auto text-white/95 [text-shadow:0_1px_8px_rgba(0,0,0,0.55)]">
+                  <p className="mt-2.5 sm:mt-3 max-w-[280px] text-xs sm:text-sm leading-relaxed">
                     {t.home.findSuppliersSub}
                   </p>
                 </div>
               </div>
             </Link>
-            <Link href="/marketplace" className="group block opacity-0-init animate-fade-in-up reveal-stagger-2">
-              <div className="our-services-photo-card relative overflow-hidden rounded-2xl border border-black/15 shadow-lg card-lift min-h-[260px] sm:min-h-[300px] h-full transition-shadow duration-300 group-hover:shadow-xl group-hover:border-black/25 isolate">
-                <Image
-                  src={s2}
-                  alt=""
-                  fill
-                  className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.05]"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
-                />
-                {/* Slightly stronger overlay — s2 is high-key / bright */}
-                <div
-                  className="absolute inset-0 bg-gradient-to-t from-black/94 via-black/60 to-black/35 pointer-events-none"
-                  aria-hidden
-                />
-                <div className="absolute inset-0 flex flex-col justify-end items-center text-center p-6 sm:p-8 pt-20 sm:pt-24">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white/20 backdrop-blur-sm border border-white/35 flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg transition-transform duration-300 group-hover:scale-105 group-hover:bg-white/25">
-                    <Repeat className="h-6 w-6 sm:h-7 sm:w-7 text-white" strokeWidth={1.75} />
-                  </div>
-                  <h3 className="text-base sm:text-lg md:text-xl leading-snug text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.65)]">
+            <Link href="/marketplace" className="group block h-full opacity-0-init animate-fade-in-up reveal-stagger-2">
+              <div className="flex h-full min-h-[320px] sm:min-h-[340px] flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-md transition-shadow duration-300 card-lift group-hover:shadow-xl group-hover:border-black/18">
+                <div className="relative w-full aspect-[4/3] shrink-0 overflow-hidden bg-muted">
+                  <Image
+                    src={s2}
+                    alt=""
+                    fill
+                    className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
+                  />
+                </div>
+                <div className="flex flex-1 flex-col items-center justify-center text-center px-5 py-6 sm:px-6 sm:py-7">
+                  <h3 className="text-base sm:text-lg md:text-xl leading-snug">
                     {t.home.buyAndSell}
                   </h3>
-                  <p className="text-xs sm:text-sm mt-2 sm:mt-2.5 leading-relaxed max-w-[280px] mx-auto text-white/95 [text-shadow:0_1px_8px_rgba(0,0,0,0.55)]">
+                  <p className="mt-2.5 sm:mt-3 max-w-[300px] text-xs sm:text-sm leading-relaxed">
                     {t.home.buyAndSellSub}
                   </p>
                 </div>

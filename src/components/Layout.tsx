@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import logoImage from "@/assets/logo.png";
 import {
   Menu, X, ChevronRight, ChevronDown,
-  User, LogOut, LayoutDashboard, ShieldCheck, Settings, Globe, ChevronUp, Heart, UserPlus, LogIn, Shield,
+  User, LogOut, LayoutDashboard, ShieldCheck, Settings, Globe, ChevronUp, Heart, UserPlus, LogIn, Shield, FileText,
 } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
@@ -306,6 +306,15 @@ export function Header() {
               </>
             )}
             <div className="my-2 border-t border-border" />
+            <Link
+              href="/terms"
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-3 min-h-[48px] px-4 py-3.5 text-sm font-medium transition-colors hover:bg-muted text-muted-foreground hover:text-foreground"
+            >
+              <FileText className="h-4 w-4 flex-shrink-0" />
+              {t.footer.terms}
+              <ChevronRight className="h-4 w-4 ml-auto text-muted-foreground" />
+            </Link>
             <Link
               href="/privacy"
               onClick={() => setMobileOpen(false)}

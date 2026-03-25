@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient, createAdminSupabaseClient } from "@/lib/supabase-server";
+import { createServerSupabaseClient, createAdminSupabaseClient, requireAdmin } from "@/lib/supabase-server";
 
 export async function GET(req: NextRequest) {
   const supabase = createServerSupabaseClient();
@@ -24,11 +24,17 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const adminAuth = await requireAdmin(req);
+  if (adminAuth instanceof NextResponse) return adminAuth;
+
   const supabase = createAdminSupabaseClient();
   if (!supabase) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   const body = await req.json();
   const { key, value } = body;
-  const { data, error } = await supabase.from("site_settings").upsert({ key, value }).select().single();
+  if (typeof key !== "string" || !key.trim()) {
+    return NextResponse.json({ error: "Missing or invalid key" }, { status: 400 });
+  }
+  const { data, error } = await supabase.from("site_settings").upsert({ key: key.trim(), value }).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }

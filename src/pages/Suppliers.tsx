@@ -208,9 +208,9 @@ const Suppliers = () => {
               // Group by plan with section headers
               const planOrder: Array<"premium" | "standard" | "basic"> = ["premium", "standard", "basic"];
               const planLabel: Record<string, string> = {
-                premium: lang === "ja" ? "プレミアム" : "Premium",
-                standard: lang === "ja" ? "スタンダード" : "Standard",
-                basic: lang === "ja" ? "ベーシック" : "Basic",
+                premium: t.suppliers.planPremium,
+                standard: t.suppliers.planStandard,
+                basic: t.suppliers.planBasic,
               };
               const planBorder: Record<string, string> = {
                 premium: "border-amber-400",

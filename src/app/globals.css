@@ -512,14 +512,6 @@
   font-weight: 400;
 }
 
-/* Photo cards: override section title/body colours — white text on darkened image */
-.our-services-section .our-services-photo-card h3 {
-  color: #ffffff !important;
-}
-.our-services-section .our-services-photo-card p {
-  color: rgba(255, 255, 255, 0.95) !important;
-}
-
 /* ── Accessibility: respect reduced motion ───────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .animate-grid-item-in,

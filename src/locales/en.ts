@@ -35,7 +35,7 @@ const en = {
   nav: {
     brand: "F&B Portal",
     suppliers: "Suppliers",
-    premiumListings: "Premium Listings",
+    premiumListings: "Full profile listings",
     marketplace: "Buy & Sell",
     news: "News",
     links: "Links",
@@ -61,7 +61,7 @@ const en = {
     tagline: "The Kitchen Connection",
     services: "Services",
     supplierSearch: "Supplier Search",
-    premiumListings: "Premium Listings",
+    premiumListings: "Full profile listings",
     marketplace: "Buy & Sell",
     news: "News",
     links: "Links",
@@ -110,9 +110,9 @@ const en = {
     category: "Category",
     area: "Area",
     plan: "Plan",
-    planPremium: "Premium",
-    planStandard: "Standard",
-    planBasic: "Basic",
+    planPremium: "Full Profile",
+    planStandard: "Standard Profile",
+    planBasic: "Quick Profile",
     areas: {
       central: "Central",
       east: "East",
@@ -774,12 +774,12 @@ const en = {
 
   // ── Plans ────────────────────────────────────────────────────────────────
   plans: {
-    premium: "Premium",
-    standard: "Standard",
-    basic: "Basic",
-    premiumDesc: "Top listing · All features · WhatsApp contact",
-    standardDesc: "Priority listing · WhatsApp contact",
-    basicDesc: "Standard listing",
+    premium: "Full Profile",
+    standard: "Standard Profile",
+    basic: "Quick Profile",
+    premiumDesc: "Full company profile · Top visibility · All features · WhatsApp",
+    standardDesc: "Standard profile · Priority placement · WhatsApp contact",
+    basicDesc: "Quick listing profile · Essential visibility",
     inquire: "Inquire about this plan",
     pageTitle: "Choose Your Plan",
     pageSubtitle: "Find the right plan for your business",
@@ -799,6 +799,75 @@ const en = {
     productsBasic: "Up to 3 items",
     productsStandard: "Up to 6 items",
     productsPremium: "Up to 12 items",
+  },
+
+  // ── Legal (public pages — shown when admin has not saved content in settings) ──
+  legal: {
+    termsFallback: `Last updated: March 2026.
+
+These Terms of Use ("Terms") govern your access to and use of The Kitchen Connection / F&B Portal website and related services (the "Service"), operated by WILL & BEYOND PTE. LTD.
+
+By accessing or using the Service, you agree to these Terms. If you do not agree, please do not use the Service.
+
+1. The Service
+The Service provides a directory of food & beverage suppliers, marketplace listings, news, and related information for Singapore's F&B industry. We may modify or discontinue features at any time.
+
+2. Accounts
+Where registration is required, you agree to provide accurate information and keep your credentials secure. You are responsible for activity under your account.
+
+3. Listings and content
+Users and suppliers are responsible for the accuracy and legality of content they submit. We may remove or refuse content that violates these Terms, applicable law, or our policies.
+
+4. Third parties and transactions
+The Service may facilitate introductions or display contact details. Transactions between you and third parties are solely between those parties. We are not a party to such transactions unless expressly stated.
+
+5. Disclaimer
+The Service is provided "as is" without warranties of any kind. We do not guarantee uninterrupted or error-free operation.
+
+6. Limitation of liability
+To the fullest extent permitted by law, WILL & BEYOND PTE. LTD. shall not be liable for indirect, incidental, or consequential damages arising from your use of the Service.
+
+7. Changes
+We may update these Terms from time to time. Continued use after changes constitutes acceptance of the revised Terms.
+
+8. Contact
+For questions about these Terms, please use the contact form on this website.`,
+    privacyFallback: `Last updated: March 2026.
+
+WILL & BEYOND PTE. LTD. ("we", "us") operates The Kitchen Connection / F&B Portal (the "Service"). This Privacy Policy describes how we collect, use, and protect personal data when you use the Service.
+
+1. Data we collect
+We may collect information you provide (such as name, email, WhatsApp details, company information, and messages sent through forms or the site), technical data (such as IP address, browser type, and device information), and usage data (such as pages viewed).
+
+2. How we use data
+We use data to operate and improve the Service, authenticate users, respond to inquiries, send service-related communications, analyse traffic, comply with legal obligations, and prevent abuse.
+
+3. Legal basis (where applicable)
+Depending on jurisdiction, we rely on consent, contract performance, legitimate interests, and legal obligation as appropriate.
+
+4. Sharing
+We may share data with service providers who assist us (e.g. hosting, analytics), when required by law, or to protect rights and safety. We do not sell your personal data as a product.
+
+5. Retention
+We retain data only as long as needed for the purposes described, unless a longer period is required by law.
+
+6. Security
+We implement appropriate technical and organisational measures; however, no online transmission is completely secure.
+
+7. Your rights
+Depending on your location, you may have rights to access, correct, delete, or restrict processing of your personal data, or to object to certain processing. Contact us to exercise these rights.
+
+8. International transfers
+If data is processed outside your country, we take steps consistent with applicable law.
+
+9. Children
+The Service is not directed at children under 16.
+
+10. Changes
+We may update this policy and will post the revised version on this page.
+
+11. Contact
+For privacy questions, please use the contact form on this website.`,
   },
 };
 

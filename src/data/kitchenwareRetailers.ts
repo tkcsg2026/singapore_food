@@ -73,7 +73,7 @@ export const KITCHENWARE_RETAILERS: KitchenwareRetailer[] = [
     blurb: "Professional-grade cookware and knives — common in commercial kitchens.",
     blurbJa: "業務用にも使われる鍋・ナイフなどプロ仕様ブランド。",
     logoDomain: "tramontina.com.sg",
-    cardImage: "https://images.unsplash.com/photo-1584990347449-a8b2917adcad?w=800&q=80",
+    cardImage: "https://images.unsplash.com/photo-1593618998160-e34014e67546?w=800&q=80",
   },
   {
     id: "nitori",
@@ -93,7 +93,7 @@ export const KITCHENWARE_RETAILERS: KitchenwareRetailer[] = [
     blurb: "Stackable, space-saving Korean-designed cookware and dining ware.",
     blurbJa: "積み重ね収納しやすい韓国デザインの鍋・食器。",
     logoDomain: "modori.sg",
-    cardImage: "https://images.unsplash.com/photo-1585672842173-87f555fd66cb?w=800&q=80",
+    cardImage: "https://images.unsplash.com/photo-1565538810643-b5bdb714032a?w=800&q=80",
   },
   {
     id: "anglee",
@@ -113,6 +113,6 @@ export const KITCHENWARE_RETAILERS: KitchenwareRetailer[] = [
     blurb: "Premium enamel cast iron and bakeware.",
     blurbJa: "ホーロー鋳物鍋など高級キッチンウェアの公式チャネル。",
     logoDomain: "lecreuset.com.sg",
-    cardImage: "https://images.unsplash.com/photo-1604908176997-125f3097f95d?w=800&q=80",
+    cardImage: "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=800&q=80",
   },
 ];

@@ -1827,9 +1827,8 @@ function AboutSiteManager() {
 
   const handleSave = async () => {
     setSaving(true);
-    await fetch("/api/settings", {
+    await authFetch("/api/settings", {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ key: "about_site", value: JSON.stringify(form) }),
     });
     setSaving(false);
@@ -1968,9 +1967,8 @@ function TermsManager() {
     setSaving(true);
     setSaveError(null);
     try {
-      const res = await fetch("/api/settings", {
+      const res = await authFetch("/api/settings", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: "terms_of_service", value: termsText }),
       });
       if (!res.ok) {
@@ -2025,18 +2023,36 @@ function PrivacyManager() {
   const [privacyText, setPrivacyText] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const { t } = useTranslation();
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const { t, lang } = useTranslation();
 
   useEffect(() => {
-    fetch("/api/settings?key=privacy_policy").then((r) => r.json()).then((d) => setPrivacyText(d?.value || ""));
+    fetch("/api/settings?key=privacy_policy")
+      .then((r) => r.json())
+      .then((d) => setPrivacyText(d?.value ?? ""))
+      .catch(() => {});
   }, []);
 
   const handleSave = async () => {
     setSaving(true);
-    await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: "privacy_policy", value: privacyText }) });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setSaveError(null);
+    try {
+      const res = await authFetch("/api/settings", {
+        method: "PUT",
+        body: JSON.stringify({ key: "privacy_policy", value: privacyText }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setSaveError(err?.error ?? (lang === "ja" ? "保存に失敗しました。" : "Save failed. Please check your database configuration."));
+      } else {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      }
+    } catch {
+      setSaveError(lang === "ja" ? "ネットワークエラーが発生しました。" : "Network error. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -2051,12 +2067,23 @@ function PrivacyManager() {
           className="w-full p-3 rounded-lg border bg-background text-sm resize-y font-mono mb-4"
           placeholder="Enter privacy policy content here..."
         />
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <Button onClick={handleSave} className="rounded-xl gap-2" disabled={saving}>
             <Save className="h-4 w-4" /> {saving ? t.common.saving : t.admin.privacySave}
           </Button>
           {saved && <span className="text-sm text-emerald-600 font-medium">{t.admin.privacySaved}</span>}
+          {saveError && <span className="text-sm text-destructive font-medium">{saveError}</span>}
         </div>
+        {privacyText && (
+          <div className="mt-6 pt-4 border-t">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">{lang === "ja" ? "プレビュー" : "Preview"}</p>
+            <div className="prose prose-sm max-w-none text-foreground max-h-48 overflow-y-auto bg-muted/30 rounded-lg p-3">
+              {privacyText.split("\n").map((line, i) =>
+                line.trim() === "" ? <br key={i} /> : <p key={i} className="mb-2 text-xs leading-relaxed text-muted-foreground">{line}</p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2073,7 +2100,7 @@ function QRManager() {
 
   const handleSave = async () => {
     setSaving(true);
-    await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: "qr_redirect_url", value: redirectUrl }) });
+    await authFetch("/api/settings", { method: "PUT", body: JSON.stringify({ key: "qr_redirect_url", value: redirectUrl }) });
     setSaving(false);
     alert(t.admin.qrSaved);
   };
@@ -2514,8 +2541,8 @@ function AppearanceManager() {
     setSaved(false);
     try {
       await Promise.all([
-        fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: "site_font",  value: fontKey  }) }),
-        fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: "site_color", value: colorKey }) }),
+        authFetch("/api/settings", { method: "PUT", body: JSON.stringify({ key: "site_font", value: fontKey }) }),
+        authFetch("/api/settings", { method: "PUT", body: JSON.stringify({ key: "site_color", value: colorKey }) }),
       ]);
       applyTheme(fontKey, colorKey);
       setSaved(true);

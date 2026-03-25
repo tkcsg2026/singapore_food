@@ -15,20 +15,40 @@ function isHttpUrl(s: string | undefined): s is string {
   }
 }
 
+/** When individual NEXT_PUBLIC_SOCIAL_* vars are unset, build URLs from this handle (no @). */
+function defaultSocialUrls(handle: string) {
+  const h = handle.replace(/^@/, "").trim();
+  if (!h) return { facebook: undefined as string | undefined, instagram: undefined as string | undefined, x: undefined as string | undefined };
+  return {
+    facebook: `https://www.facebook.com/${encodeURIComponent(h)}`,
+    instagram: `https://www.instagram.com/${encodeURIComponent(h)}/`,
+    x: `https://x.com/${encodeURIComponent(h)}`,
+  };
+}
+
 const iconBtn =
   "inline-flex h-10 w-10 min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-border bg-background/80 text-muted-foreground transition-colors duration-200";
 
 /**
  * Footer: Facebook, Instagram, and X always visible.
- * URLs from NEXT_PUBLIC_SOCIAL_*; without a URL the icon shows as disabled with a hint.
+ * URLs: NEXT_PUBLIC_SOCIAL_* env vars, or else NEXT_PUBLIC_SOCIAL_BRAND_HANDLE (default: thekitchenconnection).
  * LinkedIn / YouTube render only when configured.
  */
 export function FooterSocialLinks({ className }: { className?: string }) {
   const { t } = useTranslation();
 
-  const facebook = process.env.NEXT_PUBLIC_SOCIAL_FACEBOOK;
-  const instagram = process.env.NEXT_PUBLIC_SOCIAL_INSTAGRAM;
-  const xUrl = process.env.NEXT_PUBLIC_SOCIAL_TWITTER ?? process.env.NEXT_PUBLIC_SOCIAL_X;
+  const brandHandle =
+    process.env.NEXT_PUBLIC_SOCIAL_BRAND_HANDLE?.trim() || "thekitchenconnection";
+  const fromBrand = defaultSocialUrls(brandHandle);
+
+  const facebook =
+    process.env.NEXT_PUBLIC_SOCIAL_FACEBOOK?.trim() || fromBrand.facebook;
+  const instagram =
+    process.env.NEXT_PUBLIC_SOCIAL_INSTAGRAM?.trim() || fromBrand.instagram;
+  const xUrl =
+    process.env.NEXT_PUBLIC_SOCIAL_TWITTER?.trim() ||
+    process.env.NEXT_PUBLIC_SOCIAL_X?.trim() ||
+    fromBrand.x;
 
   const core: { id: string; href: string | undefined; Icon: LucideIcon; label: string }[] = [
     { id: "facebook", href: facebook, Icon: Facebook, label: "Facebook" },

@@ -54,11 +54,15 @@ const NewItem = () => {
   });
 
   useEffect(() => {
+    const fallback = t.legal.termsFallback;
     fetch("/api/settings?key=terms_of_service")
       .then((r) => r.json())
-      .then((d) => { if (d?.value) setTermsText(d.value); })
-      .catch(() => {});
-  }, []);
+      .then((d) => {
+        const v = typeof d?.value === "string" ? d.value.trim() : "";
+        setTermsText(v || fallback);
+      })
+      .catch(() => setTermsText(fallback));
+  }, [t.legal.termsFallback]);
 
   const handleChange = (field: string, value: string) => setForm((p) => ({ ...p, [field]: value }));
 

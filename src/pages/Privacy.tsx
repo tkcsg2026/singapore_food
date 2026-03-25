@@ -11,7 +11,10 @@ const Privacy = () => {
   useEffect(() => {
     fetch("/api/settings?key=privacy_policy")
       .then((r) => r.json())
-      .then((d) => setContent(d?.value || ""))
+      .then((d) => {
+        const v = typeof d?.value === "string" ? d.value.trim() : "";
+        setContent(v);
+      })
       .catch(() => setContent(""));
   }, []);
 
@@ -31,9 +34,9 @@ const Privacy = () => {
             <div className="h-4 bg-muted rounded w-full" />
             <div className="h-4 bg-muted rounded w-5/6" />
           </div>
-        ) : content ? (
+        ) : (
           <div className="prose prose-sm max-w-none text-foreground">
-            {content.split("\n").map((line, i) =>
+            {(content || t.legal.privacyFallback).split("\n").map((line, i) =>
               line.trim() === "" ? (
                 <br key={i} />
               ) : (
@@ -43,8 +46,6 @@ const Privacy = () => {
               )
             )}
           </div>
-        ) : (
-          <p className="text-muted-foreground text-sm">No privacy policy content has been set yet.</p>
         )}
       </div>
     </Layout>
