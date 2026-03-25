@@ -947,7 +947,6 @@ export const marketplaceItems: MarketplaceItem[] = [
 
 export const marketplaceCategories = [
   { value: 'kitchen-equipment', label: '厨房機器' },
-  { value: 'tableware', label: '食器・備品' },
   { value: 'tools', label: '調理器具' },
   { value: 'furniture', label: '家具' },
   { value: 'other', label: 'その他' },

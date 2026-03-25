@@ -34,7 +34,6 @@ const NewItem = () => {
   ];
   const mpCategories = [
     t.marketplace.categories.kitchen,
-    t.marketplace.categories.tableware,
     t.marketplace.categories.utensils,
     t.marketplace.categories.furniture,
     t.marketplace.categories.other,
