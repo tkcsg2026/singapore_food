@@ -516,9 +516,10 @@ const en = {
     privacyLabel: "Privacy Policy content",
     privacySave: "Save Privacy Policy",
     privacySaved: "Saved ✓",
-    jobsWhatsAppLabel: "Jobs WhatsApp number",
+    jobsWhatsAppLabel: "WhatsApp destination for job submissions",
     jobsWhatsAppPlaceholder: "e.g. 6581234567",
-    jobsWhatsAppHint: "Digits only, include country code (Singapore: 65). This number is used on the Job Vacancies page.",
+    jobsWhatsAppHint:
+      "This is the final destination number used when a user fills in /jobs and clicks \"Accept & post\".\nIn other words, set your own receiving inbox number here.\n\nInput rules:\n- Digits only (no +, spaces, or symbols)\n- Include country code\n- Example (Singapore): 6581234567\n\nFor operations, we recommend using a dedicated business WhatsApp number instead of a personal one.",
     jobsSaved: "Saved ✓",
     jobsModerationTitle: "Job notices moderation",
     jobsRefresh: "Refresh",

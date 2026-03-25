@@ -2025,7 +2025,7 @@ function JobsManager() {
             className="w-full h-11 px-4 rounded-lg border bg-background text-sm"
             inputMode="numeric"
           />
-          <p className="text-xs text-muted-foreground mt-2">{t.admin.jobsWhatsAppHint}</p>
+          <p className="text-xs text-muted-foreground mt-2 whitespace-pre-line">{t.admin.jobsWhatsAppHint}</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <Button onClick={handleSave} className="rounded-xl gap-2" disabled={saving}>

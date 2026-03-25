@@ -517,9 +517,10 @@ const ja: Translations = {
     privacyLabel: "プライバシーポリシーの内容",
     privacySave: "保存",
     privacySaved: "保存しました ✓",
-    jobsWhatsAppLabel: "求人ページのWhatsApp番号",
+    jobsWhatsAppLabel: "求人投稿の受け取り窓口WhatsApp番号",
     jobsWhatsAppPlaceholder: "例: 6581234567",
-    jobsWhatsAppHint: "数字のみ・国番号を含めて入力してください（シンガポール: 65）。求人ページのWhatsApp送信用に使われます。",
+    jobsWhatsAppHint:
+      "この番号は、求人を投稿したいユーザーが /jobs で内容入力し、「承諾して投稿」を押したときの最終送信先になります。\nつまり、受け取り窓口（あなた側）の番号を設定してください。\n\n入力ルール：\n・国番号付きの数字のみ（+ や空白なし）\n・例（シンガポール）：6581234567\n\n運用上は、個人番号ではなく専用の業務用WhatsApp番号の利用を推奨します。",
     jobsSaved: "保存しました ✓",
     jobsModerationTitle: "求人投稿の管理",
     jobsRefresh: "更新",
