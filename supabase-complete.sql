@@ -389,10 +389,9 @@ INSERT INTO public.categories (type, value, label, sort_order) VALUES
   ('supplier',     'equipment',         '厨房機器',    7),
   ('supplier',     'packaging',         '包装・容器',  8),
   ('marketplace',  'kitchen-equipment', '厨房機器',    1),
-  ('marketplace',  'tableware',         '食器・備品',  2),
-  ('marketplace',  'tools',             '調理器具',    3),
-  ('marketplace',  'furniture',         '家具',        4),
-  ('marketplace',  'other',             'その他',      5),
+  ('marketplace',  'tools',             '調理器具',    2),
+  ('marketplace',  'furniture',         '家具',        3),
+  ('marketplace',  'other',             'その他',      4),
   ('news',         'industry',          '業界ニュース',1),
   ('news',         'regulation',        '規制・法律',  2),
   ('news',         'trend',             'トレンド',    3),
@@ -986,6 +985,7 @@ END $$;
 -- ──────────────────────────────────────────────────────────────
 SELECT table_name, rows FROM (
   SELECT 'profiles'          AS table_name, COUNT(*) AS rows FROM public.profiles          UNION ALL
+  SELECT 'job_notices',                    COUNT(*)         FROM public.job_notices       UNION ALL
   SELECT 'suppliers',                       COUNT(*)         FROM public.suppliers          UNION ALL
   SELECT 'supplier_products',               COUNT(*)         FROM public.supplier_products  UNION ALL
   SELECT 'marketplace_items',               COUNT(*)         FROM public.marketplace_items  UNION ALL
@@ -994,6 +994,55 @@ SELECT table_name, rows FROM (
   SELECT 'site_settings',                   COUNT(*)         FROM public.site_settings      UNION ALL
   SELECT 'reports',                         COUNT(*)         FROM public.reports
 ) t ORDER BY table_name;
+
+-- ──────────────────────────────────────────────────────────────
+-- 13. JOB NOTICES — store / moderate job posts
+-- ──────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.job_notices (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  title text NOT NULL,
+  company text,
+  employment text,
+  role_category text,
+  region text,
+  compensation text,
+  experience text,
+  eligibility text,
+  description text NOT NULL,
+  agreed boolean NOT NULL DEFAULT false,
+  agreed_at timestamptz,
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','deleted')),
+  deleted_at timestamptz,
+  deleted_reason text
+);
+
+CREATE INDEX IF NOT EXISTS job_notices_created_at_idx ON public.job_notices (created_at DESC);
+CREATE INDEX IF NOT EXISTS job_notices_status_idx ON public.job_notices (status);
+
+ALTER TABLE public.job_notices ENABLE ROW LEVEL SECURITY;
+
+-- Public can insert notices (tool-only; consider adding rate limits upstream).
+DO $$ BEGIN
+  CREATE POLICY "job_notices_insert_anyone"
+  ON public.job_notices
+  FOR INSERT
+  TO anon, authenticated
+  WITH CHECK (agreed = true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Public can read active notices only (future-proof; currently not shown in UI).
+DO $$ BEGIN
+  CREATE POLICY "job_notices_select_active"
+  ON public.job_notices
+  FOR SELECT
+  TO anon, authenticated
+  USING (status = 'active');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Admin (service-role bypasses RLS; for JWT-admin use, add explicit admin policy if needed).
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS video_url  text DEFAULT '';
 -- Product dimensions (W × D × H) — for refrigerators, POS terminals, equipment etc.
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS size_w    text DEFAULT '';

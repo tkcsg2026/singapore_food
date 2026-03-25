@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, ClipboardList, ListOrdered, MessageCircle } from "lucide-react";
@@ -17,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { sanitizeWhatsAppDigits } from "@/lib/jobs-whatsapp";
 import logoImage from "@/assets/logo.png";
@@ -57,8 +56,29 @@ export default function JobVacancies() {
   const [experience, setExperience] = useState<ExperienceKey>("entry");
   const [eligibility, setEligibility] = useState<EligibilityKey>("open");
   const [description, setDescription] = useState("");
+  const [agreed, setAgreed] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [postError, setPostError] = useState<string | null>(null);
 
-  const phoneDigits = sanitizeWhatsAppDigits(process.env.NEXT_PUBLIC_JOBS_WHATSAPP ?? "");
+  const [phoneDigits, setPhoneDigits] = useState(() =>
+    sanitizeWhatsAppDigits(process.env.NEXT_PUBLIC_JOBS_WHATSAPP ?? "")
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/settings?key=jobs_whatsapp")
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled) return;
+        const v = typeof d?.value === "string" ? d.value : "";
+        const digits = sanitizeWhatsAppDigits(v);
+        if (digits) setPhoneDigits(digits);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const lines = [
     j.msgHeader,
@@ -79,7 +99,46 @@ export default function JobVacancies() {
   const whatsappMessage =
     rawMessage.length <= WA_MAX ? rawMessage : `${rawMessage.slice(0, WA_MAX - 20)}\n\n[…]`;
 
-  const canSend = jobTitle.trim().length > 0 && description.trim().length > 0 && phoneDigits.length >= 8;
+  const canSendBase = jobTitle.trim().length > 0 && description.trim().length > 0 && phoneDigits.length >= 8;
+  const canSend = canSendBase && agreed && !posting;
+
+  const consentText = useMemo(() => j.consentText ?? j.disclaimer, [j]);
+
+  const handlePost = async () => {
+    if (!canSendBase) return;
+    if (!agreed) return;
+    setPosting(true);
+    setPostError(null);
+    try {
+      const res = await fetch("/api/job-notices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: jobTitle,
+          company,
+          employment,
+          roleCategory,
+          region,
+          compensation,
+          experience,
+          eligibility,
+          description,
+          agreed: true,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setPostError(err?.error ?? j.postFailed);
+        return;
+      }
+      const encoded = encodeURIComponent(whatsappMessage);
+      window.open(`https://wa.me/${phoneDigits}?text=${encoded}`, "_blank", "noopener,noreferrer");
+    } catch {
+      setPostError(j.postFailed);
+    } finally {
+      setPosting(false);
+    }
+  };
 
   const steps = [
     { n: 1, text: j.step1 },
@@ -315,13 +374,42 @@ export default function JobVacancies() {
 
                 <div className="flex flex-col gap-3 pt-1">
                   {phoneDigits.length >= 8 ? (
-                    canSend ? (
-                      <WhatsAppButton phone={phoneDigits} message={whatsappMessage} fullWidth size="lg" />
-                    ) : (
-                      <div className="flex min-h-[44px] w-full items-center justify-center rounded-xl border border-dashed border-muted-foreground/35 bg-muted/30 px-4 text-sm text-muted-foreground text-center">
-                        {j.requiredHint}
+                    <>
+                      <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+                        <label className="flex items-start gap-3 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={agreed}
+                            onChange={(e) => setAgreed(e.target.checked)}
+                            className="mt-1 h-4 w-4 rounded border-border"
+                          />
+                          <span className="text-xs text-muted-foreground leading-relaxed">
+                            {consentText}
+                          </span>
+                        </label>
+                        <p className="text-[11px] text-muted-foreground">{j.consentHint}</p>
                       </div>
-                    )
+
+                      {canSendBase ? (
+                        <Button
+                          onClick={handlePost}
+                          disabled={!canSend}
+                          className="w-full rounded-xl min-h-[44px] font-bold"
+                        >
+                          {posting ? j.posting : j.postAndSend}
+                        </Button>
+                      ) : (
+                        <div className="flex min-h-[44px] w-full items-center justify-center rounded-xl border border-dashed border-muted-foreground/35 bg-muted/30 px-4 text-sm text-muted-foreground text-center">
+                          {j.requiredHint}
+                        </div>
+                      )}
+
+                      {postError && (
+                        <div className="text-sm text-destructive font-medium">
+                          {postError}
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground space-y-3">
                       <p>{j.whatsappMissing}</p>

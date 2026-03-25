@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     url: `${siteUrl}/kitchenware`,
     type: "website",
   },
-  robots: { index: true, follow: true },
+  robots: { index: false, follow: false },
 };
 
 export default KitchenwareRetailers;

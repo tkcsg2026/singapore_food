@@ -6,6 +6,11 @@ export interface Database {
         Insert: Omit<Profile, "created_at"> & { username?: string | null; avatar_url?: string };
         Update: Partial<Profile>;
       };
+      job_notices: {
+        Row: JobNoticeRow;
+        Insert: Omit<JobNoticeRow, "id" | "created_at" | "deleted_at" | "deleted_reason">;
+        Update: Partial<JobNoticeRow>;
+      };
       suppliers: {
         Row: SupplierRow;
         Insert: Omit<SupplierRow, "id" | "created_at">;
@@ -56,6 +61,25 @@ export interface Profile {
   company: string;
   created_at: string;
   banned: boolean;
+}
+
+export interface JobNoticeRow {
+  id: string;
+  created_at: string;
+  title: string;
+  company: string | null;
+  employment: string | null;
+  role_category: string | null;
+  region: string | null;
+  compensation: string | null;
+  experience: string | null;
+  eligibility: string | null;
+  description: string;
+  agreed: boolean;
+  agreed_at: string | null;
+  status: "active" | "deleted";
+  deleted_at: string | null;
+  deleted_reason: string | null;
 }
 
 export interface SupplierRow {

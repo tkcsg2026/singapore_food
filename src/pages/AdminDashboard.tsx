@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   Store, ShoppingBag, CheckCircle, XCircle, Plus, Trash2, Edit2, Link2,
   BarChart3, Tag, Image, AlertTriangle, Shield, Save, Eye, Newspaper, Globe, ExternalLink, FileText, Palette, Users,
-  Search, Ban, UserCheck, ClipboardList, Video,
+  Search, Ban, UserCheck, ClipboardList, Video, MessageCircle,
 } from "lucide-react";
 import { FONT_OPTIONS, COLOR_OPTIONS, applyTheme } from "@/components/ThemeProvider";
 import {
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { getSupabase } from "@/lib/supabase";
+import { sanitizeWhatsAppDigits } from "@/lib/jobs-whatsapp";
 
 /**
  * Authenticated fetch helper: attaches the current user's Bearer token to
@@ -53,6 +54,7 @@ const AdminDashboard = () => {
     { id: "links",      label: t.admin.tabLinks,      icon: Globe },
     { id: "categories", label: t.admin.tabCategories, icon: Tag },
     { id: "about",      label: t.admin.tabAbout,     icon: FileText },
+    { id: "jobs",       label: t.admin.tabJobs,      icon: MessageCircle },
     { id: "terms",      label: t.admin.tabTerms,      icon: Shield },
     { id: "privacy",    label: t.admin.tabPrivacy,    icon: Shield },
     { id: "qr",         label: t.admin.tabQR,         icon: Link2 },
@@ -127,6 +129,7 @@ const AdminDashboard = () => {
             {activeTab === "links" && <LinksManager />}
             {activeTab === "categories" && <CategoryManager />}
             {activeTab === "about" && <AboutSiteManager />}
+            {activeTab === "jobs" && <JobsManager />}
             {activeTab === "terms" && <TermsManager />}
             {activeTab === "privacy" && <PrivacyManager />}
             {activeTab === "qr" && <QRManager />}
@@ -1943,6 +1946,163 @@ function AboutSiteManager() {
             <Save className="h-4 w-4" /> {saving ? t.common.saving : t.common.save}
           </Button>
           {saved && <span className="text-sm text-emerald-600 font-medium">{lang === "ja" ? "保存しました" : "Saved"}</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function JobsManager() {
+  const { t, lang } = useTranslation();
+  const [whatsAppDigits, setWhatsAppDigits] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [notices, setNotices] = useState<any[]>([]);
+  const [loadingNotices, setLoadingNotices] = useState(false);
+  const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/settings?key=jobs_whatsapp")
+      .then((r) => r.json())
+      .then((d) => {
+        const v = typeof d?.value === "string" ? d.value : "";
+        setWhatsAppDigits(sanitizeWhatsAppDigits(v));
+      })
+      .catch(() => {});
+  }, []);
+
+  const loadNotices = async () => {
+    setLoadingNotices(true);
+    try {
+      const res = await authFetch("/api/job-notices?includeDeleted=1&limit=50");
+      const rows = await res.json().catch(() => []);
+      setNotices(Array.isArray(rows) ? rows : []);
+    } catch {
+      setNotices([]);
+    } finally {
+      setLoadingNotices(false);
+    }
+  };
+
+  useEffect(() => {
+    loadNotices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const res = await authFetch("/api/settings", {
+        method: "PUT",
+        body: JSON.stringify({ key: "jobs_whatsapp", value: whatsAppDigits }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setSaveError(err?.error ?? (lang === "ja" ? "保存に失敗しました。" : "Save failed."));
+      } else {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      }
+    } catch {
+      setSaveError(lang === "ja" ? "ネットワークエラーが発生しました。" : "Network error. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div>
+      <h2 className="text-xl font-bold mb-6">{t.admin.tabJobs}</h2>
+      <div className="bg-card border p-6 max-w-2xl space-y-4">
+        <div>
+          <label className="text-sm font-medium block mb-1.5">{t.admin.jobsWhatsAppLabel}</label>
+          <input
+            value={whatsAppDigits}
+            onChange={(e) => setWhatsAppDigits(sanitizeWhatsAppDigits(e.target.value))}
+            placeholder={t.admin.jobsWhatsAppPlaceholder}
+            className="w-full h-11 px-4 rounded-lg border bg-background text-sm"
+            inputMode="numeric"
+          />
+          <p className="text-xs text-muted-foreground mt-2">{t.admin.jobsWhatsAppHint}</p>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <Button onClick={handleSave} className="rounded-xl gap-2" disabled={saving}>
+            <Save className="h-4 w-4" /> {saving ? t.common.saving : t.common.save}
+          </Button>
+          {saved && <span className="text-sm text-emerald-600 font-medium">{t.admin.jobsSaved}</span>}
+          {saveError && <span className="text-sm text-destructive font-medium">{saveError}</span>}
+        </div>
+      </div>
+
+      <div className="mt-8">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <h3 className="text-lg font-bold">{t.admin.jobsModerationTitle}</h3>
+          <Button variant="outline" onClick={loadNotices} disabled={loadingNotices} className="rounded-xl">
+            {loadingNotices ? t.common.loading : t.admin.jobsRefresh}
+          </Button>
+        </div>
+        <div className="bg-card border rounded-xl overflow-hidden">
+          {notices.length === 0 ? (
+            <div className="p-6 text-sm text-muted-foreground">{t.admin.jobsNoNotices}</div>
+          ) : (
+            <div className="divide-y">
+              {notices.map((n) => (
+                <div key={n.id} className="p-4 flex flex-col sm:flex-row sm:items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${
+                        n.status === "deleted"
+                          ? "bg-destructive/10 border-destructive/30 text-destructive"
+                          : "bg-emerald-50 border-emerald-200 text-emerald-700"
+                      }`}>
+                        {n.status === "deleted" ? t.admin.jobsStatusDeleted : t.admin.jobsStatusActive}
+                      </span>
+                      <span className="text-sm font-bold truncate">{n.title}</span>
+                      {n.company && <span className="text-xs text-muted-foreground truncate">— {n.company}</span>}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {new Date(n.created_at).toLocaleString()}
+                      {n.deleted_at ? ` / ${t.admin.jobsDeletedAt}: ${new Date(n.deleted_at).toLocaleString()}` : ""}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap break-words line-clamp-4">
+                      {n.description}
+                    </p>
+                    {n.deleted_reason && (
+                      <p className="text-xs text-destructive mt-2 whitespace-pre-wrap break-words">
+                        {t.admin.jobsDeletedReason}: {n.deleted_reason}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    {n.status !== "deleted" && (
+                      <Button
+                        variant="destructive"
+                        className="rounded-xl"
+                        disabled={deleteBusyId === n.id}
+                        onClick={async () => {
+                          const reason = window.prompt(t.admin.jobsDeletePrompt) ?? "";
+                          setDeleteBusyId(n.id);
+                          try {
+                            const res = await authFetch(`/api/job-notices?id=${encodeURIComponent(n.id)}`, {
+                              method: "DELETE",
+                              body: JSON.stringify({ reason }),
+                            });
+                            if (res.ok) await loadNotices();
+                          } finally {
+                            setDeleteBusyId(null);
+                          }
+                        }}
+                      >
+                        {t.admin.jobsDelete}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
