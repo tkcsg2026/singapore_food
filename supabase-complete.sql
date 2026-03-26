@@ -981,28 +981,7 @@ BEGIN
 END $$;
 
 -- ──────────────────────────────────────────────────────────────
--- 12. VERIFY — row counts after setup
--- ──────────────────────────────────────────────────────────────
-SELECT table_name, rows FROM (
-  SELECT 'profiles'          AS table_name, COUNT(*) AS rows FROM public.profiles          UNION ALL
-  SELECT
-    'job_notices' AS table_name,
-    CASE
-      WHEN to_regclass('public.job_notices') IS NULL THEN 0
-      ELSE (SELECT COUNT(*) FROM public.job_notices)
-    END AS rows
-  UNION ALL
-  SELECT 'suppliers',                       COUNT(*)         FROM public.suppliers          UNION ALL
-  SELECT 'supplier_products',               COUNT(*)         FROM public.supplier_products  UNION ALL
-  SELECT 'marketplace_items',               COUNT(*)         FROM public.marketplace_items  UNION ALL
-  SELECT 'news_articles',                   COUNT(*)         FROM public.news_articles      UNION ALL
-  SELECT 'categories',                      COUNT(*)         FROM public.categories         UNION ALL
-  SELECT 'site_settings',                   COUNT(*)         FROM public.site_settings      UNION ALL
-  SELECT 'reports',                         COUNT(*)         FROM public.reports
-) t ORDER BY table_name;
-
--- ──────────────────────────────────────────────────────────────
--- 13. JOB NOTICES — store / moderate job posts
+-- 12. JOB NOTICES — store / moderate job posts
 -- ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.job_notices (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1047,6 +1026,27 @@ DO $$ BEGIN
   USING (status = 'active');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
+
+-- ──────────────────────────────────────────────────────────────
+-- 13. VERIFY — row counts after setup
+-- ──────────────────────────────────────────────────────────────
+SELECT table_name, rows FROM (
+  SELECT 'profiles'          AS table_name, COUNT(*) AS rows FROM public.profiles          UNION ALL
+  SELECT
+    'job_notices' AS table_name,
+    CASE
+      WHEN to_regclass('public.job_notices') IS NULL THEN 0
+      ELSE (SELECT COUNT(*) FROM public.job_notices)
+    END AS rows
+  UNION ALL
+  SELECT 'suppliers',                       COUNT(*)         FROM public.suppliers          UNION ALL
+  SELECT 'supplier_products',               COUNT(*)         FROM public.supplier_products  UNION ALL
+  SELECT 'marketplace_items',               COUNT(*)         FROM public.marketplace_items  UNION ALL
+  SELECT 'news_articles',                   COUNT(*)         FROM public.news_articles      UNION ALL
+  SELECT 'categories',                      COUNT(*)         FROM public.categories         UNION ALL
+  SELECT 'site_settings',                   COUNT(*)         FROM public.site_settings      UNION ALL
+  SELECT 'reports',                         COUNT(*)         FROM public.reports
+) t ORDER BY table_name;
 
 -- Admin (service-role bypasses RLS; for JWT-admin use, add explicit admin policy if needed).
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS video_url  text DEFAULT '';
