@@ -985,7 +985,13 @@ END $$;
 -- ──────────────────────────────────────────────────────────────
 SELECT table_name, rows FROM (
   SELECT 'profiles'          AS table_name, COUNT(*) AS rows FROM public.profiles          UNION ALL
-  SELECT 'job_notices',                    COUNT(*)         FROM public.job_notices       UNION ALL
+  SELECT
+    'job_notices' AS table_name,
+    CASE
+      WHEN to_regclass('public.job_notices') IS NULL THEN 0
+      ELSE (SELECT COUNT(*) FROM public.job_notices)
+    END AS rows
+  UNION ALL
   SELECT 'suppliers',                       COUNT(*)         FROM public.suppliers          UNION ALL
   SELECT 'supplier_products',               COUNT(*)         FROM public.supplier_products  UNION ALL
   SELECT 'marketplace_items',               COUNT(*)         FROM public.marketplace_items  UNION ALL

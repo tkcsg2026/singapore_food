@@ -101,7 +101,7 @@ const ja: Translations = {
     findSuppliers: "サプライヤーを探す",
     findSuppliersSub: "食材・設備の新しいサプライヤーを見つける",
     buyAndSell: "売り買い",
-    buyAndSellSub: "中古設備を同業者と取引する",
+    buyAndSellSub: "中古設備を取引する",
   },
 
   // ── Suppliers ────────────────────────────────────────────────────────────
@@ -632,6 +632,8 @@ const ja: Translations = {
     postAndSend: "承諾して投稿",
     posting: "投稿中...",
     postFailed: "投稿に失敗しました。もう一度お試しください。",
+    postSetupPending:
+      "現在、求人投稿機能のシステム設定を反映中です。少し時間をおいて再度お試しください。",
     jobTitle: "職種・ポジション名",
     jobTitlePh: "例：ラインクック、店長",
     company: "会社・店舗名（任意）",
@@ -771,7 +773,7 @@ const ja: Translations = {
 
   // ── About ─────────────────────────────────────────────────────────────────
   about: {
-    pageTitle: "このプラットフォームを選ぶ理由",
+    pageTitle: "このサイトについて",
     pageSubtitle: "シンガポール最大のF&Bサプライヤーネットワーク",
     heroTitle: "つながる。取引する。成長する。",
     heroSub: "シンガポールのF&B業界向けオールインワンプラットフォーム。サプライヤーを探し、機器を取引し、ビジネスを成長させましょう。",

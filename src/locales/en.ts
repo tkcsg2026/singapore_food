@@ -99,7 +99,7 @@ const en = {
     findSuppliers: "Find suppliers",
     findSuppliersSub: "Discover new suppliers for ingredients & equipment",
     buyAndSell: "Buy & sell",
-    buyAndSellSub: "Trade pre-owned equipment with other professionals",
+    buyAndSellSub: "Trade pre-owned equipment",
   },
 
   // ── Suppliers ────────────────────────────────────────────────────────────
@@ -631,6 +631,8 @@ const en = {
     postAndSend: "Accept & post",
     posting: "Posting...",
     postFailed: "Failed to post. Please try again.",
+    postSetupPending:
+      "The job posting system setup is still being applied. Please try again shortly.",
     jobTitle: "Job title",
     jobTitlePh: "e.g. Line Cook, Restaurant Manager",
     company: "Company / outlet name (optional)",
@@ -769,7 +771,7 @@ const en = {
 
   // ── About ─────────────────────────────────────────────────────────────────
   about: {
-    pageTitle: "Why Choose Our Platform",
+    pageTitle: "About Us",
     pageSubtitle: "Singapore's most trusted F&B supplier network",
     heroTitle: "Connect. Trade. Grow.",
     heroSub: "The all-in-one platform for Singapore's F&B industry — find suppliers, trade equipment, and grow your business.\nFind the best.",

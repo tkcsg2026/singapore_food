@@ -7,6 +7,11 @@ function clampText(value: unknown, maxLen: number): string {
   return s.length > maxLen ? s.slice(0, maxLen) : s;
 }
 
+function isMissingTableError(error: unknown): boolean {
+  const code = (error as { code?: string } | null)?.code;
+  return code === "42P01";
+}
+
 export async function GET(req: NextRequest) {
   const supabase = createServerSupabaseClient();
   if (!supabase) return NextResponse.json([]);
@@ -26,6 +31,12 @@ export async function GET(req: NextRequest) {
       .select("*")
       .order("created_at", { ascending: false })
       .limit(limit);
+    if (error && isMissingTableError(error)) {
+      return NextResponse.json(
+        { error: "job_notices setup is pending", code: "JOB_NOTICES_NOT_READY" },
+        { status: 503 }
+      );
+    }
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json(data ?? []);
   }
@@ -36,6 +47,12 @@ export async function GET(req: NextRequest) {
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(limit);
+  if (error && isMissingTableError(error)) {
+    return NextResponse.json(
+      { error: "job_notices setup is pending", code: "JOB_NOTICES_NOT_READY" },
+      { status: 503 }
+    );
+  }
   if (error) return NextResponse.json([]);
   return NextResponse.json(data ?? []);
 }
@@ -70,6 +87,12 @@ export async function POST(req: NextRequest) {
   }
 
   const { data, error } = await admin.from("job_notices").insert(row).select("*").single();
+  if (error && isMissingTableError(error)) {
+    return NextResponse.json(
+      { error: "job_notices setup is pending", code: "JOB_NOTICES_NOT_READY" },
+      { status: 503 }
+    );
+  }
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
@@ -93,6 +116,12 @@ export async function DELETE(req: NextRequest) {
     .eq("id", id)
     .select("*")
     .single();
+  if (error && isMissingTableError(error)) {
+    return NextResponse.json(
+      { error: "job_notices setup is pending", code: "JOB_NOTICES_NOT_READY" },
+      { status: 503 }
+    );
+  }
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }

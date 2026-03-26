@@ -166,7 +166,7 @@ const About = () => {
       {introText && (
         <section className="border-b border-border bg-muted/30 overflow-hidden w-full">
           <div className="container py-8 min-w-0">
-            <p className="text-muted-foreground leading-relaxed max-w-3xl whitespace-pre-line break-words-safe">{introText}</p>
+            <p className="text-muted-foreground leading-relaxed max-w-3xl whitespace-pre-line break-words-safe text-center mx-auto">{introText}</p>
           </div>
         </section>
       )}

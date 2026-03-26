@@ -128,7 +128,11 @@ export default function JobVacancies() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        setPostError(err?.error ?? j.postFailed);
+        if (err?.code === "JOB_NOTICES_NOT_READY") {
+          setPostError(j.postSetupPending);
+        } else {
+          setPostError(err?.error ?? j.postFailed);
+        }
         return;
       }
       const encoded = encodeURIComponent(whatsappMessage);
