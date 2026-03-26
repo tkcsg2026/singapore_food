@@ -41,10 +41,23 @@ export function ChatbotWidget() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [loading, setLoading] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (open) endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, open, loading]);
+
+  const autoResizeInput = useCallback(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const next = Math.min(el.scrollHeight, 140);
+    el.style.height = `${Math.max(next, 44)}px`;
+  }, []);
+
+  useEffect(() => {
+    autoResizeInput();
+  }, [input, autoResizeInput]);
 
   const sendText = useCallback(
     async (raw: string) => {
@@ -177,6 +190,7 @@ export function ChatbotWidget() {
                   {c.placeholder}
                 </label>
                 <textarea
+                  ref={inputRef}
                   id="chatbot-input"
                   rows={1}
                   value={input}
@@ -190,7 +204,7 @@ export function ChatbotWidget() {
                   placeholder={c.placeholder}
                   disabled={loading}
                   className={cn(
-                    "flex-1 min-h-[44px] max-h-24 resize-none rounded-xl border border-input bg-background px-3 py-2.5 text-sm",
+                    "flex-1 min-h-[44px] max-h-[140px] resize-none overflow-y-auto rounded-xl border border-input bg-background px-3 py-2.5 text-sm",
                     "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                     "disabled:opacity-60",
                   )}

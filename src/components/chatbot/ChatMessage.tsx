@@ -51,7 +51,7 @@ export function ChatMessage({
     >
       <div
         className={cn(
-          "max-w-[min(100%,20rem)] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm transition-colors",
+          "inline-block w-fit max-w-[min(92%,22rem)] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm transition-colors",
           isUser
             ? "bg-primary text-primary-foreground rounded-br-md"
             : "bg-muted/90 text-foreground border border-border/60 rounded-bl-md",

@@ -75,6 +75,33 @@ export function normalizeForMatch(text: string): string {
     .trim();
 }
 
+const SIMPLE_GREETINGS = [
+  "hi",
+  "hello",
+  "hey",
+  "good morning",
+  "good afternoon",
+  "good evening",
+  "yo",
+  "hiya",
+  "how are you",
+  "こんにちは",
+  "こんばんは",
+  "おはよう",
+  "やあ",
+  "もしもし",
+] as const;
+
+export function isSimpleGreeting(question: string): boolean {
+  const n = normalizeForMatch(question);
+  if (!n) return false;
+  if (n.length > 64) return false;
+  return SIMPLE_GREETINGS.some((g) => {
+    const ng = normalizeForMatch(g);
+    return n === ng || n.startsWith(`${ng} `) || n.endsWith(` ${ng}`);
+  });
+}
+
 function scoreEntry(normalized: string, keywords: string[]): number {
   let score = 0;
   for (const raw of keywords) {

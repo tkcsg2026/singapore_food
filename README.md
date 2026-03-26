@@ -73,7 +73,14 @@ src/
 
 1. Push to GitHub
 2. Import in [vercel.com](https://vercel.com)
-3. Set environment variables (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY)
+3. Set environment variables:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY` (required for server-side admin APIs)
+   - `OPENAI_API_KEY` (required for AI chatbot responses)
+   - If you previously used `OPENAPI_API_KEY` or `openai_api_key`, it is still accepted, but migrate to `OPENAI_API_KEY`.
+   - Optional: `OPENAI_MODEL` (default: `gpt-4o-mini`)
+   - Optional: `OPENAI_API_BASE` (only if you use an OpenAI-compatible proxy)
 4. Deploy
 
 ## Documentation
