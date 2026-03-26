@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { MessageCircle, X, Send, Loader2 } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { useAuth } from "@/hooks/useAuth";
 import { getSupabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { ChatMessage } from "./ChatMessage";
+import { ChatMessage, BotAvatar, UserAvatar } from "./ChatMessage";
 import { StarterPrompts } from "./StarterPrompts";
 import type { ChatbotApiResponse } from "@/types/chatbot";
 
@@ -34,6 +35,7 @@ function getOrCreateSessionId(): string {
 
 export function ChatbotWidget() {
   const { t, lang } = useTranslation();
+  const { profile } = useAuth();
   const c = t.chatbot;
   const panelId = useId();
   const [open, setOpen] = useState(false);
@@ -51,7 +53,7 @@ export function ChatbotWidget() {
     const el = inputRef.current;
     if (!el) return;
     el.style.height = "auto";
-    const next = Math.min(el.scrollHeight, 140);
+    const next = Math.min(el.scrollHeight, 120);
     el.style.height = `${Math.max(next, 44)}px`;
   }, []);
 
@@ -125,33 +127,42 @@ export function ChatbotWidget() {
       <div
         className={cn(
           "fixed z-[56] flex flex-col items-start gap-2 pointer-events-none",
-          "left-[max(1rem,env(safe-area-inset-left))]",
-          "bottom-[max(1rem,env(safe-area-inset-bottom))]",
+          "left-[max(0.75rem,env(safe-area-inset-left))]",
+          "bottom-[max(0.75rem,env(safe-area-inset-bottom))]",
         )}
       >
+        {/* ── Chat panel ─────────────────────────────────────────────────────── */}
         <div
           id={panelId}
           role="dialog"
           aria-label={c.title}
           aria-hidden={!open}
           className={cn(
-            "pointer-events-auto w-[min(100vw-2rem,22rem)] sm:w-[24rem] origin-bottom-left transition-all duration-200 ease-out motion-reduce:transition-none",
+            "pointer-events-auto",
+            "w-[calc(100vw-1.5rem)] sm:w-[36rem]",
+            "origin-bottom-left transition-all duration-200 ease-out motion-reduce:transition-none",
             open
               ? "opacity-100 scale-100 translate-y-0"
               : "opacity-0 scale-95 translate-y-2 pointer-events-none h-0 overflow-hidden",
           )}
         >
-          <div className="flex max-h-[min(70vh,28rem)] min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-xl shadow-black/10">
-            <div className="flex items-start justify-between gap-2 border-b border-border bg-muted/40 px-4 py-3">
-              <div className="min-w-0">
+          <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-2xl shadow-black/20 max-h-[min(90dvh,52rem)]">
+
+            {/* Header */}
+            <div className="flex items-center gap-3 border-b border-border bg-gradient-to-r from-primary/8 to-primary/4 px-4 py-3 shrink-0">
+              <BotAvatar />
+              <div className="min-w-0 flex-1">
                 <h2 className="text-sm font-bold tracking-tight text-foreground">{c.title}</h2>
-                <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{c.subtitle}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-sm" />
+                  <p className="text-xs text-muted-foreground leading-none">{c.subtitle}</p>
+                </div>
               </div>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 shrink-0 rounded-full"
+                className="h-8 w-8 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
                 onClick={() => setOpen(false)}
                 aria-label={c.closeAssistant}
               >
@@ -159,33 +170,59 @@ export function ChatbotWidget() {
               </Button>
             </div>
 
-            <ScrollArea className="min-h-[10rem] max-h-[min(42vh,18rem)] flex-1 basis-0 px-3 py-3">
-              <div className="space-y-3 pr-2">
+            {/* Messages */}
+            <ScrollArea className="flex-1 min-h-[16rem] max-h-[min(62dvh,36rem)] basis-0 px-4 py-4">
+              <div className="space-y-4 pr-1">
                 {messages.length === 0 && !loading && (
-                  <p className="text-xs text-muted-foreground leading-relaxed px-0.5">{c.subtitle}</p>
+                  <div className="flex items-end gap-2">
+                    <BotAvatar />
+                    <div className="max-w-[calc(100%-3rem)] w-fit rounded-2xl rounded-bl-sm bg-muted/90 border border-border/50 px-4 py-2.5 text-sm leading-relaxed text-muted-foreground shadow-sm">
+                      {c.subtitle}
+                    </div>
+                  </div>
                 )}
+
                 {messages.map((m) => (
-                  <ChatMessage key={m.id} role={m.role}>
+                  <ChatMessage
+                    key={m.id}
+                    role={m.role}
+                    userAvatarUrl={profile?.avatar_url}
+                    userName={profile?.name}
+                  >
                     {m.content}
                   </ChatMessage>
                 ))}
+
+                {/* Typing indicator */}
                 {loading && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground px-1 py-1">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
-                    <span>{c.thinking}</span>
+                  <div className="flex items-end gap-2">
+                    <BotAvatar />
+                    <div className="flex gap-1.5 items-center bg-muted/90 border border-border/50 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
+                      <span className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:0ms]" />
+                      <span className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:160ms]" />
+                      <span className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:320ms]" />
+                    </div>
                   </div>
                 )}
+
                 <div ref={endRef} />
               </div>
             </ScrollArea>
 
-            <div className="border-t border-border px-3 pt-2 pb-3 space-y-2 bg-card">
+            {/* Starter prompts + input */}
+            <div className="border-t border-border px-3 pt-2.5 pb-3 space-y-2.5 bg-card shrink-0">
               <StarterPrompts
                 prompts={messages.length === 0 && !loading ? c.starters : []}
                 onSelect={(p) => void sendText(p)}
                 disabled={loading}
               />
+
               <form onSubmit={onSubmit} className="flex gap-2 items-end">
+                <UserAvatar
+                  url={profile?.avatar_url}
+                  name={profile?.name}
+                  size="sm"
+                />
                 <label htmlFor="chatbot-input" className="sr-only">
                   {c.placeholder}
                 </label>
@@ -204,7 +241,7 @@ export function ChatbotWidget() {
                   placeholder={c.placeholder}
                   disabled={loading}
                   className={cn(
-                    "flex-1 min-h-[44px] max-h-[140px] resize-none overflow-y-auto rounded-xl border border-input bg-background px-3 py-2.5 text-sm",
+                    "flex-1 min-h-[44px] max-h-[120px] resize-none overflow-y-auto rounded-xl border border-input bg-background px-3 py-2.5 text-sm",
                     "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                     "disabled:opacity-60",
                   )}
@@ -216,13 +253,18 @@ export function ChatbotWidget() {
                   disabled={loading || !input.trim()}
                   aria-label={c.send}
                 >
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
                 </Button>
               </form>
             </div>
           </div>
         </div>
 
+        {/* ── Toggle button ───────────────────────────────────────────────────── */}
         <Button
           type="button"
           onClick={() => setOpen((o) => !o)}
