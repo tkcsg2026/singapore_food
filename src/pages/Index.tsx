@@ -217,42 +217,42 @@ const Index = () => {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8 min-w-0">
             <Link href="/suppliers" className="group block h-full opacity-0-init animate-fade-in-up reveal-stagger-1">
-              <div className="flex h-full min-h-[320px] sm:min-h-[340px] flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-md transition-shadow duration-300 card-lift group-hover:shadow-xl group-hover:border-black/18">
-                <div className="relative w-full aspect-[4/3] shrink-0 overflow-hidden bg-muted">
+              <div className="flex h-full min-h-[260px] sm:min-h-[280px] flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-md transition-shadow duration-300 card-lift group-hover:shadow-xl group-hover:border-black/18">
+                <div className="relative w-full aspect-[16/9] shrink-0 overflow-hidden bg-white">
                   <Image
                     src={s1}
                     alt=""
                     fill
-                    className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                    className="object-contain p-3 transition-transform duration-500 ease-out group-hover:scale-[1.04]"
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
                   />
                 </div>
-                <div className="flex flex-1 flex-col items-center justify-center text-center px-5 py-6 sm:px-6 sm:py-7">
+                <div className="flex flex-1 flex-col items-center justify-center text-center px-5 py-4 sm:px-6 sm:py-5">
                   <h3 className="text-base sm:text-lg md:text-xl leading-snug">
                     {t.home.findSuppliers}
                   </h3>
-                  <p className="mt-2.5 sm:mt-3 max-w-[280px] text-xs sm:text-sm leading-relaxed">
+                  <p className="mt-2 sm:mt-2.5 max-w-[280px] text-xs sm:text-sm leading-relaxed">
                     {t.home.findSuppliersSub}
                   </p>
                 </div>
               </div>
             </Link>
             <Link href="/marketplace" className="group block h-full opacity-0-init animate-fade-in-up reveal-stagger-2">
-              <div className="flex h-full min-h-[320px] sm:min-h-[340px] flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-md transition-shadow duration-300 card-lift group-hover:shadow-xl group-hover:border-black/18">
-                <div className="relative w-full aspect-[4/3] shrink-0 overflow-hidden bg-muted">
+              <div className="flex h-full min-h-[260px] sm:min-h-[280px] flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-md transition-shadow duration-300 card-lift group-hover:shadow-xl group-hover:border-black/18">
+                <div className="relative w-full aspect-[16/9] shrink-0 overflow-hidden bg-white">
                   <Image
                     src={s2}
                     alt=""
                     fill
-                    className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                    className="object-contain p-3 transition-transform duration-500 ease-out group-hover:scale-[1.04]"
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
                   />
                 </div>
-                <div className="flex flex-1 flex-col items-center justify-center text-center px-5 py-6 sm:px-6 sm:py-7">
+                <div className="flex flex-1 flex-col items-center justify-center text-center px-5 py-4 sm:px-6 sm:py-5">
                   <h3 className="text-base sm:text-lg md:text-xl leading-snug">
                     {t.home.buyAndSell}
                   </h3>
-                  <p className="mt-2.5 sm:mt-3 max-w-[300px] text-xs sm:text-sm leading-relaxed">
+                  <p className="mt-2 sm:mt-2.5 max-w-[300px] text-xs sm:text-sm leading-relaxed">
                     {t.home.buyAndSellSub}
                   </p>
                 </div>
