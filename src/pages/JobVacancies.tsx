@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, ClipboardList, ListOrdered, MessageCircle } from "lucide-react";
+import { ArrowLeft, Briefcase, CheckCircle2, ChevronDown, ChevronUp, ClipboardList, ListOrdered, MapPin, MessageCircle, RefreshCw } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +34,21 @@ type CompensationKey =
 type ExperienceKey = "entry" | "y1_2" | "y3_5" | "y5plus";
 type EligibilityKey = "scPr" | "open" | "inDesc";
 
+interface JobNotice {
+  id: string;
+  title: string;
+  company?: string;
+  employment?: string;
+  role_category?: string;
+  region?: string;
+  compensation?: string;
+  experience?: string;
+  eligibility?: string;
+  description?: string;
+  created_at: string;
+  status: string;
+}
+
 const WA_MAX = 3800;
 
 const HERO_IMAGE =
@@ -41,6 +56,108 @@ const HERO_IMAGE =
 
 function optLabel(record: Record<string, string>, key: string): string {
   return record[key] ?? key;
+}
+
+function JobListingCard({
+  notice,
+  j,
+  phoneDigits,
+}: {
+  notice: JobNotice;
+  j: ReturnType<typeof useTranslation>["t"]["jobs"];
+  phoneDigits: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const desc = notice.description ?? "";
+  const SHORT = 160;
+  const isLong = desc.length > SHORT;
+
+  const badges = [
+    notice.employment ? optLabel(j.employmentOpts, notice.employment) : null,
+    notice.region ? optLabel(j.regionOpts, notice.region) : null,
+    notice.compensation ? optLabel(j.compensationOpts, notice.compensation) : null,
+    notice.experience ? optLabel(j.experienceOpts, notice.experience) : null,
+    notice.eligibility ? optLabel(j.eligibilityOpts, notice.eligibility) : null,
+  ].filter(Boolean) as string[];
+
+  const waText = [
+    `[${j.msgHeader}]`,
+    `${j.msgTitle}: ${notice.title}`,
+    notice.company ? `${j.msgCompany}: ${notice.company}` : null,
+    `${j.msgType}: ${optLabel(j.employmentOpts, notice.employment ?? "")}`,
+    `${j.msgCategory}: ${optLabel(j.roleOpts ?? {}, notice.role_category ?? "")}`,
+    `${j.msgRegion}: ${optLabel(j.regionOpts, notice.region ?? "")}`,
+    `${j.msgPay}: ${optLabel(j.compensationOpts, notice.compensation ?? "")}`,
+    "",
+    desc,
+  ]
+    .filter((l) => l !== null)
+    .join("\n");
+
+  return (
+    <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col gap-3 transition-shadow hover:shadow-md">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="font-bold text-base leading-snug truncate">{notice.title}</h3>
+          {notice.company && (
+            <p className="text-sm text-muted-foreground mt-0.5 truncate">{notice.company}</p>
+          )}
+        </div>
+        <span className="text-[11px] text-muted-foreground whitespace-nowrap flex-shrink-0 pt-0.5">
+          {j.postedAt}: {new Date(notice.created_at).toLocaleDateString()}
+        </span>
+      </div>
+
+      {badges.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {badges.map((b, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-primary/8 border border-primary/15 text-primary"
+            >
+              {i === 0 && <Briefcase className="h-3 w-3 opacity-70" />}
+              {i === 1 && <MapPin className="h-3 w-3 opacity-70" />}
+              {b}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {desc && (
+        <div className="text-sm text-muted-foreground leading-relaxed">
+          <p className="whitespace-pre-wrap break-words">
+            {expanded || !isLong ? desc : `${desc.slice(0, SHORT)}…`}
+          </p>
+          {isLong && (
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              {expanded ? (
+                <><ChevronUp className="h-3.5 w-3.5" />{j.collapseDesc}</>
+              ) : (
+                <><ChevronDown className="h-3.5 w-3.5" />{j.expandDesc}</>
+              )}
+            </button>
+          )}
+        </div>
+      )}
+
+      {phoneDigits.length >= 8 && (
+        <div className="mt-1">
+          <a
+            href={`https://wa.me/${phoneDigits}?text=${encodeURIComponent(waText)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-xl bg-[#25D366]/10 border border-[#25D366]/30 text-[#1a9e4d] hover:bg-[#25D366]/20 transition-colors"
+          >
+            <MessageCircle className="h-3.5 w-3.5" />
+            {j.applyViaWA}
+          </a>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function JobVacancies() {
@@ -59,10 +176,15 @@ export default function JobVacancies() {
   const [agreed, setAgreed] = useState(false);
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
+  const [postSuccess, setPostSuccess] = useState(false);
+  const successRef = useRef<HTMLDivElement>(null);
 
   const [phoneDigits, setPhoneDigits] = useState(() =>
     sanitizeWhatsAppDigits(process.env.NEXT_PUBLIC_JOBS_WHATSAPP ?? "")
   );
+
+  const [listings, setListings] = useState<JobNotice[]>([]);
+  const [listingsLoading, setListingsLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,6 +201,25 @@ export default function JobVacancies() {
       cancelled = true;
     };
   }, []);
+
+  const fetchListings = useCallback(async () => {
+    setListingsLoading(true);
+    try {
+      const res = await fetch("/api/job-notices?limit=50");
+      if (res.ok) {
+        const data = await res.json().catch(() => []);
+        setListings(Array.isArray(data) ? data : []);
+      }
+    } catch {
+      /* silent */
+    } finally {
+      setListingsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchListings();
+  }, [fetchListings]);
 
   const lines = [
     j.msgHeader,
@@ -109,6 +250,7 @@ export default function JobVacancies() {
     if (!agreed) return;
     setPosting(true);
     setPostError(null);
+    setPostSuccess(false);
     try {
       const res = await fetch("/api/job-notices", {
         method: "POST",
@@ -137,6 +279,22 @@ export default function JobVacancies() {
       }
       const encoded = encodeURIComponent(whatsappMessage);
       window.open(`https://wa.me/${phoneDigits}?text=${encoded}`, "_blank", "noopener,noreferrer");
+
+      setJobTitle("");
+      setCompany("");
+      setEmployment("fullTime");
+      setRoleCategory("kitchen");
+      setRegion("islandwide");
+      setCompensation("negotiate");
+      setExperience("entry");
+      setEligibility("open");
+      setDescription("");
+      setAgreed(false);
+      setPostSuccess(true);
+      fetchListings();
+      setTimeout(() => {
+        successRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
     } catch {
       setPostError(j.postFailed);
     } finally {
@@ -413,6 +571,16 @@ export default function JobVacancies() {
                           {postError}
                         </div>
                       )}
+
+                      {postSuccess && (
+                        <div
+                          ref={successRef}
+                          className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 font-medium shadow-sm"
+                        >
+                          <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                          <span>{j.postSuccess}</span>
+                        </div>
+                      )}
                     </>
                   ) : (
                     <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground space-y-3">
@@ -428,6 +596,61 @@ export default function JobVacancies() {
           </div>
         </div>
       </div>
+
+      {/* ── Job Listings ─────────────────────────────────────────────────── */}
+      <section className="container max-w-6xl py-10 md:py-14 min-w-0 w-full border-t border-border">
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <h2 className="text-xl md:text-2xl font-black tracking-tight flex items-center gap-2">
+            <Briefcase className="h-5 w-5 text-primary flex-shrink-0" />
+            {j.listingsTitle}
+          </h2>
+          <button
+            onClick={fetchListings}
+            disabled={listingsLoading}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${listingsLoading ? "animate-spin" : ""}`} />
+            {listingsLoading ? t.common.loading : t.admin?.jobsRefresh ?? "Refresh"}
+          </button>
+        </div>
+
+        {listingsLoading && listings.length === 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="rounded-2xl border border-border bg-card p-5 animate-pulse space-y-3">
+                <div className="h-4 bg-muted rounded w-2/3" />
+                <div className="h-3 bg-muted rounded w-1/3" />
+                <div className="flex gap-2">
+                  <div className="h-5 bg-muted rounded-full w-20" />
+                  <div className="h-5 bg-muted rounded-full w-16" />
+                </div>
+                <div className="space-y-1.5">
+                  <div className="h-2.5 bg-muted rounded w-full" />
+                  <div className="h-2.5 bg-muted rounded w-4/5" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : listings.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border bg-muted/20 py-12 text-center text-sm text-muted-foreground">
+            {j.noListings}
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {listings.map((notice) => (
+                <JobListingCard
+                  key={notice.id}
+                  notice={notice}
+                  j={j}
+                  phoneDigits={phoneDigits}
+                />
+              ))}
+            </div>
+            <p className="mt-4 text-center text-xs text-muted-foreground">{j.listingsNote}</p>
+          </>
+        )}
+      </section>
     </Layout>
   );
 }

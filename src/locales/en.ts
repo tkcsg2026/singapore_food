@@ -712,6 +712,14 @@ const en = {
     step2: "Choose employment type, location, pay band, and eligibility — they are merged into the WhatsApp draft.",
     step3: "Open WhatsApp, review the message, and send. If WhatsApp is not configured, use the contact form instead.",
     formCardTitle: "Job listing form",
+    postSuccess: "✅ Job posted successfully. Please send the message on WhatsApp.",
+    listingsTitle: "Current Job Listings",
+    noListings: "No job listings at the moment.",
+    postedAt: "Posted",
+    expandDesc: "Read more",
+    collapseDesc: "Show less",
+    listingsNote: "Showing the latest 50 listings",
+    applyViaWA: "Enquire via WhatsApp",
   },
 
   // ── Site assistant (floating chatbot) ─────────────────────────────────────

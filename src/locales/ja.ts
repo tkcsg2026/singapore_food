@@ -713,6 +713,14 @@ const ja: Translations = {
     step2: "雇用形態・勤務地・待遇・応募資格を選ぶと、WhatsApp用の文面に反映されます。",
     step3: "WhatsAppで文面を確認して送信してください。未設定の場合はお問い合わせフォームをご利用ください。",
     formCardTitle: "求人入力フォーム",
+    postSuccess: "✅ 求人が投稿されました。WhatsApp でメッセージを送信してください。",
+    listingsTitle: "掲載中の求人",
+    noListings: "現在掲載中の求人はありません。",
+    postedAt: "掲載日",
+    expandDesc: "続きを見る",
+    collapseDesc: "閉じる",
+    listingsNote: "直近50件を表示しています",
+    applyViaWA: "WhatsApp で応募・問い合わせ",
   },
 
   // ── Site assistant (floating chatbot) ─────────────────────────────────────
