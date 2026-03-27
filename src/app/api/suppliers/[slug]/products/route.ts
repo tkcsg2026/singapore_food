@@ -48,6 +48,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     image:             str(body.image),
     moq:               str(body.moq),
     country_of_origin: str(body.country_of_origin),
+    country_of_origin_en: str(body.country_of_origin_en),
     weight:            str(body.weight),
     quantity:          str(body.quantity),
     size_w:            str(body.size_w),
@@ -65,7 +66,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    // Backward compatibility: if DB migration for country_of_origin_en is not yet applied,
+    // retry without the new column instead of hard-failing the save.
+    if (error.message.includes("country_of_origin_en")) {
+      const fallbackPayload = { ...payload };
+      delete fallbackPayload.country_of_origin_en;
+      const retry = await admin
+        .from("supplier_products")
+        .insert(fallbackPayload)
+        .select()
+        .single();
+      if (retry.error) return NextResponse.json({ error: retry.error.message }, { status: 500 });
+      return NextResponse.json(retry.data);
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
   return NextResponse.json(data);
 }
 
@@ -94,6 +110,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ slug
     image:             str(body.image),
     moq:               str(body.moq),
     country_of_origin: str(body.country_of_origin),
+    country_of_origin_en: str(body.country_of_origin_en),
     weight:            str(body.weight),
     quantity:          str(body.quantity),
     size_w:            str(body.size_w),
@@ -113,7 +130,22 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ slug
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    if (error.message.includes("country_of_origin_en")) {
+      const fallbackPayload = { ...payload };
+      delete fallbackPayload.country_of_origin_en;
+      const retry = await admin
+        .from("supplier_products")
+        .update(fallbackPayload)
+        .eq("id", id)
+        .eq("supplier_id", supplier.id)
+        .select()
+        .single();
+      if (retry.error) return NextResponse.json({ error: retry.error.message }, { status: 500 });
+      return NextResponse.json(retry.data);
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
   return NextResponse.json(data);
 }
 

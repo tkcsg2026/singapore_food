@@ -495,6 +495,7 @@ const ja: Translations = {
     productVideoHint: "MP4 / WebM ファイルをアップロード（最大200MB）、またはYouTube / VimeoのURLを貼り付けてください。",
     productVideoUrlPlaceholder: "https://youtube.com/watch?v=... または直接MP4のURL",
     productCountryOfOrigin: "原産国（日本語）",
+    productCountryOfOriginEn: "原産国（英語）",
     productWeight: "重量",
     productQuantity: "入数",
     productDimensions: "サイズ（幅×奥行き×高さ）",
@@ -721,6 +722,8 @@ const ja: Translations = {
     collapseDesc: "閉じる",
     listingsNote: "直近50件を表示しています",
     applyViaWA: "WhatsApp で応募・問い合わせ",
+    seekerLabel: "求職者",
+    contactSeekerWA: "WhatsApp で連絡する",
   },
 
   // ── Site assistant (floating chatbot) ─────────────────────────────────────

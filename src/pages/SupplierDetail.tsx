@@ -8,6 +8,7 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { useFetch } from "@/hooks/useSupabaseData";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useLoginPrompt } from "@/components/LoginPromptModal";
+import type { CategoryRow } from "@/types/database";
 
 /** Embeds a YouTube / Vimeo iframe or native <video> for a product video URL. */
 function ProductVideoEmbed({ url, className = "" }: { url: string; className?: string }) {
@@ -44,10 +45,25 @@ function ProductVideoEmbed({ url, className = "" }: { url: string; className?: s
   );
 }
 
+/** Returns a preview thumbnail URL for YouTube/Vimeo links. */
+function getVideoThumbnail(url?: string): string | null {
+  if (!url) return null;
+  const ytMatch =
+    url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/) ||
+    url.match(/youtube\.com\/embed\/([A-Za-z0-9_-]{11})/);
+  if (ytMatch) return `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
+
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) return `https://vumbnail.com/${vimeoMatch[1]}.jpg`;
+
+  return null;
+}
+
 const SupplierDetail = () => {
   const params = useParams();
   const slug = typeof params?.slug === "string" ? params.slug : "";
   const { data: supplier, loading } = useFetch<any>(`/api/suppliers/${slug}`, [slug]);
+  const { data: tagCategories } = useFetch<(CategoryRow & { type: "tag"; label_ja?: string | null })[]>("/api/categories?type=tag");
   const [activeTab, setActiveTab] = useState("about");
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -70,7 +86,18 @@ const SupplierDetail = () => {
   ].filter(Boolean) as string[];
   const displayArea = lang === "ja" ? (supplier?.area_ja || supplier?.area) : (supplier?.area || supplier?.area_ja);
   const tagMap = (t.suppliers as { tagMap?: Record<string, string> }).tagMap ?? {};
-  const translateTag = (tag: string) => tagMap[tag] ?? tag;
+  const dynamicTagMap = new Map<string, string>(
+    (tagCategories || []).flatMap((cat) => {
+      const labelEn = cat.label?.trim();
+      const labelJa = cat.label_ja?.trim();
+      if (!labelEn) return [];
+      const pairs: Array<[string, string]> = [[labelEn, labelEn]];
+      if (labelJa) pairs.push([labelJa, labelEn]);
+      if (cat.value) pairs.push([cat.value, labelEn]);
+      return pairs;
+    })
+  );
+  const translateTag = (tag: string) => dynamicTagMap.get(tag) ?? tagMap[tag] ?? tag;
   const galleryImages = [supplier?.logo, supplier?.image_2, supplier?.image_3].filter(Boolean) as string[];
   const catalogUrl = supplier?.catalog_url?.trim();
   const contactName = supplier?.whatsapp_contact_name?.trim();
@@ -225,10 +252,27 @@ const SupplierDetail = () => {
                 {products.map((p: any) => (
                   <div key={p.id} role="button" tabIndex={0} onClick={() => setSelectedProduct(p.id)} onKeyDown={(e) => e.key === "Enter" && setSelectedProduct(p.id)} className="bg-card border text-left active:opacity-80 w-full cursor-pointer select-none">
                     <div className="relative">
-                      {p.image
-                        ? <img src={p.image} alt={p.name} className="w-full h-auto block" referrerPolicy="no-referrer" />
-                        : <div className="aspect-[4/3] bg-muted flex items-center justify-center"><span className="text-muted-foreground text-xs">No image</span></div>
-                      }
+                      {(() => {
+                        const videoThumb = getVideoThumbnail(p.video_url);
+                        if (p.image) {
+                          return <img src={p.image} alt={p.name} className="w-full h-auto block" referrerPolicy="no-referrer" />;
+                        }
+                        if (videoThumb) {
+                          return <img src={videoThumb} alt={p.name} className="w-full h-auto block" referrerPolicy="no-referrer" />;
+                        }
+                        if (p.video_url) {
+                          return (
+                            <div className="aspect-[4/3] bg-black/90 text-white flex items-center justify-center">
+                              <span className="text-xs">{lang === "ja" ? "動画プレビュー" : "Video preview"}</span>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="aspect-[4/3] bg-muted flex items-center justify-center">
+                            <span className="text-muted-foreground text-xs">No image</span>
+                          </div>
+                        );
+                      })()}
                       {p.video_url && (
                         <span className="absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 bg-black/70 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
                           <Video className="h-2.5 w-2.5" />
@@ -240,7 +284,11 @@ const SupplierDetail = () => {
                       <div className="text-xs sm:text-sm font-semibold leading-snug break-words">{p.name}</div>
                       {p.name_en && <div className="text-xs text-muted-foreground break-words">{p.name_en}</div>}
                       {p.temperature && <div className="text-xs text-primary font-medium mt-0.5">{p.temperature}</div>}
-                      {p.country_of_origin && <div className="text-xs text-muted-foreground">{labels.origin}: {p.country_of_origin}</div>}
+                      {(lang === "ja" ? p.country_of_origin : (p.country_of_origin_en || p.country_of_origin)) && (
+                        <div className="text-xs text-muted-foreground">
+                          {labels.origin}: {lang === "ja" ? p.country_of_origin : (p.country_of_origin_en || p.country_of_origin)}
+                        </div>
+                      )}
                       {p.weight && <div className="text-xs text-muted-foreground">{labels.weight}: {p.weight}</div>}
                       {p.quantity && <div className="text-xs text-muted-foreground">{labels.quantity}: {p.quantity}</div>}
                       {(p.size_w || p.size_d || p.size_h) && (
@@ -305,7 +353,7 @@ const SupplierDetail = () => {
                     <span className="inline-block bg-primary/10 text-primary text-xs font-semibold px-2 py-1 rounded-md">{product.temperature}</span>
                   )}
                   <dl className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2">
-                    <div><dt className="text-xs text-muted-foreground">{labels.origin}</dt><dd className="text-sm font-medium">{product.country_of_origin || "—"}</dd></div>
+                    <div><dt className="text-xs text-muted-foreground">{labels.origin}</dt><dd className="text-sm font-medium">{lang === "ja" ? (product.country_of_origin || "—") : (product.country_of_origin_en || product.country_of_origin || "—")}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">{labels.weight}</dt><dd className="text-sm font-medium">{product.weight || "—"}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">{labels.quantity}</dt><dd className="text-sm font-medium">{product.quantity || "—"}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">{labels.storage}</dt><dd className="text-sm font-medium">{product.storage_condition || "—"}</dd></div>

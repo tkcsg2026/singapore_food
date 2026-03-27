@@ -794,7 +794,7 @@ function ProductManager({ slug }: { slug: string }) {
   const [videoUploading, setVideoUploading] = useState(false);
   const [form, setForm] = useState({
     name: "", name_en: "", image: "", moq: "",
-    country_of_origin: "", weight: "", quantity: "",
+    country_of_origin: "", country_of_origin_en: "", weight: "", quantity: "",
     size_w: "", size_d: "", size_h: "", size_unit: "cm",
     storage_condition: "", temperature: "", video_url: "",
   });
@@ -812,7 +812,7 @@ function ProductManager({ slug }: { slug: string }) {
   };
 
   const clearForm = () => {
-    setForm({ name: "", name_en: "", image: "", moq: "", country_of_origin: "", weight: "", quantity: "", size_w: "", size_d: "", size_h: "", size_unit: "cm", storage_condition: "", temperature: "", video_url: "" });
+    setForm({ name: "", name_en: "", image: "", moq: "", country_of_origin: "", country_of_origin_en: "", weight: "", quantity: "", size_w: "", size_d: "", size_h: "", size_unit: "cm", storage_condition: "", temperature: "", video_url: "" });
     setEditingId(null);
   };
 
@@ -823,6 +823,7 @@ function ProductManager({ slug }: { slug: string }) {
       image: p.image ?? "",
       moq: p.moq ?? "",
       country_of_origin: p.country_of_origin ?? "",
+      country_of_origin_en: p.country_of_origin_en ?? "",
       weight: p.weight ?? "",
       quantity: p.quantity ?? "",
       size_w: p.size_w ?? "",
@@ -914,16 +915,51 @@ function ProductManager({ slug }: { slug: string }) {
                 const file = e.target.files?.[0];
                 if (!file) return;
                 setVideoUploading(true);
-                const fd = new FormData();
-                fd.append("file", file);
-                fd.append("folder", "videos");
                 try {
+                  if (file.size > 200 * 1024 * 1024) {
+                    alert(lang === "ja" ? "動画サイズは200MB以下にしてください。" : "Video size must be 200MB or less.");
+                    return;
+                  }
+
+                  const signRes = await fetch("/api/upload/signed", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      fileName: file.name,
+                      fileType: file.type,
+                      fileSize: file.size,
+                      folder: "videos",
+                    }),
+                  });
+
+                  if (signRes.ok) {
+                    const signed = await signRes.json();
+                    const sb = getSupabase();
+                    if (sb && signed?.bucket && signed?.path && signed?.token) {
+                      const up = await sb.storage
+                        .from(signed.bucket)
+                        .uploadToSignedUrl(signed.path, signed.token, file);
+                      if (!up.error) {
+                        setForm((prev) => ({ ...prev, video_url: signed.publicUrl }));
+                        return;
+                      }
+                    }
+                  }
+
+                  // Fallback: keep legacy server-side upload path.
+                  const fd = new FormData();
+                  fd.append("file", file);
+                  fd.append("folder", "videos");
                   const res = await fetch("/api/upload", { method: "POST", body: fd });
-                  const j = await res.json();
-                  if (j?.url) setForm((prev) => ({ ...prev, video_url: j.url }));
-                  else alert(j?.error ?? (lang === "ja" ? "アップロードに失敗しました。" : "Upload failed."));
-                } catch {
-                  alert(lang === "ja" ? "ネットワークエラー" : "Network error.");
+                  let j: any = null;
+                  try { j = await res.json(); } catch {}
+                  if (res.ok && j?.url) {
+                    setForm((prev) => ({ ...prev, video_url: j.url }));
+                    return;
+                  }
+                  alert(j?.error ?? (lang === "ja" ? "アップロードに失敗しました。" : "Upload failed."));
+                } catch (err: any) {
+                  alert((lang === "ja" ? "ネットワークエラー: " : "Network error: ") + (err?.message || ""));
                 } finally {
                   setVideoUploading(false);
                   e.target.value = "";
@@ -948,9 +984,10 @@ function ProductManager({ slug }: { slug: string }) {
         )}
       </div>
 
-      {/* Row 3: Origin + Weight + Quantity + MOQ */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Row 3: Origin (JA/EN) + Weight + Quantity + MOQ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         <InputField label={t.admin.productCountryOfOrigin} value={form.country_of_origin} onChange={(v) => setForm((p) => ({ ...p, country_of_origin: v }))} />
+        <InputField label={t.admin.productCountryOfOriginEn} value={form.country_of_origin_en} onChange={(v) => setForm((p) => ({ ...p, country_of_origin_en: v }))} />
         <InputField label={t.admin.productWeight} value={form.weight} onChange={(v) => setForm((p) => ({ ...p, weight: v }))} />
         <InputField label={t.admin.productQuantity} value={form.quantity} onChange={(v) => setForm((p) => ({ ...p, quantity: v }))} />
         <InputField label={lang === "ja" ? "MOQ" : "MOQ"} value={form.moq} onChange={(v) => setForm((p) => ({ ...p, moq: v }))} placeholder={lang === "ja" ? "例: 1kg〜" : "e.g. 1kg"} />
@@ -1037,7 +1074,9 @@ function ProductManager({ slug }: { slug: string }) {
                 {p.name_en && <p className="text-xs text-muted-foreground truncate">{p.name_en}</p>}
                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
                   {p.temperature && <span className="text-xs font-medium text-primary">{p.temperature}</span>}
-                  {p.country_of_origin && <span className="text-xs text-muted-foreground">{p.country_of_origin}</span>}
+                  {(lang === "ja" ? p.country_of_origin : (p.country_of_origin_en || p.country_of_origin)) && (
+                    <span className="text-xs text-muted-foreground">{lang === "ja" ? p.country_of_origin : (p.country_of_origin_en || p.country_of_origin)}</span>
+                  )}
                   {p.weight && <span className="text-xs text-muted-foreground">{p.weight}</span>}
                   {p.quantity && <span className="text-xs text-muted-foreground">{p.quantity}</span>}
                   {(p.size_w || p.size_d || p.size_h) && (

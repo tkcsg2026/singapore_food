@@ -494,6 +494,7 @@ const en = {
     productVideoHint: "Upload an MP4 / WebM file (max 200 MB), OR paste a YouTube / Vimeo URL.",
     productVideoUrlPlaceholder: "https://youtube.com/watch?v=... or direct MP4 URL",
     productCountryOfOrigin: "Country of Origin (Japanese)",
+    productCountryOfOriginEn: "Country of Origin (English)",
     productWeight: "Weight",
     productQuantity: "Quantity",
     productDimensions: "Dimensions (W × D × H)",
@@ -720,6 +721,8 @@ const en = {
     collapseDesc: "Show less",
     listingsNote: "Showing the latest 50 listings",
     applyViaWA: "Enquire via WhatsApp",
+    seekerLabel: "Job Seeker",
+    contactSeekerWA: "Contact via WhatsApp",
   },
 
   // ── Site assistant (floating chatbot) ─────────────────────────────────────

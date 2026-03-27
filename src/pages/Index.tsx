@@ -215,44 +215,44 @@ const Index = () => {
           <h2 className="text-center text-xl md:text-2xl mb-8 md:mb-10 opacity-0-init animate-fade-in-up reveal-stagger-0">
             {t.home.ourServices}
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8 min-w-0">
-            <Link href="/suppliers" className="group block h-full opacity-0-init animate-fade-in-up reveal-stagger-1">
-              <div className="flex h-full min-h-[260px] sm:min-h-[280px] flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-md transition-shadow duration-300 card-lift group-hover:shadow-xl group-hover:border-black/18">
-                <div className="relative w-full aspect-[16/9] shrink-0 overflow-hidden bg-white">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6 md:gap-8 min-w-0 justify-items-center sm:justify-items-stretch">
+            <Link href="/suppliers" className="group block h-full w-[70%] sm:w-full opacity-0-init animate-fade-in-up reveal-stagger-1">
+              <div className="flex h-full min-h-[170px] sm:min-h-[280px] flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-md transition-shadow duration-300 card-lift group-hover:shadow-xl group-hover:border-black/18">
+                <div className="relative w-full aspect-[16/8.5] sm:aspect-[16/9] shrink-0 overflow-hidden bg-white">
                   <Image
                     src={s1}
                     alt=""
                     fill
-                    className="object-contain p-3 transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                    className="object-contain p-2 sm:p-3 transition-transform duration-500 ease-out group-hover:scale-[1.04]"
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
                   />
                 </div>
-                <div className="flex flex-1 flex-col items-center justify-center text-center px-5 py-4 sm:px-6 sm:py-5">
-                  <h3 className="text-base sm:text-lg md:text-xl leading-snug">
+                <div className="flex flex-1 flex-col items-center justify-center text-center px-3 py-2.5 sm:px-6 sm:py-5">
+                  <h3 className="text-[14px] sm:text-lg md:text-xl leading-snug">
                     {t.home.findSuppliers}
                   </h3>
-                  <p className="mt-2 sm:mt-2.5 max-w-[280px] text-xs sm:text-sm leading-relaxed">
+                  <p className="mt-1 sm:mt-2.5 max-w-[280px] text-[11px] sm:text-sm leading-relaxed">
                     {t.home.findSuppliersSub}
                   </p>
                 </div>
               </div>
             </Link>
-            <Link href="/marketplace" className="group block h-full opacity-0-init animate-fade-in-up reveal-stagger-2">
-              <div className="flex h-full min-h-[260px] sm:min-h-[280px] flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-md transition-shadow duration-300 card-lift group-hover:shadow-xl group-hover:border-black/18">
-                <div className="relative w-full aspect-[16/9] shrink-0 overflow-hidden bg-white">
+            <Link href="/marketplace" className="group block h-full w-[70%] sm:w-full opacity-0-init animate-fade-in-up reveal-stagger-2">
+              <div className="flex h-full min-h-[170px] sm:min-h-[280px] flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-md transition-shadow duration-300 card-lift group-hover:shadow-xl group-hover:border-black/18">
+                <div className="relative w-full aspect-[16/8.5] sm:aspect-[16/9] shrink-0 overflow-hidden bg-white">
                   <Image
                     src={s2}
                     alt=""
                     fill
-                    className="object-contain p-3 transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                    className="object-contain p-2 sm:p-3 transition-transform duration-500 ease-out group-hover:scale-[1.04]"
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
                   />
                 </div>
-                <div className="flex flex-1 flex-col items-center justify-center text-center px-5 py-4 sm:px-6 sm:py-5">
-                  <h3 className="text-base sm:text-lg md:text-xl leading-snug">
+                <div className="flex flex-1 flex-col items-center justify-center text-center px-3 py-2.5 sm:px-6 sm:py-5">
+                  <h3 className="text-[14px] sm:text-lg md:text-xl leading-snug">
                     {t.home.buyAndSell}
                   </h3>
-                  <p className="mt-2 sm:mt-2.5 max-w-[300px] text-xs sm:text-sm leading-relaxed">
+                  <p className="mt-1 sm:mt-2.5 max-w-[300px] text-[11px] sm:text-sm leading-relaxed">
                     {t.home.buyAndSellSub}
                   </p>
                 </div>

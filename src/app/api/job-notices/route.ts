@@ -67,7 +67,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Consent required" }, { status: 400 });
   }
 
+  const rawType = body?.post_type;
+  const post_type: "job" | "seeker" =
+    rawType === "seeker" ? "seeker" : "job";
+
   const row = {
+    post_type,
     title: clampText(body?.title, 120),
     company: clampText(body?.company, 120),
     employment: clampText(body?.employment, 24),

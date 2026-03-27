@@ -62,7 +62,9 @@ const News = () => {
                 selectedCategory === cat.value ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
-              {(t.news as { categories?: Record<string, string> }).categories?.[cat.value] ?? cat.label}
+              {lang === "ja"
+                ? (cat.label_ja || cat.label || (t.news as { categories?: Record<string, string> }).categories?.[cat.value] || cat.value)
+                : ((t.news as { categories?: Record<string, string> }).categories?.[cat.value] || cat.label || cat.value)}
             </button>
           ))}
         </div>
@@ -85,7 +87,14 @@ const News = () => {
                   <div className="p-5">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="tag-badge">
-                        {(t.news as { categories?: Record<string, string> }).categories?.[article.category] ?? article.category}
+                        {lang === "ja"
+                          ? ((categories || []).find((c) => c.value === article.category)?.label_ja
+                              || (t.news as { categories?: Record<string, string> }).categories?.[article.category]
+                              || (categories || []).find((c) => c.value === article.category)?.label
+                              || article.category)
+                          : ((t.news as { categories?: Record<string, string> }).categories?.[article.category]
+                              || (categories || []).find((c) => c.value === article.category)?.label
+                              || article.category)}
                       </span>
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Calendar className="h-3 w-3" />

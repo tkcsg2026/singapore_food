@@ -39,6 +39,19 @@ const Suppliers = () => {
 
   const { data: suppliers } = useFetch<SupplierRow[]>("/api/suppliers");
   const { data: categories } = useFetch<CategoryRow[]>("/api/categories?type=supplier");
+  const { data: tagCategories } = useFetch<(CategoryRow & { type: "tag"; label_ja?: string | null })[]>("/api/categories?type=tag");
+
+  const tagLabelMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const cat of tagCategories || []) {
+      const labelEn = cat.label?.trim();
+      const labelJa = cat.label_ja?.trim();
+      if (labelJa && labelEn) map[labelJa] = labelEn;
+      if (cat.value && labelEn) map[cat.value] = labelEn;
+      if (labelEn) map[labelEn] = labelEn;
+    }
+    return map;
+  }, [tagCategories]);
 
   const areas = [
     { value: "central", label: t.suppliers.areas.central },
@@ -199,7 +212,7 @@ const Suppliers = () => {
                   <div className={`min-w-0 ${viewMode === "list" ? "space-y-3" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"}`}>
                     {filtered.map((s, i) => (
                       <AnimatedGridItem key={s.id} index={i}>
-                        <SupplierCard supplier={s} variant={viewMode} rank={selectedCategories.length === 1 ? i + 1 : undefined} />
+                        <SupplierCard supplier={s} variant={viewMode} rank={selectedCategories.length === 1 ? i + 1 : undefined} tagLabelMap={tagLabelMap} />
                       </AnimatedGridItem>
                     ))}
                   </div>
@@ -238,7 +251,7 @@ const Suppliers = () => {
                         <div className={`min-w-0 ${viewMode === "list" ? "space-y-3" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"}`}>
                           {group.map((s, i) => (
                             <AnimatedGridItem key={s.id} index={i}>
-                              <SupplierCard supplier={s} variant={viewMode} rank={selectedCategories.length === 1 ? i + 1 : undefined} />
+                              <SupplierCard supplier={s} variant={viewMode} rank={selectedCategories.length === 1 ? i + 1 : undefined} tagLabelMap={tagLabelMap} />
                             </AnimatedGridItem>
                           ))}
                         </div>

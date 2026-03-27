@@ -66,6 +66,8 @@ export interface Profile {
 export interface JobNoticeRow {
   id: string;
   created_at: string;
+  /** "job" = 求人, "seeker" = 求職者 */
+  post_type?: "job" | "seeker";
   title: string;
   company: string | null;
   employment: string | null;
@@ -122,6 +124,7 @@ export interface SupplierProductRow {
   image: string;
   moq?: string;
   country_of_origin?: string;
+  country_of_origin_en?: string;
   weight?: string;
   quantity?: string;
   storage_condition?: string;
@@ -180,7 +183,7 @@ export interface NewsArticleRow {
 
 export interface CategoryRow {
   id: string;
-  type: "supplier" | "marketplace" | "news";
+  type: "supplier" | "marketplace" | "news" | "tag";
   value: string;
   label: string;
   label_ja?: string | null;

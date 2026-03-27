@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { ArrowLeft, Briefcase, CheckCircle2, ChevronDown, ChevronUp, ClipboardList, ListOrdered, MapPin, MessageCircle, RefreshCw } from "lucide-react";
+import {
+  ArrowLeft, Briefcase, CheckCircle2, ChevronDown, ChevronUp, ClipboardList,
+  ListOrdered, MapPin, MessageCircle, RefreshCw, Plus, User, X,
+} from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,10 +19,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { sanitizeWhatsAppDigits } from "@/lib/jobs-whatsapp";
-import logoImage from "@/assets/logo.png";
 
+type PostType = "job" | "seeker";
 type EmploymentKey = "fullTime" | "partTime" | "contract" | "temp" | "intern";
 type RoleKey = "kitchen" | "service" | "management" | "ops" | "delivery" | "other";
 type RegionKey = "central" | "east" | "west" | "north" | "northEast" | "islandwide" | "other";
@@ -36,6 +44,7 @@ type EligibilityKey = "scPr" | "open" | "inDesc";
 
 interface JobNotice {
   id: string;
+  post_type?: PostType;
   title: string;
   company?: string;
   employment?: string;
@@ -50,14 +59,33 @@ interface JobNotice {
 }
 
 const WA_MAX = 3800;
-
-const HERO_IMAGE =
-  "https://images.unsplash.com/photo-1556911220-bff31c812dba?w=1600&q=80";
+const HERO_IMAGE = "https://images.unsplash.com/photo-1556911220-bff31c812dba?w=1600&q=80";
+/** Characters threshold AND line threshold — whichever is exceeded first shows Read more */
+const SHORT_CHARS = 160;
+const SHORT_LINES = 5;
 
 function optLabel(record: Record<string, string>, key: string): string {
   return record[key] ?? key;
 }
 
+/** True when the text should be clipped — checks both character count and newline count */
+function isLongText(text: string): boolean {
+  if (text.length > SHORT_CHARS) return true;
+  if (text.split("\n").length > SHORT_LINES) return true;
+  return false;
+}
+
+/** Clip the text to SHORT_CHARS chars or SHORT_LINES lines, whichever comes first */
+function clipText(text: string): string {
+  const byChar = text.length > SHORT_CHARS ? `${text.slice(0, SHORT_CHARS)}…` : null;
+  const lines = text.split("\n");
+  const byLines =
+    lines.length > SHORT_LINES ? `${lines.slice(0, SHORT_LINES).join("\n")}…` : null;
+  if (byChar && byLines) return byChar.length < byLines.length ? byChar : byLines;
+  return byChar ?? byLines ?? text;
+}
+
+// ── Card component ────────────────────────────────────────────────────────────
 function JobListingCard({
   notice,
   j,
@@ -69,8 +97,8 @@ function JobListingCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const desc = notice.description ?? "";
-  const SHORT = 160;
-  const isLong = desc.length > SHORT;
+  const long = isLongText(desc);
+  const isSeeker = notice.post_type === "seeker";
 
   const badges = [
     notice.employment ? optLabel(j.employmentOpts, notice.employment) : null,
@@ -81,11 +109,11 @@ function JobListingCard({
   ].filter(Boolean) as string[];
 
   const waText = [
-    `[${j.msgHeader}]`,
+    isSeeker ? "[F&B Portal — 求職者]" : `[${j.msgHeader}]`,
     `${j.msgTitle}: ${notice.title}`,
     notice.company ? `${j.msgCompany}: ${notice.company}` : null,
     `${j.msgType}: ${optLabel(j.employmentOpts, notice.employment ?? "")}`,
-    `${j.msgCategory}: ${optLabel(j.roleOpts ?? {}, notice.role_category ?? "")}`,
+    `${j.msgCategory}: ${optLabel((j.roleOpts ?? {}) as Record<string, string>, notice.role_category ?? "")}`,
     `${j.msgRegion}: ${optLabel(j.regionOpts, notice.region ?? "")}`,
     `${j.msgPay}: ${optLabel(j.compensationOpts, notice.compensation ?? "")}`,
     "",
@@ -98,6 +126,12 @@ function JobListingCard({
     <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col gap-3 transition-shadow hover:shadow-md">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
         <div className="min-w-0">
+          {isSeeker && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-400/25 text-blue-600 mb-1">
+              <User className="h-2.5 w-2.5" />
+              {j.seekerLabel ?? "求職者"}
+            </span>
+          )}
           <h3 className="font-bold text-base leading-snug truncate">{notice.title}</h3>
           {notice.company && (
             <p className="text-sm text-muted-foreground mt-0.5 truncate">{notice.company}</p>
@@ -126,9 +160,9 @@ function JobListingCard({
       {desc && (
         <div className="text-sm text-muted-foreground leading-relaxed">
           <p className="whitespace-pre-wrap break-words">
-            {expanded || !isLong ? desc : `${desc.slice(0, SHORT)}…`}
+            {expanded || !long ? desc : clipText(desc)}
           </p>
-          {isLong && (
+          {long && (
             <button
               onClick={() => setExpanded((v) => !v)}
               className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
@@ -152,7 +186,7 @@ function JobListingCard({
             className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-xl bg-[#25D366]/10 border border-[#25D366]/30 text-[#1a9e4d] hover:bg-[#25D366]/20 transition-colors"
           >
             <MessageCircle className="h-3.5 w-3.5" />
-            {j.applyViaWA}
+            {isSeeker ? (j.contactSeekerWA ?? "WhatsApp で連絡") : j.applyViaWA}
           </a>
         </div>
       )}
@@ -160,9 +194,22 @@ function JobListingCard({
   );
 }
 
-export default function JobVacancies() {
-  const { t } = useTranslation();
-  const j = t.jobs;
+// ── Posting form (shared for job / seeker) ────────────────────────────────────
+function PostForm({
+  postType,
+  j,
+  phoneDigits,
+  onSuccess,
+  onClose,
+}: {
+  postType: PostType;
+  j: ReturnType<typeof useTranslation>["t"]["jobs"];
+  phoneDigits: string;
+  onSuccess: () => void;
+  onClose: () => void;
+}) {
+  const { lang } = useTranslation();
+  const isSeeker = postType === "seeker";
 
   const [jobTitle, setJobTitle] = useState("");
   const [company, setCompany] = useState("");
@@ -176,53 +223,9 @@ export default function JobVacancies() {
   const [agreed, setAgreed] = useState(false);
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
-  const [postSuccess, setPostSuccess] = useState(false);
-  const successRef = useRef<HTMLDivElement>(null);
-
-  const [phoneDigits, setPhoneDigits] = useState(() =>
-    sanitizeWhatsAppDigits(process.env.NEXT_PUBLIC_JOBS_WHATSAPP ?? "")
-  );
-
-  const [listings, setListings] = useState<JobNotice[]>([]);
-  const [listingsLoading, setListingsLoading] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/settings?key=jobs_whatsapp")
-      .then((r) => r.json())
-      .then((d) => {
-        if (cancelled) return;
-        const v = typeof d?.value === "string" ? d.value : "";
-        const digits = sanitizeWhatsAppDigits(v);
-        if (digits) setPhoneDigits(digits);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const fetchListings = useCallback(async () => {
-    setListingsLoading(true);
-    try {
-      const res = await fetch("/api/job-notices?limit=50");
-      if (res.ok) {
-        const data = await res.json().catch(() => []);
-        setListings(Array.isArray(data) ? data : []);
-      }
-    } catch {
-      /* silent */
-    } finally {
-      setListingsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchListings();
-  }, [fetchListings]);
 
   const lines = [
-    j.msgHeader,
+    isSeeker ? "[F&B Portal — 求職者]" : j.msgHeader,
     `${j.msgTitle}: ${jobTitle.trim() || "—"}`,
     company.trim() ? `${j.msgCompany}: ${company.trim()}` : null,
     `${j.msgType}: ${optLabel(j.employmentOpts, employment)}`,
@@ -243,19 +246,16 @@ export default function JobVacancies() {
   const canSendBase = jobTitle.trim().length > 0 && description.trim().length > 0 && phoneDigits.length >= 8;
   const canSend = canSendBase && agreed && !posting;
 
-  const consentText = useMemo(() => j.consentText ?? j.disclaimer, [j]);
-
   const handlePost = async () => {
-    if (!canSendBase) return;
-    if (!agreed) return;
+    if (!canSendBase || !agreed) return;
     setPosting(true);
     setPostError(null);
-    setPostSuccess(false);
     try {
       const res = await fetch("/api/job-notices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          post_type: postType,
           title: jobTitle,
           company,
           employment,
@@ -279,27 +279,293 @@ export default function JobVacancies() {
       }
       const encoded = encodeURIComponent(whatsappMessage);
       window.open(`https://wa.me/${phoneDigits}?text=${encoded}`, "_blank", "noopener,noreferrer");
-
-      setJobTitle("");
-      setCompany("");
-      setEmployment("fullTime");
-      setRoleCategory("kitchen");
-      setRegion("islandwide");
-      setCompensation("negotiate");
-      setExperience("entry");
-      setEligibility("open");
-      setDescription("");
-      setAgreed(false);
-      setPostSuccess(true);
-      fetchListings();
-      setTimeout(() => {
-        successRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 100);
+      onSuccess();
+      onClose();
     } catch {
       setPostError(j.postFailed);
     } finally {
       setPosting(false);
     }
+  };
+
+  const titleLabel = isSeeker
+    ? (lang === "ja" ? "希望職種・スキル名" : "Desired role / skills")
+    : j.jobTitle;
+  const titlePh = isSeeker
+    ? (lang === "ja" ? "例: ホールスタッフ、調理補助" : "e.g. Service staff, Kitchen helper")
+    : j.jobTitlePh;
+  const descLabel = isSeeker
+    ? (lang === "ja" ? "自己PR・希望条件" : "About me & requirements")
+    : j.description;
+  const descPh = isSeeker
+    ? (lang === "ja"
+        ? "経験、語学力、希望勤務時間・エリア、ビザ種別など"
+        : "Experience, languages, preferred hours/area, visa type, etc.")
+    : j.descriptionPh;
+  const cardTitle = isSeeker
+    ? (lang === "ja" ? "求職者情報フォーム" : "Job seeker form")
+    : j.formCardTitle;
+
+  return (
+    <Card className="rounded-2xl border-border shadow-sm overflow-hidden">
+      <CardHeader className="border-b border-border bg-muted/30 pb-4">
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="text-xl font-black tracking-tight">{cardTitle}</CardTitle>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+            aria-label={lang === "ja" ? "閉じる" : "Close"}
+          >
+            <X className="h-5 w-5 text-muted-foreground" />
+          </button>
+        </div>
+      </CardHeader>
+      <CardContent className="p-5 sm:p-7 space-y-5 pt-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="form-title">{titleLabel}</Label>
+            <Input
+              id="form-title"
+              value={jobTitle}
+              onChange={(e) => setJobTitle(e.target.value)}
+              placeholder={titlePh}
+              className="min-h-[44px] rounded-xl bg-background"
+            />
+          </div>
+          {!isSeeker && (
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="form-company">{j.company}</Label>
+              <Input
+                id="form-company"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                placeholder={j.companyPh}
+                className="min-h-[44px] rounded-xl bg-background"
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>{j.employment}</Label>
+            <Select value={employment} onValueChange={(v) => setEmployment(v as EmploymentKey)}>
+              <SelectTrigger className="min-h-[44px] rounded-xl bg-background">
+                <SelectValue placeholder={j.selectPlaceholder} />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(j.employmentOpts) as EmploymentKey[]).map((k) => (
+                  <SelectItem key={k} value={k}>{j.employmentOpts[k]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>{j.roleCategory}</Label>
+            <Select value={roleCategory} onValueChange={(v) => setRoleCategory(v as RoleKey)}>
+              <SelectTrigger className="min-h-[44px] rounded-xl bg-background">
+                <SelectValue placeholder={j.selectPlaceholder} />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(j.roleOpts) as RoleKey[]).map((k) => (
+                  <SelectItem key={k} value={k}>{j.roleOpts[k]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>{j.region}</Label>
+            <Select value={region} onValueChange={(v) => setRegion(v as RegionKey)}>
+              <SelectTrigger className="min-h-[44px] rounded-xl bg-background">
+                <SelectValue placeholder={j.selectPlaceholder} />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(j.regionOpts) as RegionKey[]).map((k) => (
+                  <SelectItem key={k} value={k}>{j.regionOpts[k]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>{j.compensation}</Label>
+            <Select value={compensation} onValueChange={(v) => setCompensation(v as CompensationKey)}>
+              <SelectTrigger className="min-h-[44px] rounded-xl bg-background">
+                <SelectValue placeholder={j.selectPlaceholder} />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(j.compensationOpts) as CompensationKey[]).map((k) => (
+                  <SelectItem key={k} value={k}>{j.compensationOpts[k]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>{j.experience}</Label>
+            <Select value={experience} onValueChange={(v) => setExperience(v as ExperienceKey)}>
+              <SelectTrigger className="min-h-[44px] rounded-xl bg-background">
+                <SelectValue placeholder={j.selectPlaceholder} />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(j.experienceOpts) as ExperienceKey[]).map((k) => (
+                  <SelectItem key={k} value={k}>{j.experienceOpts[k]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>{j.eligibility}</Label>
+            <Select value={eligibility} onValueChange={(v) => setEligibility(v as EligibilityKey)}>
+              <SelectTrigger className="min-h-[44px] rounded-xl bg-background">
+                <SelectValue placeholder={j.selectPlaceholder} />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(j.eligibilityOpts) as EligibilityKey[]).map((k) => (
+                  <SelectItem key={k} value={k}>{j.eligibilityOpts[k]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="form-desc">{descLabel}</Label>
+          <Textarea
+            id="form-desc"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder={descPh}
+            rows={6}
+            className="rounded-xl bg-background resize-y min-h-[140px]"
+          />
+        </div>
+
+        <div className="rounded-xl border border-border bg-muted/25 p-4 space-y-2">
+          <p className="text-xs font-semibold text-foreground">{j.preview}</p>
+          <pre className="text-[11px] sm:text-xs whitespace-pre-wrap break-words rounded-lg bg-background border border-border p-3 max-h-44 overflow-y-auto text-muted-foreground">
+            {whatsappMessage}
+          </pre>
+          <p className="text-[11px] text-muted-foreground">{j.whatsappHelp}</p>
+        </div>
+
+        <div className="flex flex-col gap-3 pt-1">
+          {phoneDigits.length >= 8 ? (
+            <>
+              <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+                <label className="flex items-start gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={agreed}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-border"
+                  />
+                  <span className="text-xs text-muted-foreground leading-relaxed">
+                    {j.consentText}
+                  </span>
+                </label>
+                <p className="text-[11px] text-muted-foreground">{j.consentHint}</p>
+              </div>
+
+              {canSendBase ? (
+                <Button
+                  onClick={handlePost}
+                  disabled={!canSend}
+                  className="w-full rounded-xl min-h-[44px] font-bold"
+                >
+                  {posting ? j.posting : j.postAndSend}
+                </Button>
+              ) : (
+                <div className="flex min-h-[44px] w-full items-center justify-center rounded-xl border border-dashed border-muted-foreground/35 bg-muted/30 px-4 text-sm text-muted-foreground text-center">
+                  {j.requiredHint}
+                </div>
+              )}
+
+              {postError && (
+                <div className="text-sm text-destructive font-medium">{postError}</div>
+              )}
+            </>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground space-y-3">
+              <p>{j.whatsappMissing}</p>
+              <Button variant="outline" asChild className="w-full rounded-xl">
+                <Link href="/contact">{j.contactInstead}</Link>
+              </Button>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+export default function JobVacancies() {
+  const { t, lang } = useTranslation();
+  const j = t.jobs;
+
+  const [activeTab, setActiveTab] = useState<PostType>("job");
+  const [showForm, setShowForm] = useState(false);
+  const [formType, setFormType] = useState<PostType>("job");
+  const [postSuccess, setPostSuccess] = useState(false);
+  const toastTimerRef = useRef<number | null>(null);
+
+  const [phoneDigits, setPhoneDigits] = useState(() =>
+    sanitizeWhatsAppDigits(process.env.NEXT_PUBLIC_JOBS_WHATSAPP ?? "")
+  );
+  const [listings, setListings] = useState<JobNotice[]>([]);
+  const [listingsLoading, setListingsLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/settings?key=jobs_whatsapp")
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled) return;
+        const v = typeof d?.value === "string" ? d.value : "";
+        const digits = sanitizeWhatsAppDigits(v);
+        if (digits) setPhoneDigits(digits);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const fetchListings = useCallback(async () => {
+    setListingsLoading(true);
+    try {
+      const res = await fetch("/api/job-notices?limit=50");
+      if (res.ok) {
+        const data = await res.json().catch(() => []);
+        setListings(Array.isArray(data) ? data : []);
+      }
+    } catch { /* silent */ }
+    finally { setListingsLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchListings(); }, [fetchListings]);
+
+  useEffect(() => {
+    if (!postSuccess) return;
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => {
+      setPostSuccess(false);
+      toastTimerRef.current = null;
+    }, 7000);
+    return () => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = null;
+      }
+    };
+  }, [postSuccess]);
+
+  const openForm = (type: PostType) => {
+    setFormType(type);
+    setShowForm(true);
   };
 
   const steps = [
@@ -308,15 +574,40 @@ export default function JobVacancies() {
     { n: 3, text: j.step3 },
   ];
 
+  // Tab-filtered listings. Treat missing post_type as "job" for legacy entries.
+  const tabListings = useMemo(
+    () => listings.filter((l) => (l.post_type ?? "job") === activeTab),
+    [listings, activeTab]
+  );
+
+  const jobCount = useMemo(
+    () => listings.filter((l) => (l.post_type ?? "job") === "job").length,
+    [listings]
+  );
+  const seekerCount = useMemo(
+    () => listings.filter((l) => l.post_type === "seeker").length,
+    [listings]
+  );
+
   return (
     <Layout>
+      {postSuccess && (
+        <div className="fixed top-4 left-1/2 z-50 w-[min(92vw,760px)] -translate-x-1/2">
+          <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 font-medium shadow-lg">
+            <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+            <span>{j.postSuccess ?? "✅ 投稿されました。"}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Hero */}
       <section className="relative overflow-hidden border-b border-border">
         <img src={HERO_IMAGE} alt="" className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/40" />
         <div className="relative container max-w-6xl py-10 md:py-14 text-white min-w-0">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-sm text-white/85 hover:text-white mb-6 font-medium break-words-safe"
+            className="inline-flex items-center gap-1.5 text-sm text-white/85 hover:text-white mb-6 font-medium"
           >
             <ArrowLeft className="h-4 w-4 flex-shrink-0" />
             <span className="min-w-0">{t.contact.backHome}</span>
@@ -327,294 +618,113 @@ export default function JobVacancies() {
               {j.bulletinLabel}
             </span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight max-w-3xl drop-shadow-sm break-words-safe">
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight max-w-3xl drop-shadow-sm">
             {j.pageTitle}
           </h1>
-          <p className="mt-3 text-sm md:text-base text-white/90 max-w-2xl leading-relaxed break-words-safe">
+          <p className="mt-3 text-sm md:text-base text-white/90 max-w-2xl leading-relaxed">
             {j.pageSubtitle}
           </p>
         </div>
       </section>
 
-      <div className="container max-w-6xl py-10 md:py-14 min-w-0 w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
-          <aside className="lg:col-span-4 space-y-6 order-2 lg:order-1">
-            <Card className="rounded-2xl border-border/80 shadow-sm overflow-hidden">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <ListOrdered className="h-5 w-5 text-primary" />
-                  {j.howItWorks}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 pt-0">
-                <ol className="space-y-4">
-                  {steps.map(({ n, text }) => (
-                    <li key={n} className="flex gap-3">
-                      <span
-                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-black text-primary border border-primary/15"
-                        aria-hidden
-                      >
-                        {n}
-                      </span>
-                      <p className="text-sm text-muted-foreground leading-relaxed pt-0.5">{text}</p>
-                    </li>
-                  ))}
-                </ol>
-              </CardContent>
-            </Card>
-
-            <div className="rounded-2xl border border-border bg-muted/40 p-5">
-              <p className="text-xs leading-relaxed text-muted-foreground border-l-4 border-primary/35 pl-3">
-                {j.disclaimer}
-              </p>
-            </div>
-
-            <div className="flex justify-center lg:justify-start pt-1">
-              <Image
-                src={logoImage}
-                alt=""
-                width={180}
-                height={64}
-                className="h-12 w-auto object-contain opacity-90"
-              />
-            </div>
-          </aside>
-
-          <div className="lg:col-span-8 order-1 lg:order-2 min-w-0">
-            <Card className="rounded-2xl border-border shadow-sm overflow-hidden">
-              <CardHeader className="border-b border-border bg-muted/30 pb-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <CardTitle className="text-xl font-black tracking-tight">{j.formCardTitle}</CardTitle>
-                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                    <MessageCircle className="h-3.5 w-3.5 text-[#25D366]" aria-hidden />
-                    WhatsApp
-                  </span>
-                </div>
-              </CardHeader>
-              <CardContent className="p-5 sm:p-7 space-y-5 pt-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="job-title">{j.jobTitle}</Label>
-                    <Input
-                      id="job-title"
-                      value={jobTitle}
-                      onChange={(e) => setJobTitle(e.target.value)}
-                      placeholder={j.jobTitlePh}
-                      className="min-h-[44px] rounded-xl bg-background"
-                    />
-                  </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="job-company">{j.company}</Label>
-                    <Input
-                      id="job-company"
-                      value={company}
-                      onChange={(e) => setCompany(e.target.value)}
-                      placeholder={j.companyPh}
-                      className="min-h-[44px] rounded-xl bg-background"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>{j.employment}</Label>
-                    <Select value={employment} onValueChange={(v) => setEmployment(v as EmploymentKey)}>
-                      <SelectTrigger className="min-h-[44px] rounded-xl bg-background">
-                        <SelectValue placeholder={j.selectPlaceholder} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(Object.keys(j.employmentOpts) as EmploymentKey[]).map((k) => (
-                          <SelectItem key={k} value={k}>
-                            {j.employmentOpts[k]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{j.roleCategory}</Label>
-                    <Select value={roleCategory} onValueChange={(v) => setRoleCategory(v as RoleKey)}>
-                      <SelectTrigger className="min-h-[44px] rounded-xl bg-background">
-                        <SelectValue placeholder={j.selectPlaceholder} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(Object.keys(j.roleOpts) as RoleKey[]).map((k) => (
-                          <SelectItem key={k} value={k}>
-                            {j.roleOpts[k]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>{j.region}</Label>
-                    <Select value={region} onValueChange={(v) => setRegion(v as RegionKey)}>
-                      <SelectTrigger className="min-h-[44px] rounded-xl bg-background">
-                        <SelectValue placeholder={j.selectPlaceholder} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(Object.keys(j.regionOpts) as RegionKey[]).map((k) => (
-                          <SelectItem key={k} value={k}>
-                            {j.regionOpts[k]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{j.compensation}</Label>
-                    <Select value={compensation} onValueChange={(v) => setCompensation(v as CompensationKey)}>
-                      <SelectTrigger className="min-h-[44px] rounded-xl bg-background">
-                        <SelectValue placeholder={j.selectPlaceholder} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(Object.keys(j.compensationOpts) as CompensationKey[]).map((k) => (
-                          <SelectItem key={k} value={k}>
-                            {j.compensationOpts[k]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>{j.experience}</Label>
-                    <Select value={experience} onValueChange={(v) => setExperience(v as ExperienceKey)}>
-                      <SelectTrigger className="min-h-[44px] rounded-xl bg-background">
-                        <SelectValue placeholder={j.selectPlaceholder} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(Object.keys(j.experienceOpts) as ExperienceKey[]).map((k) => (
-                          <SelectItem key={k} value={k}>
-                            {j.experienceOpts[k]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{j.eligibility}</Label>
-                    <Select value={eligibility} onValueChange={(v) => setEligibility(v as EligibilityKey)}>
-                      <SelectTrigger className="min-h-[44px] rounded-xl bg-background">
-                        <SelectValue placeholder={j.selectPlaceholder} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(Object.keys(j.eligibilityOpts) as EligibilityKey[]).map((k) => (
-                          <SelectItem key={k} value={k}>
-                            {j.eligibilityOpts[k]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="job-desc">{j.description}</Label>
-                  <Textarea
-                    id="job-desc"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder={j.descriptionPh}
-                    rows={6}
-                    className="rounded-xl bg-background resize-y min-h-[140px]"
-                  />
-                </div>
-
-                <div className="rounded-xl border border-border bg-muted/25 p-4 space-y-2">
-                  <p className="text-xs font-semibold text-foreground">{j.preview}</p>
-                  <pre className="text-[11px] sm:text-xs whitespace-pre-wrap break-words rounded-lg bg-background border border-border p-3 max-h-44 overflow-y-auto text-muted-foreground">
-                    {whatsappMessage}
-                  </pre>
-                  <p className="text-[11px] text-muted-foreground">{j.whatsappHelp}</p>
-                </div>
-
-                <div className="flex flex-col gap-3 pt-1">
-                  {phoneDigits.length >= 8 ? (
-                    <>
-                      <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
-                        <label className="flex items-start gap-3 cursor-pointer select-none">
-                          <input
-                            type="checkbox"
-                            checked={agreed}
-                            onChange={(e) => setAgreed(e.target.checked)}
-                            className="mt-1 h-4 w-4 rounded border-border"
-                          />
-                          <span className="text-xs text-muted-foreground leading-relaxed">
-                            {consentText}
-                          </span>
-                        </label>
-                        <p className="text-[11px] text-muted-foreground">{j.consentHint}</p>
-                      </div>
-
-                      {canSendBase ? (
-                        <Button
-                          onClick={handlePost}
-                          disabled={!canSend}
-                          className="w-full rounded-xl min-h-[44px] font-bold"
-                        >
-                          {posting ? j.posting : j.postAndSend}
-                        </Button>
-                      ) : (
-                        <div className="flex min-h-[44px] w-full items-center justify-center rounded-xl border border-dashed border-muted-foreground/35 bg-muted/30 px-4 text-sm text-muted-foreground text-center">
-                          {j.requiredHint}
-                        </div>
-                      )}
-
-                      {postError && (
-                        <div className="text-sm text-destructive font-medium">
-                          {postError}
-                        </div>
-                      )}
-
-                      {postSuccess && (
-                        <div
-                          ref={successRef}
-                          className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 font-medium shadow-sm"
-                        >
-                          <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                          <span>{j.postSuccess}</span>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground space-y-3">
-                      <p>{j.whatsappMissing}</p>
-                      <Button variant="outline" asChild className="w-full rounded-xl">
-                        <Link href="/contact">{j.contactInstead}</Link>
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+      {/* Post buttons (prominent, below hero) */}
+      <div className="border-b border-border bg-muted/30">
+        <div className="container max-w-6xl py-4 flex flex-wrap gap-3 items-center">
+          <Button
+            onClick={() => openForm("job")}
+            className="rounded-xl gap-2 font-bold min-h-[44px]"
+          >
+            <Plus className="h-4 w-4" />
+            {lang === "ja" ? "求人を投稿する" : "Post a Job"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => openForm("seeker")}
+            className="rounded-xl gap-2 font-bold min-h-[44px]"
+          >
+            <User className="h-4 w-4" />
+            {lang === "ja" ? "求職者として投稿する" : "Post as Job Seeker"}
+          </Button>
         </div>
       </div>
 
-      {/* ── Job Listings ─────────────────────────────────────────────────── */}
-      <section className="container max-w-6xl py-10 md:py-14 min-w-0 w-full border-t border-border">
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <h2 className="text-xl md:text-2xl font-black tracking-tight flex items-center gap-2">
-            <Briefcase className="h-5 w-5 text-primary flex-shrink-0" />
-            {j.listingsTitle}
+      {/* How it works — permanent info section */}
+      <div className="border-b border-border bg-muted/10">
+        <div className="container max-w-6xl py-5 min-w-0">
+          <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <ListOrdered className="h-3.5 w-3.5" />
+            {j.howItWorks}
           </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            {steps.map(({ n, text }) => (
+              <div key={n} className="flex gap-2.5 items-start">
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 text-xs font-black text-primary border border-primary/15">
+                  {n}
+                </span>
+                <p className="text-xs text-muted-foreground leading-relaxed pt-0.5">{text}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground border-l-4 border-primary/30 pl-3">
+            {j.disclaimer}
+          </p>
+        </div>
+      </div>
+
+      {/* Form modal */}
+      <Dialog open={showForm} onOpenChange={(open) => { if (!open) setShowForm(false); }}>
+        <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto p-0 rounded-2xl [&>button:last-child]:hidden">
+          <DialogTitle className="sr-only">
+            {formType === "seeker"
+              ? (lang === "ja" ? "求職者情報フォーム" : "Job seeker form")
+              : (lang === "ja" ? "求人投稿フォーム" : "Post a Job")}
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            {lang === "ja" ? "必要情報を入力して投稿してください" : "Fill in the required information and submit"}
+          </DialogDescription>
+          <PostForm
+            postType={formType}
+            j={j}
+            phoneDigits={phoneDigits}
+            onSuccess={() => { setPostSuccess(true); fetchListings(); }}
+            onClose={() => setShowForm(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Listings (tabbed) ─────────────────────────────────────────────── */}
+      <section className="container max-w-6xl py-10 md:py-14 min-w-0 w-full">
+        {/* Tab bar */}
+        <div className="flex items-center gap-2 mb-6 border-b border-border">
           <button
-            onClick={fetchListings}
-            disabled={listingsLoading}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            onClick={() => setActiveTab("job")}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold border-b-2 transition-colors whitespace-nowrap -mb-px ${activeTab === "job" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${listingsLoading ? "animate-spin" : ""}`} />
-            {listingsLoading ? t.common.loading : t.admin?.jobsRefresh ?? "Refresh"}
+            <Briefcase className="h-4 w-4" />
+            {lang === "ja" ? "求人" : "Job Listings"}
+            <span className="ml-1 text-[10px] bg-muted text-muted-foreground rounded-full px-1.5 py-0.5">{jobCount}</span>
           </button>
+          <button
+            onClick={() => setActiveTab("seeker")}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold border-b-2 transition-colors whitespace-nowrap -mb-px ${activeTab === "seeker" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          >
+            <User className="h-4 w-4" />
+            {lang === "ja" ? "求職者" : "Job Seekers"}
+            <span className="ml-1 text-[10px] bg-muted text-muted-foreground rounded-full px-1.5 py-0.5">{seekerCount}</span>
+          </button>
+          <div className="ml-auto">
+            <button
+              onClick={fetchListings}
+              disabled={listingsLoading}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${listingsLoading ? "animate-spin" : ""}`} />
+              {listingsLoading ? t.common.loading : (t.admin?.jobsRefresh ?? "Refresh")}
+            </button>
+          </div>
         </div>
 
-        {listingsLoading && listings.length === 0 ? (
+        {listingsLoading && tabListings.length === 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="rounded-2xl border border-border bg-card p-5 animate-pulse space-y-3">
@@ -631,14 +741,16 @@ export default function JobVacancies() {
               </div>
             ))}
           </div>
-        ) : listings.length === 0 ? (
+        ) : tabListings.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-muted/20 py-12 text-center text-sm text-muted-foreground">
-            {j.noListings}
+            {activeTab === "seeker"
+              ? (lang === "ja" ? "現在掲載中の求職者情報はありません。" : "No job seekers listed at the moment.")
+              : j.noListings}
           </div>
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {listings.map((notice) => (
+              {tabListings.map((notice) => (
                 <JobListingCard
                   key={notice.id}
                   notice={notice}

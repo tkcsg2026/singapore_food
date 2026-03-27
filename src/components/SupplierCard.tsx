@@ -36,6 +36,7 @@ interface SupplierCardProps {
   };
   variant?: "grid" | "list";
   rank?: number;
+  tagLabelMap?: Record<string, string>;
 }
 
 function PlanBadge({ plan, lang }: { plan?: string | null; lang: string }) {
@@ -85,7 +86,7 @@ function useFavorites() {
   return { favorites, toggle: toggleFavorite };
 }
 
-export function SupplierCard({ supplier, variant = "grid", rank }: SupplierCardProps) {
+export function SupplierCard({ supplier, variant = "grid", rank, tagLabelMap }: SupplierCardProps) {
   const { t, lang } = useTranslation();
   const cfg = getPlanConfig(supplier.plan);
   const { favorites, toggle } = useFavorites();
@@ -98,7 +99,7 @@ export function SupplierCard({ supplier, variant = "grid", rank }: SupplierCardP
   const contactName = supplier.whatsapp_contact_name?.trim();
 
   const tagMap = (t.suppliers as { tagMap?: Record<string, string> }).tagMap ?? {};
-  const translateTag = (tag: string) => tagMap[tag] ?? tag;
+  const translateTag = (tag: string) => tagLabelMap?.[tag] ?? tagMap[tag] ?? tag;
 
   const categories = (lang === "ja"
     ? [supplier.category_ja || supplier.categoryJa, supplier.category_2_ja, supplier.category_3_ja]

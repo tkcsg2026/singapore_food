@@ -16,7 +16,7 @@ const Marketplace = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedCondition, setSelectedCondition] = useState("");
   const [sort, setSort] = useState<SortOption>("newest");
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const { requireLogin, loginPromptModal } = useLoginPrompt();
 
   const { data: items } = useFetch<MarketplaceItemRow[]>("/api/marketplace");
@@ -76,7 +76,9 @@ const Marketplace = () => {
             <option value="">{t.common.allCategories}</option>
             {(categories || []).map((c) => (
               <option key={c.value} value={c.value}>
-                {(t.marketplace as { categories?: Record<string, string> }).categories?.[c.value] ?? c.label}
+                {lang === "ja"
+                  ? (c.label_ja || c.label || (t.marketplace as { categories?: Record<string, string> }).categories?.[c.value] || c.value)
+                  : ((t.marketplace as { categories?: Record<string, string> }).categories?.[c.value] || c.label || c.value)}
               </option>
             ))}
           </select>

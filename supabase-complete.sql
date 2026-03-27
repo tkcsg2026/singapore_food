@@ -186,6 +186,7 @@ ALTER TABLE public.supplier_view_logs   ENABLE ROW LEVEL SECURITY;
 -- Add extra product detail columns (safe to run multiple times)
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS name_en           text DEFAULT '';
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS country_of_origin text DEFAULT '';
+ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS country_of_origin_en text DEFAULT '';
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS weight            text DEFAULT '';
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS quantity          text DEFAULT '';
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS storage_condition text DEFAULT '';
@@ -1004,6 +1005,10 @@ CREATE TABLE IF NOT EXISTS public.job_notices (
 
 CREATE INDEX IF NOT EXISTS job_notices_created_at_idx ON public.job_notices (created_at DESC);
 CREATE INDEX IF NOT EXISTS job_notices_status_idx ON public.job_notices (status);
+
+-- post_type: "job" (求人) or "seeker" (求職者). Defaults to "job" for legacy rows.
+ALTER TABLE public.job_notices ADD COLUMN IF NOT EXISTS post_type text NOT NULL DEFAULT 'job' CHECK (post_type IN ('job','seeker'));
+CREATE INDEX IF NOT EXISTS job_notices_post_type_idx ON public.job_notices (post_type);
 
 ALTER TABLE public.job_notices ENABLE ROW LEVEL SECURITY;
 
