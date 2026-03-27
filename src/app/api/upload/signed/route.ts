@@ -9,7 +9,26 @@ const VIDEO_TYPES = [
   "video/3gpp",
   "video/3gpp2",
 ];
+const VIDEO_EXTENSIONS = new Set([
+  "mp4", "m4v", "mov", "qt", "webm", "3gp", "3g2",
+  "avi", "mkv", "mts", "m2ts", "ts", "mpeg", "mpg",
+  "wmv", "flv", "ogv", "mxf",
+]);
+const GENERIC_VIDEO_TYPES = new Set(["application/octet-stream", "binary/octet-stream"]);
 const VIDEO_MAX_BYTES = 200 * 1024 * 1024;
+
+function getExt(fileName: string): string {
+  return (fileName.split(".").pop() || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function isAllowedVideoUpload(fileType: string, fileName: string): boolean {
+  const normalizedType = fileType.toLowerCase().trim();
+  if (normalizedType.startsWith("video/")) return true;
+  if (VIDEO_TYPES.includes(normalizedType)) return true;
+  if (GENERIC_VIDEO_TYPES.has(normalizedType)) return true;
+  const ext = getExt(fileName);
+  return VIDEO_EXTENSIONS.has(ext);
+}
 
 export async function POST(req: NextRequest) {
   const supabase = createAdminSupabaseClient();
@@ -24,14 +43,14 @@ export async function POST(req: NextRequest) {
   const folder = typeof body.folder === "string" && body.folder.trim() ? body.folder.trim() : "videos";
 
   if (!fileName) return NextResponse.json({ error: "fileName is required" }, { status: 400 });
-  if (!VIDEO_TYPES.includes(fileType)) {
-    return NextResponse.json({ error: "Unsupported video type. Use MP4 / WebM / MOV / 3GP." }, { status: 400 });
+  if (!isAllowedVideoUpload(fileType, fileName)) {
+    return NextResponse.json({ error: "Unsupported file type. Please upload a video file." }, { status: 400 });
   }
   if (fileSize > VIDEO_MAX_BYTES) {
     return NextResponse.json({ error: "File is too large. Maximum size is 200 MB." }, { status: 400 });
   }
 
-  const sanitizedExt = (fileName.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const sanitizedExt = getExt(fileName) || "mp4";
   const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${sanitizedExt || "mp4"}`;
   const bucket = "videos";
 

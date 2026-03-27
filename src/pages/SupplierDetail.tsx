@@ -12,7 +12,8 @@ import type { CategoryRow } from "@/types/database";
 
 /** Embeds a YouTube / Vimeo iframe or native <video> for a product video URL. */
 function ProductVideoEmbed({ url, className = "" }: { url: string; className?: string }) {
-  const lowerUrl = url.toLowerCase();
+  const cleanUrl = url.split(/[?#]/)[0] || url;
+  const lowerUrl = cleanUrl.toLowerCase();
   const videoType =
     lowerUrl.endsWith(".mov") || lowerUrl.endsWith(".qt")
       ? "video/quicktime"
@@ -276,8 +277,14 @@ const SupplierDetail = () => {
                         }
                         if (p.video_url) {
                           return (
-                            <div className="aspect-[4/3] bg-black/90 text-white flex items-center justify-center">
-                              <span className="text-xs">{lang === "ja" ? "動画プレビュー" : "Video preview"}</span>
+                            <div className="aspect-[4/3] bg-black/95 overflow-hidden">
+                              <video
+                                src={p.video_url}
+                                muted
+                                playsInline
+                                preload="metadata"
+                                className="w-full h-full object-cover"
+                              />
                             </div>
                           );
                         }

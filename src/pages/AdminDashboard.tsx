@@ -884,12 +884,13 @@ function ProductManager({ slug }: { slug: string }) {
 
   const resolveVideoContentType = (file: File): string => {
     const declared = (file.type || "").toLowerCase().trim();
-    if (declared) return declared;
     const ext = (file.name.split(".").pop() || "").toLowerCase();
+    if (declared.startsWith("video/")) return declared;
     if (ext === "mov" || ext === "qt") return "video/quicktime";
     if (ext === "webm") return "video/webm";
     if (ext === "3gp") return "video/3gpp";
     if (ext === "3g2") return "video/3gpp2";
+    if (declared) return declared;
     return "video/mp4";
   };
 
@@ -916,10 +917,10 @@ function ProductManager({ slug }: { slug: string }) {
             <Video className="h-3.5 w-3.5" />
             {videoUploading
               ? (lang === "ja" ? "アップロード中…" : "Uploading…")
-              : (lang === "ja" ? "MP4 / WebM をアップロード" : "Upload MP4 / WebM")}
+              : (lang === "ja" ? "動画ファイルをアップロード" : "Upload video file")}
             <input
               type="file"
-              accept="video/mp4,video/webm,video/quicktime,video/x-quicktime,video/3gpp,video/3gpp2,.mov,.qt,.3gp,.3g2"
+              accept="video/*,.mov,.qt,.3gp,.3g2,.mkv,.avi,.wmv,.m4v,.flv,.mpeg,.mpg,.ts"
               className="sr-only"
               disabled={videoUploading}
               onChange={async (e) => {

@@ -10,6 +10,12 @@ const VIDEO_TYPES = [
   "video/3gpp",
   "video/3gpp2",
 ];
+const VIDEO_EXTENSIONS = new Set([
+  "mp4", "m4v", "mov", "qt", "webm", "3gp", "3g2",
+  "avi", "mkv", "mts", "m2ts", "ts", "mpeg", "mpg",
+  "wmv", "flv", "ogv", "mxf",
+]);
+const GENERIC_VIDEO_TYPES = new Set(["application/octet-stream", "binary/octet-stream"]);
 
 /** Maximum sizes */
 const IMAGE_MAX_BYTES = 10 * 1024 * 1024;  // 10 MB
@@ -27,14 +33,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No file" }, { status: 400 });
   }
 
-  const isImage = IMAGE_TYPES.includes(file.type);
-  const isVideo = VIDEO_TYPES.includes(file.type);
+  const requestedFolder = ((formData.get("folder") as string) || "").trim().toLowerCase();
+  const normalizedType = (file.type || "").toLowerCase().trim();
+  const ext = (file.name.split(".").pop() || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  const isImage = IMAGE_TYPES.includes(normalizedType);
+  const isVideoByType =
+    normalizedType.startsWith("video/") ||
+    VIDEO_TYPES.includes(normalizedType) ||
+    GENERIC_VIDEO_TYPES.has(normalizedType);
+  const isVideoByExt = VIDEO_EXTENSIONS.has(ext);
+  const isVideo = isVideoByType || isVideoByExt || requestedFolder === "videos";
 
   if (!isImage && !isVideo) {
     return NextResponse.json(
       {
         error:
-          "Unsupported file type. Accepted: JPEG, PNG, WebP, GIF (images) or MP4, WebM, MOV, 3GP (videos).",
+          "Unsupported file type. Accepted: common image files or video files.",
       },
       { status: 400 },
     );
@@ -49,16 +64,28 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const folder = (formData.get("folder") as string) || (isVideo ? "videos" : "suppliers");
-  const ext = file.name.split(".").pop() || (isVideo ? "mp4" : "png");
-  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const folder = requestedFolder || (isVideo ? "videos" : "suppliers");
+  const safeExt = ext || (isVideo ? "mp4" : "png");
+  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExt}`;
   const buf = await file.arrayBuffer();
 
   // Videos go into the "videos" bucket; images stay in "logos"
   const bucket = isVideo ? "videos" : "logos";
 
+  const resolvedVideoType = normalizedType.startsWith("video/")
+    ? normalizedType
+    : safeExt === "webm"
+      ? "video/webm"
+      : safeExt === "mov" || safeExt === "qt"
+        ? "video/quicktime"
+        : safeExt === "3gp"
+          ? "video/3gpp"
+          : safeExt === "3g2"
+            ? "video/3gpp2"
+            : "video/mp4";
+
   const { error } = await supabase.storage.from(bucket).upload(path, buf, {
-    contentType: file.type,
+    contentType: isVideo ? resolvedVideoType : normalizedType,
     upsert: false,
   });
 
