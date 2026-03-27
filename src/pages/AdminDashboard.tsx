@@ -882,6 +882,17 @@ function ProductManager({ slug }: { slug: string }) {
     fetchProducts();
   };
 
+  const resolveVideoContentType = (file: File): string => {
+    const declared = (file.type || "").toLowerCase().trim();
+    if (declared) return declared;
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    if (ext === "mov" || ext === "qt") return "video/quicktime";
+    if (ext === "webm") return "video/webm";
+    if (ext === "3gp") return "video/3gpp";
+    if (ext === "3g2") return "video/3gpp2";
+    return "video/mp4";
+  };
+
   return (
     <div className="mt-2 bg-muted/50 border p-3 sm:p-4 space-y-4 overflow-x-hidden">
       <h3 className="text-sm font-bold">{t.admin.productManagement}</h3>
@@ -908,7 +919,7 @@ function ProductManager({ slug }: { slug: string }) {
               : (lang === "ja" ? "MP4 / WebM をアップロード" : "Upload MP4 / WebM")}
             <input
               type="file"
-              accept="video/mp4,video/webm,video/quicktime"
+              accept="video/mp4,video/webm,video/quicktime,video/x-quicktime,video/3gpp,video/3gpp2,.mov,.qt,.3gp,.3g2"
               className="sr-only"
               disabled={videoUploading}
               onChange={async (e) => {
@@ -936,9 +947,15 @@ function ProductManager({ slug }: { slug: string }) {
                     const signed = await signRes.json();
                     const sb = getSupabase();
                     if (sb && signed?.bucket && signed?.path && signed?.token) {
+                      const contentType = resolveVideoContentType(file);
+                      const body = new Uint8Array(await file.arrayBuffer());
                       const up = await sb.storage
                         .from(signed.bucket)
-                        .uploadToSignedUrl(signed.path, signed.token, file);
+                        .uploadToSignedUrl(signed.path, signed.token, body, {
+                          contentType,
+                          cacheControl: "3600",
+                          upsert: false,
+                        });
                       if (!up.error) {
                         setForm((prev) => ({ ...prev, video_url: signed.publicUrl }));
                         return;
@@ -3051,6 +3068,17 @@ function LinksManager() {
  */
 function VideoPreview({ url }: { url: string }) {
   if (!url) return null;
+  const lowerUrl = url.toLowerCase();
+  const videoType =
+    lowerUrl.endsWith(".mov") || lowerUrl.endsWith(".qt")
+      ? "video/quicktime"
+      : lowerUrl.endsWith(".webm")
+        ? "video/webm"
+        : lowerUrl.endsWith(".3gp")
+          ? "video/3gpp"
+          : lowerUrl.endsWith(".3g2")
+            ? "video/3gpp2"
+            : "video/mp4";
 
   // YouTube
   const ytMatch =
@@ -3087,11 +3115,15 @@ function VideoPreview({ url }: { url: string }) {
   // Direct MP4 / WebM
   return (
     <video
-      src={url}
       controls
+      playsInline
+      preload="metadata"
       className="w-full rounded-lg bg-black"
       style={{ maxHeight: "240px" }}
-    />
+    >
+      <source src={url} type={videoType} />
+      <source src={url} />
+    </video>
   );
 }
 

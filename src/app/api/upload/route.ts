@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase-server";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-const VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
+const VIDEO_TYPES = [
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/x-quicktime",
+  "video/3gpp",
+  "video/3gpp2",
+];
 
 /** Maximum sizes */
 const IMAGE_MAX_BYTES = 10 * 1024 * 1024;  // 10 MB
@@ -27,7 +34,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error:
-          "Unsupported file type. Accepted: JPEG, PNG, WebP, GIF (images) or MP4, WebM (videos).",
+          "Unsupported file type. Accepted: JPEG, PNG, WebP, GIF (images) or MP4, WebM, MOV, 3GP (videos).",
       },
       { status: 400 },
     );

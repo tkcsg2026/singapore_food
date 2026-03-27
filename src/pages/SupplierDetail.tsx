@@ -12,6 +12,17 @@ import type { CategoryRow } from "@/types/database";
 
 /** Embeds a YouTube / Vimeo iframe or native <video> for a product video URL. */
 function ProductVideoEmbed({ url, className = "" }: { url: string; className?: string }) {
+  const lowerUrl = url.toLowerCase();
+  const videoType =
+    lowerUrl.endsWith(".mov") || lowerUrl.endsWith(".qt")
+      ? "video/quicktime"
+      : lowerUrl.endsWith(".webm")
+        ? "video/webm"
+        : lowerUrl.endsWith(".3gp")
+          ? "video/3gpp"
+          : lowerUrl.endsWith(".3g2")
+            ? "video/3gpp2"
+            : "video/mp4";
   const ytMatch =
     url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/) ||
     url.match(/youtube\.com\/embed\/([A-Za-z0-9_-]{11})/);
@@ -41,7 +52,10 @@ function ProductVideoEmbed({ url, className = "" }: { url: string; className?: s
     );
   }
   return (
-    <video src={url} controls className={`w-full bg-black ${className}`} />
+    <video controls playsInline preload="metadata" className={`w-full bg-black ${className}`}>
+      <source src={url} type={videoType} />
+      <source src={url} />
+    </video>
   );
 }
 

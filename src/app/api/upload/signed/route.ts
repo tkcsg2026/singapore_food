@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase-server";
 
-const VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
+const VIDEO_TYPES = [
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/x-quicktime",
+  "video/3gpp",
+  "video/3gpp2",
+];
 const VIDEO_MAX_BYTES = 200 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
@@ -18,7 +25,7 @@ export async function POST(req: NextRequest) {
 
   if (!fileName) return NextResponse.json({ error: "fileName is required" }, { status: 400 });
   if (!VIDEO_TYPES.includes(fileType)) {
-    return NextResponse.json({ error: "Unsupported video type. Use MP4 / WebM / MOV." }, { status: 400 });
+    return NextResponse.json({ error: "Unsupported video type. Use MP4 / WebM / MOV / 3GP." }, { status: 400 });
   }
   if (fileSize > VIDEO_MAX_BYTES) {
     return NextResponse.json({ error: "File is too large. Maximum size is 200 MB." }, { status: 400 });
