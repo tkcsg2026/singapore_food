@@ -969,19 +969,14 @@ function ProductManager({ slug }: { slug: string }) {
                     }
                     const signed = await signRes.json();
 
-                    // Step 2 — upload directly to Supabase Storage via XHR
-                    // (XHR gives real-time progress; File object is sent as a stream
-                    //  so the entire video is never buffered into RAM first)
-                    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-                    if (!supabaseUrl) throw new Error("NEXT_PUBLIC_SUPABASE_URL is not set");
-
+                    // Step 2 — upload directly to Supabase Storage via XHR.
+                    // Uses signedUrl returned by the Supabase SDK so there is no
+                    // manual URL construction and no NEXT_PUBLIC_SUPABASE_URL needed.
                     const contentType = inferVideoMimeType({
                       fileType: signed.contentType || file.type,
                       fileName: file.name,
                     });
-                    const xhrUrl =
-                      `${supabaseUrl}/storage/v1/object/upload/sign/` +
-                      `${signed.bucket}/${signed.path}?token=${signed.token}`;
+                    const xhrUrl = signed.signedUrl;
 
                     await new Promise<void>((resolve, reject) => {
                       const xhr = new XMLHttpRequest();
@@ -3205,6 +3200,11 @@ function VideoPreview({ url }: { url: string }) {
   );
 }
 
+/**
+ * ImageField uploads files directly to Supabase Storage using a signed URL
+ * obtained from /api/upload/signed.  The file bytes never pass through the
+ * Vercel serverless function, so there is no 4.5 MB body-size limit to hit.
+ */
 function ImageField({
   label,
   value,
@@ -3221,43 +3221,97 @@ function ImageField({
   folder?: string;
 }) {
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<number | null>(null);
   const { lang } = useTranslation();
+
   return (
     <div>
       <label className="text-sm font-medium block mb-1.5">{label}</label>
       <div className="flex flex-wrap gap-2 items-center">
-        <label className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border cursor-pointer transition-colors ${uploading ? "opacity-50 pointer-events-none" : "hover:bg-muted"}`}>
-          {uploading ? (lang === "ja" ? "アップロード中…" : "Uploading…") : (lang === "ja" ? "ファイルを選択" : "Choose File")}
-          <input
-            type="file"
-            accept="image/*,.pdf"
-            className="sr-only"
-            disabled={uploading}
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              setUploading(true);
-              try {
-                const fd = new FormData();
-                fd.append("file", file);
-                if (folder) fd.append("folder", folder);
-                const res = await fetch("/api/upload", { method: "POST", body: fd });
-                const j = await res.json();
-                if (j?.url) {
-                  onChange(j.url);
-                } else {
-                  alert(j?.error ?? (lang === "ja" ? "アップロードに失敗しました。" : "Upload failed."));
-                }
-              } catch {
-                alert(lang === "ja" ? "ネットワークエラーが発生しました。" : "Network error.");
-              } finally {
-                setUploading(false);
-                e.target.value = "";
-              }
-            }}
-          />
-        </label>
-        <span className="text-xs text-muted-foreground">{uploadLabel}</span>
+        {uploading ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+            <span>
+              {progress === null || progress === 0
+                ? (lang === "ja" ? "準備中…" : "Preparing…")
+                : progress >= 100
+                  ? (lang === "ja" ? "完了処理中…" : "Finalizing…")
+                  : `${progress}%`}
+            </span>
+          </div>
+        ) : (
+          <>
+            <label className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border cursor-pointer transition-colors hover:bg-muted">
+              {lang === "ja" ? "ファイルを選択" : "Choose File"}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+                className="sr-only"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setUploading(true);
+                  setProgress(0);
+                  try {
+                    // Step 1 — get a signed upload URL from the server
+                    const signRes = await fetch("/api/upload/signed", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        fileName: file.name,
+                        fileType: file.type,
+                        fileSize: file.size,
+                        folder: folder || "products",
+                      }),
+                    });
+                    if (!signRes.ok) {
+                      const j = await signRes.json().catch(() => ({}));
+                      throw new Error(j?.error || `Upload setup failed (${signRes.status})`);
+                    }
+                    const signed = await signRes.json();
+
+                    // Step 2 — PUT directly to Supabase (no Vercel body-size limit)
+                    await new Promise<void>((resolve, reject) => {
+                      const xhr = new XMLHttpRequest();
+                      xhr.upload.addEventListener("progress", (ev) => {
+                        if (ev.lengthComputable) setProgress(Math.round((ev.loaded / ev.total) * 100));
+                      });
+                      xhr.addEventListener("load", () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                          resolve();
+                        } else {
+                          let msg = `HTTP ${xhr.status}`;
+                          try { const b = JSON.parse(xhr.responseText); msg = b?.error || b?.message || msg; } catch { /* ignore */ }
+                          reject(new Error(msg));
+                        }
+                      });
+                      xhr.addEventListener("error", () =>
+                        reject(new Error(lang === "ja" ? "ネットワークエラー" : "Upload network error"))
+                      );
+                      // Use signedUrl returned by the Supabase SDK — it is the correct
+                      // absolute URL and avoids any manual URL construction bugs.
+                      xhr.open("PUT", signed.signedUrl);
+                      xhr.setRequestHeader("Content-Type", signed.contentType || file.type);
+                      xhr.send(file);
+                    });
+
+                    onChange(signed.publicUrl);
+                  } catch (err: any) {
+                    alert(
+                      (lang === "ja" ? "アップロードに失敗しました:\n" : "Upload failed:\n") +
+                      (err?.message || String(err))
+                    );
+                  } finally {
+                    setUploading(false);
+                    setProgress(null);
+                    e.target.value = "";
+                  }
+                }}
+              />
+            </label>
+            <span className="text-xs text-muted-foreground">{uploadLabel}</span>
+          </>
+        )}
       </div>
       <input
         type="url"
