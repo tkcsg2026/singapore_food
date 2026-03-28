@@ -1,5 +1,83 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient, createAdminSupabaseClient } from "@/lib/supabase-server";
+import { getVideoTranscodeStateForUrl } from "@/lib/video";
+
+type AdminClient = NonNullable<ReturnType<typeof createAdminSupabaseClient>>;
+
+const OPTIONAL_PRODUCT_COLUMNS = [
+  "country_of_origin_en",
+  "video_playback_url",
+  "video_transcoded_url",
+  "video_transcode_status",
+  "video_transcode_error",
+  "video_transcode_requested_at",
+  "video_transcoded_at",
+] as const;
+
+function stripUnsupportedColumns(payload: Record<string, unknown>, errorMessage: string) {
+  const unsupported = OPTIONAL_PRODUCT_COLUMNS.filter((col) => errorMessage.includes(col));
+  if (unsupported.length === 0) return null;
+  const next = { ...payload };
+  for (const col of unsupported) delete next[col];
+  return next;
+}
+
+async function insertWithSchemaFallback(admin: AdminClient, payload: Record<string, unknown>) {
+  let currentPayload = { ...payload };
+  const maxAttempts = OPTIONAL_PRODUCT_COLUMNS.length + 1;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const result = await admin
+      .from("supplier_products")
+      .insert(currentPayload)
+      .select()
+      .single();
+    if (!result.error) return result;
+
+    const stripped = stripUnsupportedColumns(currentPayload, result.error.message);
+    if (!stripped) return result;
+    currentPayload = stripped;
+  }
+
+  return await admin
+    .from("supplier_products")
+    .insert(currentPayload)
+    .select()
+    .single();
+}
+
+async function updateWithSchemaFallback(
+  admin: AdminClient,
+  supplierId: string,
+  id: string,
+  payload: Record<string, unknown>,
+) {
+  let currentPayload = { ...payload };
+  const maxAttempts = OPTIONAL_PRODUCT_COLUMNS.length + 1;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const result = await admin
+      .from("supplier_products")
+      .update(currentPayload)
+      .eq("id", id)
+      .eq("supplier_id", supplierId)
+      .select()
+      .single();
+    if (!result.error) return result;
+
+    const stripped = stripUnsupportedColumns(currentPayload, result.error.message);
+    if (!stripped) return result;
+    currentPayload = stripped;
+  }
+
+  return await admin
+    .from("supplier_products")
+    .update(currentPayload)
+    .eq("id", id)
+    .eq("supplier_id", supplierId)
+    .select()
+    .single();
+}
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug: slugParam } = await params;
@@ -22,7 +100,17 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     .select("*")
     .eq("supplier_id", supplier.id);
 
-  return NextResponse.json(products || []);
+  const normalisedProducts = (products || []).map((p: Record<string, unknown>) => ({
+    ...p,
+    video_playback_url: (p.video_playback_url as string) || (p.video_transcoded_url as string) || (p.video_url as string) || "",
+    video_transcoded_url: (p.video_transcoded_url as string) || "",
+    video_transcode_status: (p.video_transcode_status as string) || ((p.video_url as string) ? "not_needed" : "none"),
+    video_transcode_error: (p.video_transcode_error as string) || "",
+    video_transcode_requested_at: (p.video_transcode_requested_at as string) || null,
+    video_transcoded_at: (p.video_transcoded_at as string) || null,
+  }));
+
+  return NextResponse.json(normalisedProducts);
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
@@ -41,7 +129,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   const body = await req.json();
   const str = (v: unknown) => (v != null ? String(v).trim() : "");
-  const payload: Record<string, string> = {
+  const videoUrl = str(body.video_url);
+  const payload: Record<string, unknown> = {
     supplier_id: supplier.id,
     name:              str(body.name),
     name_en:           str(body.name_en),
@@ -57,29 +146,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     size_unit:         str(body.size_unit) || "cm",
     storage_condition: str(body.storage_condition),
     temperature:       str(body.temperature),
-    video_url:         str(body.video_url),
+    video_url:         videoUrl,
   };
+  const videoTranscode = getVideoTranscodeStateForUrl(videoUrl);
+  payload.video_playback_url = videoTranscode.video_playback_url;
+  payload.video_transcoded_url = videoTranscode.video_transcoded_url;
+  payload.video_transcode_status = videoTranscode.video_transcode_status;
+  payload.video_transcode_error = videoTranscode.video_transcode_error;
+  payload.video_transcode_requested_at = videoTranscode.video_transcode_requested_at;
+  payload.video_transcoded_at = videoTranscode.video_transcoded_at;
 
-  const { data, error } = await admin
-    .from("supplier_products")
-    .insert(payload)
-    .select()
-    .single();
+  const { data, error } = await insertWithSchemaFallback(admin, payload);
 
   if (error) {
-    // Backward compatibility: if DB migration for country_of_origin_en is not yet applied,
-    // retry without the new column instead of hard-failing the save.
-    if (error.message.includes("country_of_origin_en")) {
-      const fallbackPayload = { ...payload };
-      delete fallbackPayload.country_of_origin_en;
-      const retry = await admin
-        .from("supplier_products")
-        .insert(fallbackPayload)
-        .select()
-        .single();
-      if (retry.error) return NextResponse.json({ error: retry.error.message }, { status: 500 });
-      return NextResponse.json(retry.data);
-    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json(data);
@@ -104,7 +183,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ slug
   if (!id) return NextResponse.json({ error: "Product id required" }, { status: 400 });
 
   const str = (v: unknown) => (v != null ? String(v).trim() : "");
-  const payload: Record<string, string> = {
+  const videoUrl = str(body.video_url);
+  const payload: Record<string, unknown> = {
     name:              str(body.name),
     name_en:           str(body.name_en),
     image:             str(body.image),
@@ -119,31 +199,19 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ slug
     size_unit:         str(body.size_unit) || "cm",
     storage_condition: str(body.storage_condition),
     temperature:       str(body.temperature),
-    video_url:         str(body.video_url),
+    video_url:         videoUrl,
   };
+  const videoTranscode = getVideoTranscodeStateForUrl(videoUrl);
+  payload.video_playback_url = videoTranscode.video_playback_url;
+  payload.video_transcoded_url = videoTranscode.video_transcoded_url;
+  payload.video_transcode_status = videoTranscode.video_transcode_status;
+  payload.video_transcode_error = videoTranscode.video_transcode_error;
+  payload.video_transcode_requested_at = videoTranscode.video_transcode_requested_at;
+  payload.video_transcoded_at = videoTranscode.video_transcoded_at;
 
-  const { data, error } = await admin
-    .from("supplier_products")
-    .update(payload)
-    .eq("id", id)
-    .eq("supplier_id", supplier.id)
-    .select()
-    .single();
+  const { data, error } = await updateWithSchemaFallback(admin, supplier.id, id, payload);
 
   if (error) {
-    if (error.message.includes("country_of_origin_en")) {
-      const fallbackPayload = { ...payload };
-      delete fallbackPayload.country_of_origin_en;
-      const retry = await admin
-        .from("supplier_products")
-        .update(fallbackPayload)
-        .eq("id", id)
-        .eq("supplier_id", supplier.id)
-        .select()
-        .single();
-      if (retry.error) return NextResponse.json({ error: retry.error.message }, { status: 500 });
-      return NextResponse.json(retry.data);
-    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json(data);
