@@ -67,6 +67,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     storage_condition: p.storage_condition ?? "",
     temperature: p.temperature ?? "",
     video_url: p.video_url ?? "",
+    video_playback_url: p.video_playback_url ?? p.video_transcoded_url ?? p.video_url ?? "",
+    video_transcoded_url: p.video_transcoded_url ?? "",
+    video_transcode_status: p.video_transcode_status ?? (p.video_url ? "not_needed" : "none"),
+    video_transcode_error: p.video_transcode_error ?? "",
+    video_transcode_requested_at: p.video_transcode_requested_at ?? null,
+    video_transcoded_at: p.video_transcoded_at ?? null,
   }));
 
   return NextResponse.json({ ...supplier, products: normalisedProducts });

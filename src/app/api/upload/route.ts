@@ -1,21 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase-server";
+import { GENERIC_VIDEO_TYPES, getFileExtension, inferVideoMimeType, VIDEO_EXTENSIONS } from "@/lib/video";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-const VIDEO_TYPES = [
-  "video/mp4",
-  "video/webm",
-  "video/quicktime",
-  "video/x-quicktime",
-  "video/3gpp",
-  "video/3gpp2",
-];
-const VIDEO_EXTENSIONS = new Set([
-  "mp4", "m4v", "mov", "qt", "webm", "3gp", "3g2",
-  "avi", "mkv", "mts", "m2ts", "ts", "mpeg", "mpg",
-  "wmv", "flv", "ogv", "mxf",
-]);
-const GENERIC_VIDEO_TYPES = new Set(["application/octet-stream", "binary/octet-stream"]);
 
 /** Maximum sizes */
 const IMAGE_MAX_BYTES = 10 * 1024 * 1024;  // 10 MB
@@ -35,13 +22,10 @@ export async function POST(req: NextRequest) {
 
   const requestedFolder = ((formData.get("folder") as string) || "").trim().toLowerCase();
   const normalizedType = (file.type || "").toLowerCase().trim();
-  const ext = (file.name.split(".").pop() || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const ext = getFileExtension(file.name);
 
   const isImage = IMAGE_TYPES.includes(normalizedType);
-  const isVideoByType =
-    normalizedType.startsWith("video/") ||
-    VIDEO_TYPES.includes(normalizedType) ||
-    GENERIC_VIDEO_TYPES.has(normalizedType);
+  const isVideoByType = normalizedType.startsWith("video/") || GENERIC_VIDEO_TYPES.has(normalizedType);
   const isVideoByExt = VIDEO_EXTENSIONS.has(ext);
   const isVideo = isVideoByType || isVideoByExt || requestedFolder === "videos";
 
@@ -71,18 +55,10 @@ export async function POST(req: NextRequest) {
 
   // Videos go into the "videos" bucket; images stay in "logos"
   const bucket = isVideo ? "videos" : "logos";
-
-  const resolvedVideoType = normalizedType.startsWith("video/")
-    ? normalizedType
-    : safeExt === "webm"
-      ? "video/webm"
-      : safeExt === "mov" || safeExt === "qt"
-        ? "video/quicktime"
-        : safeExt === "3gp"
-          ? "video/3gpp"
-          : safeExt === "3g2"
-            ? "video/3gpp2"
-            : "video/mp4";
+  const resolvedVideoType = inferVideoMimeType({
+    fileType: normalizedType,
+    fileName: file.name,
+  });
 
   const { error } = await supabase.storage.from(bucket).upload(path, buf, {
     contentType: isVideo ? resolvedVideoType : normalizedType,

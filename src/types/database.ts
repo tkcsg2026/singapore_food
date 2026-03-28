@@ -136,6 +136,16 @@ export interface SupplierProductRow {
   size_unit?: string;
   /** Direct MP4/WebM URL or YouTube/Vimeo embed URL */
   video_url?: string;
+  /** Preferred playable URL used by frontend (transcoded if ready, else source URL). */
+  video_playback_url?: string;
+  /** Worker-generated browser-safe output URL. */
+  video_transcoded_url?: string;
+  /** Transcode lifecycle state. */
+  video_transcode_status?: "none" | "not_needed" | "queued" | "processing" | "completed" | "failed";
+  /** Last worker error message for failed jobs. */
+  video_transcode_error?: string;
+  video_transcode_requested_at?: string | null;
+  video_transcoded_at?: string | null;
 }
 
 export interface MarketplaceItemRow {

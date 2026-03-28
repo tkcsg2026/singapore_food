@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   Store, ShoppingBag, CheckCircle, XCircle, Plus, Trash2, Edit2, Link2,
   BarChart3, Tag, Image, AlertTriangle, Shield, Save, Eye, Newspaper, Globe, ExternalLink, FileText, Palette, Users,
-  Search, Ban, UserCheck, ClipboardList, Video, MessageCircle,
+  Search, Ban, UserCheck, ClipboardList, Video, MessageCircle, Loader2, Play,
 } from "lucide-react";
 import { FONT_OPTIONS, COLOR_OPTIONS, applyTheme } from "@/components/ThemeProvider";
 import {
@@ -16,6 +16,13 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { getSupabase } from "@/lib/supabase";
 import { sanitizeWhatsAppDigits } from "@/lib/jobs-whatsapp";
+import { inferVideoMimeType, VIDEO_EXTENSIONS, getFileExtension } from "@/lib/video";
+
+/** Returns true when a URL clearly points to a video file (by extension). */
+function isVideoFileUrl(url: string): boolean {
+  if (!url) return false;
+  return VIDEO_EXTENSIONS.has(getFileExtension(url.trim()));
+}
 
 /**
  * Authenticated fetch helper: attaches the current user's Bearer token to
@@ -792,6 +799,7 @@ function ProductManager({ slug }: { slug: string }) {
   const [products, setProducts] = useState<any[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [videoUploading, setVideoUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [form, setForm] = useState({
     name: "", name_en: "", image: "", moq: "",
     country_of_origin: "", country_of_origin_en: "", weight: "", quantity: "",
@@ -882,18 +890,6 @@ function ProductManager({ slug }: { slug: string }) {
     fetchProducts();
   };
 
-  const resolveVideoContentType = (file: File): string => {
-    const declared = (file.type || "").toLowerCase().trim();
-    const ext = (file.name.split(".").pop() || "").toLowerCase();
-    if (declared.startsWith("video/")) return declared;
-    if (ext === "mov" || ext === "qt") return "video/quicktime";
-    if (ext === "webm") return "video/webm";
-    if (ext === "3gp") return "video/3gpp";
-    if (ext === "3g2") return "video/3gpp2";
-    if (declared) return declared;
-    return "video/mp4";
-  };
-
   return (
     <div className="mt-2 bg-muted/50 border p-3 sm:p-4 space-y-4 overflow-x-hidden">
       <h3 className="text-sm font-bold">{t.admin.productManagement}</h3>
@@ -912,81 +908,125 @@ function ProductManager({ slug }: { slug: string }) {
         <label className="text-sm font-medium block mb-1.5">
           <span className="inline-flex items-center gap-1.5"><Video className="h-3.5 w-3.5" />{t.admin.productVideo}</span>
         </label>
-        <div className="flex flex-wrap gap-2 items-center mb-1.5">
-          <label className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border cursor-pointer transition-colors ${videoUploading ? "opacity-50 pointer-events-none" : "hover:bg-muted"}`}>
-            <Video className="h-3.5 w-3.5" />
-            {videoUploading
-              ? (lang === "ja" ? "アップロード中…" : "Uploading…")
-              : (lang === "ja" ? "動画ファイルをアップロード" : "Upload video file")}
-            <input
-              type="file"
-              accept="video/*,.mov,.qt,.3gp,.3g2,.mkv,.avi,.wmv,.m4v,.flv,.mpeg,.mpg,.ts"
-              className="sr-only"
-              disabled={videoUploading}
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                setVideoUploading(true);
-                try {
-                  if (file.size > 200 * 1024 * 1024) {
-                    alert(lang === "ja" ? "動画サイズは200MB以下にしてください。" : "Video size must be 200MB or less.");
-                    return;
-                  }
-
-                  const signRes = await fetch("/api/upload/signed", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      fileName: file.name,
-                      fileType: file.type,
-                      fileSize: file.size,
-                      folder: "videos",
-                    }),
-                  });
-
-                  if (signRes.ok) {
-                    const signed = await signRes.json();
-                    const sb = getSupabase();
-                    if (sb && signed?.bucket && signed?.path && signed?.token) {
-                      const contentType = resolveVideoContentType(file);
-                      const body = new Uint8Array(await file.arrayBuffer());
-                      const up = await sb.storage
-                        .from(signed.bucket)
-                        .uploadToSignedUrl(signed.path, signed.token, body, {
-                          contentType,
-                          cacheControl: "3600",
-                          upsert: false,
-                        });
-                      if (!up.error) {
-                        setForm((prev) => ({ ...prev, video_url: signed.publicUrl }));
-                        return;
-                      }
+        {videoUploading ? (
+          <div className="mb-1.5 space-y-1.5">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+              <span>
+                {uploadProgress === null || uploadProgress === 0
+                  ? (lang === "ja" ? "準備中…" : "Preparing…")
+                  : uploadProgress >= 100
+                    ? (lang === "ja" ? "完了処理中…" : "Finalizing…")
+                    : (lang === "ja" ? `アップロード中… ${uploadProgress}%` : `Uploading… ${uploadProgress}%`)}
+              </span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+              <div
+                className="bg-primary h-1.5 rounded-full transition-[width] duration-200"
+                style={{ width: `${uploadProgress ?? 0}%` }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2 items-center mb-1.5">
+            <label className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border cursor-pointer transition-colors hover:bg-muted">
+              <Video className="h-3.5 w-3.5" />
+              {lang === "ja" ? "動画ファイルをアップロード" : "Upload video file"}
+              <input
+                type="file"
+                accept="video/*,.mov,.qt,.3gp,.3g2,.mkv,.avi,.wmv,.m4v,.flv,.mpeg,.mpg,.ts,.m2ts,.mts,.ogv,.mxf"
+                className="sr-only"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setVideoUploading(true);
+                  setUploadProgress(0);
+                  try {
+                    if (file.size > 200 * 1024 * 1024) {
+                      alert(lang === "ja" ? "動画サイズは200MB以下にしてください。" : "Video size must be 200 MB or less.");
+                      return;
                     }
-                  }
 
-                  // Fallback: keep legacy server-side upload path.
-                  const fd = new FormData();
-                  fd.append("file", file);
-                  fd.append("folder", "videos");
-                  const res = await fetch("/api/upload", { method: "POST", body: fd });
-                  let j: any = null;
-                  try { j = await res.json(); } catch {}
-                  if (res.ok && j?.url) {
-                    setForm((prev) => ({ ...prev, video_url: j.url }));
-                    return;
+                    // Step 1 — ask the server for a signed upload URL
+                    const signRes = await fetch("/api/upload/signed", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        fileName: file.name,
+                        fileType: file.type,
+                        fileSize: file.size,
+                        folder: "videos",
+                      }),
+                    });
+                    if (!signRes.ok) {
+                      const j = await signRes.json().catch(() => ({}));
+                      throw new Error(
+                        j?.error ||
+                        (lang === "ja"
+                          ? `署名付きURLの取得に失敗 (${signRes.status})`
+                          : `Failed to prepare upload (${signRes.status}) — check Supabase service role key`)
+                      );
+                    }
+                    const signed = await signRes.json();
+
+                    // Step 2 — upload directly to Supabase Storage via XHR
+                    // (XHR gives real-time progress; File object is sent as a stream
+                    //  so the entire video is never buffered into RAM first)
+                    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+                    if (!supabaseUrl) throw new Error("NEXT_PUBLIC_SUPABASE_URL is not set");
+
+                    const contentType = inferVideoMimeType({
+                      fileType: signed.contentType || file.type,
+                      fileName: file.name,
+                    });
+                    const xhrUrl =
+                      `${supabaseUrl}/storage/v1/object/upload/sign/` +
+                      `${signed.bucket}/${signed.path}?token=${signed.token}`;
+
+                    await new Promise<void>((resolve, reject) => {
+                      const xhr = new XMLHttpRequest();
+                      xhr.upload.addEventListener("progress", (ev) => {
+                        if (ev.lengthComputable) {
+                          setUploadProgress(Math.round((ev.loaded / ev.total) * 100));
+                        }
+                      });
+                      xhr.addEventListener("load", () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                          resolve();
+                        } else {
+                          let msg = `HTTP ${xhr.status}`;
+                          try {
+                            const b = JSON.parse(xhr.responseText);
+                            msg = b?.error || b?.message || msg;
+                          } catch { /* ignore parse errors */ }
+                          reject(new Error(msg));
+                        }
+                      });
+                      xhr.addEventListener("error", () =>
+                        reject(new Error(lang === "ja" ? "ネットワークエラー" : "Network error during upload"))
+                      );
+                      xhr.open("PUT", xhrUrl);
+                      xhr.setRequestHeader("Content-Type", contentType);
+                      xhr.send(file);
+                    });
+
+                    setForm((prev) => ({ ...prev, video_url: signed.publicUrl }));
+                  } catch (err: any) {
+                    alert(
+                      (lang === "ja" ? "アップロードに失敗しました:\n" : "Upload failed:\n") +
+                      (err?.message || String(err))
+                    );
+                  } finally {
+                    setVideoUploading(false);
+                    setUploadProgress(null);
+                    e.target.value = "";
                   }
-                  alert(j?.error ?? (lang === "ja" ? "アップロードに失敗しました。" : "Upload failed."));
-                } catch (err: any) {
-                  alert((lang === "ja" ? "ネットワークエラー: " : "Network error: ") + (err?.message || ""));
-                } finally {
-                  setVideoUploading(false);
-                  e.target.value = "";
-                }
-              }}
-            />
-          </label>
-          <span className="text-xs text-muted-foreground">{lang === "ja" ? "または" : "or"}</span>
-        </div>
+                }}
+              />
+            </label>
+            <span className="text-xs text-muted-foreground">{lang === "ja" ? "または" : "or"}</span>
+          </div>
+        )}
         <input
           type="url"
           value={form.video_url}
@@ -1077,11 +1117,45 @@ function ProductManager({ slug }: { slug: string }) {
           {products.map((p: any) => (
             <div key={p.id} className="flex items-center gap-3 bg-card border p-3">
               <div className="relative flex-shrink-0">
-                {p.image
-                  ? <img src={p.image} alt="" className="w-12 h-12 rounded object-cover" referrerPolicy="no-referrer" />
-                  : <div className="w-12 h-12 rounded bg-muted flex items-center justify-center"><Image className="h-5 w-5 text-muted-foreground" /></div>
-                }
-                {p.video_url && (
+                {(() => {
+                  const rawImg = (p.image || "").trim();
+                  const imgIsVideo = isVideoFileUrl(rawImg);
+                  const videoSrc = imgIsVideo ? rawImg : (p.video_url || "").trim();
+                  const imageSrc = imgIsVideo ? "" : rawImg;
+
+                  if (imageSrc) {
+                    return (
+                      <img
+                        src={imageSrc}
+                        alt=""
+                        className="w-12 h-12 rounded object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    );
+                  }
+                  if (videoSrc) {
+                    return (
+                      <div className="w-12 h-12 rounded bg-gray-900 relative overflow-hidden">
+                        <video
+                          src={videoSrc}
+                          muted
+                          playsInline
+                          preload="metadata"
+                          className="absolute inset-0 w-full h-full object-cover opacity-80"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                          <Play className="h-3.5 w-3.5 text-white fill-white" />
+                        </div>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="w-12 h-12 rounded bg-muted flex items-center justify-center">
+                      <Image className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  );
+                })()}
+                {(p.video_url || isVideoFileUrl((p.image || "").trim())) && (
                   <span className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5" title={lang === "ja" ? "動画あり" : "Has video"}>
                     <Video className="h-2.5 w-2.5" />
                   </span>
@@ -3069,17 +3143,8 @@ function LinksManager() {
  */
 function VideoPreview({ url }: { url: string }) {
   if (!url) return null;
-  const lowerUrl = url.toLowerCase();
-  const videoType =
-    lowerUrl.endsWith(".mov") || lowerUrl.endsWith(".qt")
-      ? "video/quicktime"
-      : lowerUrl.endsWith(".webm")
-        ? "video/webm"
-        : lowerUrl.endsWith(".3gp")
-          ? "video/3gpp"
-          : lowerUrl.endsWith(".3g2")
-            ? "video/3gpp2"
-            : "video/mp4";
+  const videoType = inferVideoMimeType({ url });
+  const [loadFailed, setLoadFailed] = useState(false);
 
   // YouTube
   const ytMatch =
@@ -3113,12 +3178,24 @@ function VideoPreview({ url }: { url: string }) {
     );
   }
 
-  // Direct MP4 / WebM
+  if (loadFailed) {
+    return (
+      <div className="aspect-video w-full rounded-lg bg-black/95 text-white/80 flex flex-col items-center justify-center gap-2 px-4">
+        <span className="text-sm text-center">Preview unavailable in this browser.</span>
+        <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs underline underline-offset-2 text-white/70">
+          Open video in new tab ↗
+        </a>
+      </div>
+    );
+  }
+
+  // Direct video file — no crossOrigin so Supabase storage CORS doesn't block playback
   return (
     <video
       controls
       playsInline
       preload="metadata"
+      onError={() => setLoadFailed(true)}
       className="w-full rounded-lg bg-black"
       style={{ maxHeight: "240px" }}
     >

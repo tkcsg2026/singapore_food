@@ -1,7 +1,7 @@
 "use client";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { MapPin, ArrowLeft, Award, Phone, ChevronLeft, ChevronRight, MessageCircle, Video } from "lucide-react";
+import { MapPin, ArrowLeft, Award, Phone, ChevronLeft, ChevronRight, MessageCircle, Video, Play } from "lucide-react";
 import { useState } from "react";
 import Layout from "@/components/Layout";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
@@ -9,24 +9,69 @@ import { useFetch } from "@/hooks/useSupabaseData";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useLoginPrompt } from "@/components/LoginPromptModal";
 import type { CategoryRow } from "@/types/database";
+import { getPreferredPlaybackUrl, VIDEO_EXTENSIONS, getFileExtension } from "@/lib/video";
 
-/** Embeds a YouTube / Vimeo iframe or native <video> for a product video URL. */
-function ProductVideoEmbed({ url, className = "" }: { url: string; className?: string }) {
-  const cleanUrl = url.split(/[?#]/)[0] || url;
-  const lowerUrl = cleanUrl.toLowerCase();
-  const videoType =
-    lowerUrl.endsWith(".mov") || lowerUrl.endsWith(".qt")
-      ? "video/quicktime"
-      : lowerUrl.endsWith(".webm")
-        ? "video/webm"
-        : lowerUrl.endsWith(".3gp")
-          ? "video/3gpp"
-          : lowerUrl.endsWith(".3g2")
-            ? "video/3gpp2"
-            : "video/mp4";
-  const ytMatch =
-    url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/) ||
+function isYouTube(url: string) {
+  return url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/) ||
     url.match(/youtube\.com\/embed\/([A-Za-z0-9_-]{11})/);
+}
+function isVimeo(url: string) {
+  return url.match(/vimeo\.com\/(\d+)/);
+}
+function isVideoFileUrl(url: string): boolean {
+  if (!url) return false;
+  const ext = getFileExtension(url);
+  return VIDEO_EXTENSIONS.has(ext);
+}
+
+/**
+ * Resolves the best image URL and best video playback URL for a product.
+ * Handles the case where the video URL was accidentally saved into `image`
+ * instead of `video_url` — in that case `imageUrl` is cleared and the video
+ * URL is promoted to `playbackUrl`.
+ */
+function resolveProductMedia(p: any): {
+  imageUrl: string;
+  playbackUrl: string;
+  hasVideo: boolean;
+  transcodeStatus: string;
+  transcodeError: string;
+} {
+  const rawImage = (p.image || "").trim();
+  const imageIsVideo = Boolean(rawImage) && isVideoFileUrl(rawImage);
+
+  // Prefer explicit video_url / playback_url; fall back to image field if
+  // it turns out to be a video URL.
+  const playbackUrl = getPreferredPlaybackUrl({
+    videoUrl: (p.video_url || "").trim() || (imageIsVideo ? rawImage : ""),
+    videoTranscodedUrl: (p.video_transcoded_url || "").trim(),
+    videoPlaybackUrl: (p.video_playback_url || "").trim(),
+  });
+
+  return {
+    imageUrl: imageIsVideo ? "" : rawImage,
+    playbackUrl,
+    hasVideo: Boolean(playbackUrl),
+    transcodeStatus: (p.video_transcode_status || "").toString().trim().toLowerCase(),
+    transcodeError: (p.video_transcode_error || "").toString().trim(),
+  };
+}
+
+/**
+ * Embeds a YouTube / Vimeo iframe or a native <video> for a direct video URL.
+ *
+ * For direct files the component uses a **click-to-play** pattern:
+ *  1. Initially renders a dark poster with a large Play button — no network
+ *     request is made so there is no premature error event.
+ *  2. On click it swaps in the real <video> element with autoPlay.
+ *  3. If the video still fails to load (bad URL, codec, server error) it
+ *     falls back to a "Open in new tab" link so the user is never stranded.
+ */
+function ProductVideoEmbed({ url, className = "" }: { url: string; className?: string }) {
+  const [playing, setPlaying] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  const ytMatch = isYouTube(url);
   if (ytMatch) {
     return (
       <div className={`aspect-video w-full overflow-hidden bg-black ${className}`}>
@@ -39,7 +84,7 @@ function ProductVideoEmbed({ url, className = "" }: { url: string; className?: s
       </div>
     );
   }
-  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  const vimeoMatch = isVimeo(url);
   if (vimeoMatch) {
     return (
       <div className={`aspect-video w-full overflow-hidden bg-black ${className}`}>
@@ -52,26 +97,166 @@ function ProductVideoEmbed({ url, className = "" }: { url: string; className?: s
       </div>
     );
   }
+
+  if (loadFailed) {
+    return (
+      <div className={`aspect-video w-full bg-black/95 text-white/80 flex flex-col items-center justify-center gap-3 px-6 ${className}`}>
+        <Play className="h-10 w-10 text-white/30" />
+        <span className="text-sm text-center leading-relaxed">
+          Video preview unavailable in this browser.
+        </span>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-xs bg-white/10 hover:bg-white/20 transition-colors px-4 py-2 rounded-full text-white/90"
+        >
+          Open video in new tab ↗
+        </a>
+      </div>
+    );
+  }
+
+  if (!playing) {
+    return (
+      <div
+        className={`aspect-video w-full bg-black flex items-center justify-center cursor-pointer group ${className}`}
+        onClick={() => setPlaying(true)}
+        role="button"
+        aria-label="Play video"
+      >
+        {/* Blurred first-frame hint: load only metadata, hidden behind overlay */}
+        <video
+          src={url}
+          muted
+          playsInline
+          preload="metadata"
+          className="absolute inset-0 w-full h-full object-cover opacity-60 pointer-events-none"
+          style={{ filter: "blur(2px)" }}
+        />
+        <div className="relative z-10 bg-black/50 group-hover:bg-black/70 transition-colors rounded-full p-5 shadow-2xl">
+          <Play className="h-10 w-10 text-white fill-white" />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <video controls playsInline preload="metadata" className={`w-full bg-black ${className}`}>
-      <source src={url} type={videoType} />
+    <video
+      controls
+      autoPlay
+      playsInline
+      preload="auto"
+      onError={() => setLoadFailed(true)}
+      className={`w-full bg-black ${className}`}
+    >
+      {/* No type= attribute: let the browser detect from Content-Type header */}
       <source src={url} />
     </video>
   );
 }
 
-/** Returns a preview thumbnail URL for YouTube/Vimeo links. */
+/** Returns a preview thumbnail URL for YouTube / Vimeo links only. */
 function getVideoThumbnail(url?: string): string | null {
   if (!url) return null;
-  const ytMatch =
-    url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/) ||
-    url.match(/youtube\.com\/embed\/([A-Za-z0-9_-]{11})/);
+  const ytMatch = isYouTube(url);
   if (ytMatch) return `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
-
-  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  const vimeoMatch = isVimeo(url);
   if (vimeoMatch) return `https://vumbnail.com/${vimeoMatch[1]}.jpg`;
-
   return null;
+}
+
+/**
+ * Thumbnail card for direct video URLs.
+ * Always shows a dark card with play-icon overlay immediately so the card
+ * never appears blank while the video preloads.  If the browser can load
+ * metadata the first frame is shown behind the overlay.
+ */
+function VideoThumbnailCard({ url }: { url: string }) {
+  return (
+    <div className="aspect-[4/3] bg-gray-900 overflow-hidden relative">
+      {/* Attempt to paint the first frame; errors are silently ignored */}
+      <video
+        src={url}
+        muted
+        playsInline
+        preload="metadata"
+        className="absolute inset-0 w-full h-full object-cover opacity-80"
+        onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = "none"; }}
+      />
+      {/* Play-icon overlay — always visible regardless of whether first frame loads */}
+      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+        <div className="bg-black/60 rounded-full p-2.5 shadow-lg">
+          <Play className="h-6 w-6 text-white fill-white" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProductCardMedia({ product, name }: { product: any; name: string }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const { imageUrl, playbackUrl } = resolveProductMedia(product);
+  const videoThumb = getVideoThumbnail(playbackUrl);
+
+  if (imageUrl && !imageFailed) {
+    return (
+      <img
+        src={imageUrl}
+        alt={name}
+        className="w-full h-auto block"
+        referrerPolicy="no-referrer"
+        onError={() => setImageFailed(true)}
+      />
+    );
+  }
+  if (videoThumb) {
+    return <img src={videoThumb} alt={name} className="w-full h-auto block" referrerPolicy="no-referrer" />;
+  }
+  if (playbackUrl) {
+    return <VideoThumbnailCard url={playbackUrl} />;
+  }
+  return (
+    <div className="aspect-[4/3] bg-muted flex items-center justify-center">
+      <span className="text-muted-foreground text-xs">No image</span>
+    </div>
+  );
+}
+
+function ProductModalMedia({ product }: { product: any }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const { imageUrl, playbackUrl, transcodeStatus, transcodeError } = resolveProductMedia(product);
+  const hasImage = Boolean(imageUrl) && !imageFailed;
+
+  return (
+    <>
+      {imageUrl && !imageFailed && (
+        <img
+          src={imageUrl}
+          alt={product.name}
+          className="w-full h-auto block"
+          referrerPolicy="no-referrer"
+          onError={() => setImageFailed(true)}
+        />
+      )}
+      {playbackUrl && (
+        <ProductVideoEmbed
+          url={playbackUrl}
+          className={hasImage ? "border-t" : "rounded-t-2xl sm:rounded-t-2xl"}
+        />
+      )}
+      {!playbackUrl && transcodeStatus === "processing" && (
+        <div className="aspect-video w-full bg-black/95 text-white/80 flex items-center justify-center text-sm px-4 text-center rounded-t-2xl sm:rounded-t-2xl">
+          Video is being processed — please refresh in a moment.
+        </div>
+      )}
+      {!playbackUrl && transcodeStatus === "failed" && (
+        <div className="aspect-video w-full bg-black/95 text-white/80 flex items-center justify-center text-sm px-4 text-center rounded-t-2xl sm:rounded-t-2xl">
+          {transcodeError || "Video processing failed."}
+        </div>
+      )}
+    </>
+  );
 }
 
 const SupplierDetail = () => {
@@ -267,34 +452,8 @@ const SupplierDetail = () => {
                 {products.map((p: any) => (
                   <div key={p.id} role="button" tabIndex={0} onClick={() => setSelectedProduct(p.id)} onKeyDown={(e) => e.key === "Enter" && setSelectedProduct(p.id)} className="bg-card border text-left active:opacity-80 w-full cursor-pointer select-none">
                     <div className="relative">
-                      {(() => {
-                        const videoThumb = getVideoThumbnail(p.video_url);
-                        if (p.image) {
-                          return <img src={p.image} alt={p.name} className="w-full h-auto block" referrerPolicy="no-referrer" />;
-                        }
-                        if (videoThumb) {
-                          return <img src={videoThumb} alt={p.name} className="w-full h-auto block" referrerPolicy="no-referrer" />;
-                        }
-                        if (p.video_url) {
-                          return (
-                            <div className="aspect-[4/3] bg-black/95 overflow-hidden">
-                              <video
-                                src={p.video_url}
-                                muted
-                                playsInline
-                                preload="metadata"
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          );
-                        }
-                        return (
-                          <div className="aspect-[4/3] bg-muted flex items-center justify-center">
-                            <span className="text-muted-foreground text-xs">No image</span>
-                          </div>
-                        );
-                      })()}
-                      {p.video_url && (
+                      <ProductCardMedia product={p} name={p.name} />
+                      {resolveProductMedia(p).hasVideo && (
                         <span className="absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 bg-black/70 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
                           <Video className="h-2.5 w-2.5" />
                           {lang === "ja" ? "動画" : "Video"}
@@ -360,12 +519,7 @@ const SupplierDetail = () => {
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center overflow-hidden p-0 sm:p-4">
             <div className="absolute inset-0 bg-foreground/40" onClick={() => setSelectedProduct(null)} />
             <div className="relative bg-background rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90dvh] overflow-y-auto shadow-2xl">
-              {product.image && (
-                <img src={product.image} alt={product.name} className="w-full h-auto block" referrerPolicy="no-referrer" />
-              )}
-              {product.video_url && (
-                <ProductVideoEmbed url={product.video_url} className={product.image ? "border-t" : "rounded-t-2xl sm:rounded-t-2xl"} />
-              )}
+              <ProductModalMedia product={product} />
               <div className="p-4">
                 <h3 className="text-base font-bold">{product.name}</h3>
                 {product.name_en && <p className="text-sm text-muted-foreground">{product.name_en}</p>}
