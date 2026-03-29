@@ -67,14 +67,22 @@ function resolveProductMedia(p: any): {
  *  3. If the video still fails to load (bad URL, codec, server error) it
  *     falls back to a "Open in new tab" link so the user is never stranded.
  */
-function ProductVideoEmbed({ url, className = "" }: { url: string; className?: string }) {
+function ProductVideoEmbed({
+  url,
+  poster,
+  className = "",
+}: {
+  url: string;
+  poster?: string;
+  className?: string;
+}) {
   const [playing, setPlaying] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
 
   const ytMatch = isYouTube(url);
   if (ytMatch) {
     return (
-      <div className={`aspect-video w-full overflow-hidden bg-black ${className}`}>
+      <div className={`aspect-video w-full relative overflow-hidden bg-black ${className}`}>
         <iframe
           src={`https://www.youtube.com/embed/${ytMatch[1]}`}
           allow="autoplay; encrypted-media"
@@ -87,7 +95,7 @@ function ProductVideoEmbed({ url, className = "" }: { url: string; className?: s
   const vimeoMatch = isVimeo(url);
   if (vimeoMatch) {
     return (
-      <div className={`aspect-video w-full overflow-hidden bg-black ${className}`}>
+      <div className={`aspect-video w-full relative overflow-hidden bg-black ${className}`}>
         <iframe
           src={`https://player.vimeo.com/video/${vimeoMatch[1]}`}
           allow="autoplay; fullscreen"
@@ -119,21 +127,33 @@ function ProductVideoEmbed({ url, className = "" }: { url: string; className?: s
 
   if (!playing) {
     return (
+      /* relative + overflow-hidden are required so the absolutely-positioned
+         blurred background stays clipped inside this container */
       <div
-        className={`aspect-video w-full bg-black flex items-center justify-center cursor-pointer group ${className}`}
+        className={`aspect-video w-full bg-black relative overflow-hidden flex items-center justify-center cursor-pointer group ${className}`}
         onClick={() => setPlaying(true)}
         role="button"
         aria-label="Play video"
       >
-        {/* Blurred first-frame hint: load only metadata, hidden behind overlay */}
-        <video
-          src={url}
-          muted
-          playsInline
-          preload="metadata"
-          className="absolute inset-0 w-full h-full object-cover opacity-60 pointer-events-none"
-          style={{ filter: "blur(2px)" }}
-        />
+        {/* Blurred first-frame / poster behind the play button */}
+        {poster ? (
+          <img
+            src={poster}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover opacity-60 pointer-events-none"
+            style={{ filter: "blur(3px)" }}
+          />
+        ) : (
+          <video
+            src={url}
+            muted
+            playsInline
+            preload="metadata"
+            className="absolute inset-0 w-full h-full object-cover opacity-60 pointer-events-none"
+            style={{ filter: "blur(2px)" }}
+            onLoadedMetadata={(e) => { e.currentTarget.currentTime = 0.001; }}
+          />
+        )}
         <div className="relative z-10 bg-black/50 group-hover:bg-black/70 transition-colors rounded-full p-5 shadow-2xl">
           <Play className="h-10 w-10 text-white fill-white" />
         </div>
@@ -142,13 +162,16 @@ function ProductVideoEmbed({ url, className = "" }: { url: string; className?: s
   }
 
   return (
+    /* w-full + max-h keeps the video from dominating a small mobile screen
+       while still going full-size on desktop */
     <video
       controls
       autoPlay
       playsInline
       preload="auto"
+      poster={poster}
       onError={() => setLoadFailed(true)}
-      className={`w-full bg-black ${className}`}
+      className={`w-full bg-black block max-h-[56vw] sm:max-h-none ${className}`}
     >
       {/* No type= attribute: let the browser detect from Content-Type header */}
       <source src={url} />
@@ -227,37 +250,50 @@ function ProductCardMedia({ product, name }: { product: any; name: string }) {
 function ProductModalMedia({ product }: { product: any }) {
   const [imageFailed, setImageFailed] = useState(false);
   const { imageUrl, playbackUrl, transcodeStatus, transcodeError } = resolveProductMedia(product);
-  const hasImage = Boolean(imageUrl) && !imageFailed;
 
-  return (
-    <>
-      {imageUrl && !imageFailed && (
-        <img
-          src={imageUrl}
-          alt={product.name}
-          className="w-full h-auto block"
-          referrerPolicy="no-referrer"
-          onError={() => setImageFailed(true)}
-        />
-      )}
-      {playbackUrl && (
-        <ProductVideoEmbed
-          url={playbackUrl}
-          className={hasImage ? "border-t" : "rounded-t-2xl sm:rounded-t-2xl"}
-        />
-      )}
-      {!playbackUrl && transcodeStatus === "processing" && (
-        <div className="aspect-video w-full bg-black/95 text-white/80 flex items-center justify-center text-sm px-4 text-center rounded-t-2xl sm:rounded-t-2xl">
-          Video is being processed — please refresh in a moment.
-        </div>
-      )}
-      {!playbackUrl && transcodeStatus === "failed" && (
-        <div className="aspect-video w-full bg-black/95 text-white/80 flex items-center justify-center text-sm px-4 text-center rounded-t-2xl sm:rounded-t-2xl">
-          {transcodeError || "Video processing failed."}
-        </div>
-      )}
-    </>
-  );
+  // When a video is present, show the video player only — using the product
+  // image as a poster so it still appears before the user presses play.
+  // This prevents the "image stacked above video" layout that makes the modal
+  // too tall on mobile.
+  if (playbackUrl) {
+    return (
+      <ProductVideoEmbed
+        url={playbackUrl}
+        poster={imageFailed ? undefined : (imageUrl || undefined)}
+        className="rounded-t-2xl sm:rounded-t-2xl overflow-hidden"
+      />
+    );
+  }
+
+  if (transcodeStatus === "processing") {
+    return (
+      <div className="aspect-video w-full bg-black/95 text-white/80 flex items-center justify-center text-sm px-4 text-center rounded-t-2xl sm:rounded-t-2xl">
+        Video is being processed — please refresh in a moment.
+      </div>
+    );
+  }
+  if (transcodeStatus === "failed") {
+    return (
+      <div className="aspect-video w-full bg-black/95 text-white/80 flex items-center justify-center text-sm px-4 text-center rounded-t-2xl sm:rounded-t-2xl">
+        {transcodeError || "Video processing failed."}
+      </div>
+    );
+  }
+
+  // No video — show the image only
+  if (imageUrl && !imageFailed) {
+    return (
+      <img
+        src={imageUrl}
+        alt={product.name}
+        className="w-full h-auto block rounded-t-2xl sm:rounded-t-2xl"
+        referrerPolicy="no-referrer"
+        onError={() => setImageFailed(true)}
+      />
+    );
+  }
+
+  return null;
 }
 
 const SupplierDetail = () => {
