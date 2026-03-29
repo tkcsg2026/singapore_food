@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Store, ShoppingBag, CheckCircle, XCircle, Plus, Trash2, Edit2, Link2,
   BarChart3, Tag, Image, AlertTriangle, Shield, Save, Eye, Newspaper, Globe, ExternalLink, FileText, Palette, Users,
@@ -22,6 +22,59 @@ import { inferVideoMimeType, VIDEO_EXTENSIONS, getFileExtension } from "@/lib/vi
 function isVideoFileUrl(url: string): boolean {
   if (!url) return false;
   return VIDEO_EXTENSIONS.has(getFileExtension(url.trim()));
+}
+
+/**
+ * Attempts to extract the first video frame as a JPEG data URL using the
+ * browser's Canvas API.  Returns null if the format is unsupported or the
+ * operation times out (5 s).
+ */
+async function generateVideoThumbnail(file: File): Promise<string | null> {
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const video = document.createElement("video");
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "metadata";
+
+    let resolved = false;
+    const finish = (result: string | null) => {
+      if (resolved) return;
+      resolved = true;
+      URL.revokeObjectURL(objectUrl);
+      resolve(result);
+    };
+
+    // 5-second safety timeout
+    const tid = setTimeout(() => finish(null), 5000);
+
+    video.onseeked = () => {
+      clearTimeout(tid);
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 320;
+        canvas.height = 180;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { finish(null); return; }
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        finish(canvas.toDataURL("image/jpeg", 0.75));
+      } catch {
+        finish(null);
+      }
+    };
+
+    video.onloadedmetadata = () => {
+      // A tiny offset ensures the seeked event fires even on the first frame
+      video.currentTime = 0.001;
+    };
+
+    video.onerror = () => {
+      clearTimeout(tid);
+      finish(null);
+    };
+
+    video.src = objectUrl;
+  });
 }
 
 /**
@@ -800,6 +853,8 @@ function ProductManager({ slug }: { slug: string }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [videoUploading, setVideoUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [nameError, setNameError] = useState("");
+  const nameFieldRef = useRef<HTMLDivElement>(null);
   const [form, setForm] = useState({
     name: "", name_en: "", image: "", moq: "",
     country_of_origin: "", country_of_origin_en: "", weight: "", quantity: "",
@@ -822,6 +877,7 @@ function ProductManager({ slug }: { slug: string }) {
   const clearForm = () => {
     setForm({ name: "", name_en: "", image: "", moq: "", country_of_origin: "", country_of_origin_en: "", weight: "", quantity: "", size_w: "", size_d: "", size_h: "", size_unit: "cm", storage_condition: "", temperature: "", video_url: "" });
     setEditingId(null);
+    setNameError("");
   };
 
   const handleEdit = (p: any) => {
@@ -847,9 +903,11 @@ function ProductManager({ slug }: { slug: string }) {
 
   const handleSubmit = async () => {
     if (!(form.name || "").trim()) {
-      alert(t.common.requiredField);
+      setNameError(t.common.requiredField);
+      nameFieldRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
+    setNameError("");
     try {
       const method = editingId ? "PUT" : "POST";
       const body = editingId ? { id: editingId, ...form } : form;
@@ -895,8 +953,14 @@ function ProductManager({ slug }: { slug: string }) {
       <h3 className="text-sm font-bold">{t.admin.productManagement}</h3>
 
       {/* Row 1: Name (JA) + Name (EN) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <InputField label={t.admin.productName} value={form.name} onChange={(v) => setForm((p) => ({ ...p, name: v }))} required />
+      <div ref={nameFieldRef} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <InputField
+          label={t.admin.productName}
+          value={form.name}
+          onChange={(v) => { setForm((p) => ({ ...p, name: v })); if (v.trim()) setNameError(""); }}
+          required
+          error={nameError}
+        />
         <InputField label={t.admin.productNameEn} value={form.name_en} onChange={(v) => setForm((p) => ({ ...p, name_en: v }))} />
       </div>
 
@@ -947,36 +1011,70 @@ function ProductManager({ slug }: { slug: string }) {
                       return;
                     }
 
-                    // Step 1 — ask the server for a signed upload URL
-                    const signRes = await fetch("/api/upload/signed", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        fileName: file.name,
-                        fileType: file.type,
-                        fileSize: file.size,
-                        folder: "videos",
+                    // Step 1 — generate a JPEG thumbnail from the first video frame
+                    // (runs in parallel with getting the signed URL; no blocking).
+                    const [thumbDataUrl, signRes] = await Promise.all([
+                      generateVideoThumbnail(file),
+                      fetch("/api/upload/signed", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          fileName: file.name,
+                          fileType: file.type,
+                          fileSize: file.size,
+                          folder: "videos",
+                        }),
                       }),
-                    });
+                    ]);
+
                     if (!signRes.ok) {
                       const j = await signRes.json().catch(() => ({}));
                       throw new Error(
                         j?.error ||
                         (lang === "ja"
                           ? `署名付きURLの取得に失敗 (${signRes.status})`
-                          : `Failed to prepare upload (${signRes.status}) — check Supabase service role key`)
+                          : `Failed to prepare upload (${signRes.status}) — check that the videos bucket exists in Supabase and SUPABASE_SERVICE_ROLE_KEY is set in Vercel`)
                       );
                     }
                     const signed = await signRes.json();
 
-                    // Step 2 — upload directly to Supabase Storage via XHR.
-                    // Uses signedUrl returned by the Supabase SDK so there is no
-                    // manual URL construction and no NEXT_PUBLIC_SUPABASE_URL needed.
+                    // Step 2 — if we captured a thumbnail and the image field is empty,
+                    // upload the thumbnail as a JPEG and use it as the product image.
+                    if (thumbDataUrl) {
+                      try {
+                        const thumbBlob = await fetch(thumbDataUrl).then((r) => r.blob());
+                        const thumbFile = new File([thumbBlob], "thumbnail.jpg", { type: "image/jpeg" });
+                        const thumbSignRes = await fetch("/api/upload/signed", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            fileName: "thumbnail.jpg",
+                            fileType: "image/jpeg",
+                            fileSize: thumbFile.size,
+                            folder: "products",
+                          }),
+                        });
+                        if (thumbSignRes.ok) {
+                          const thumbSigned = await thumbSignRes.json();
+                          await new Promise<void>((res, rej) => {
+                            const x = new XMLHttpRequest();
+                            x.addEventListener("load", () => (x.status >= 200 && x.status < 300 ? res() : rej()));
+                            x.addEventListener("error", rej);
+                            x.open("PUT", thumbSigned.signedUrl);
+                            x.setRequestHeader("Content-Type", "image/jpeg");
+                            x.send(thumbFile);
+                          });
+                          // Set thumbnail as product image only if no image is set yet
+                          setForm((prev) => ({ ...prev, image: prev.image || thumbSigned.publicUrl }));
+                        }
+                      } catch { /* thumbnail upload is best-effort; never block video upload */ }
+                    }
+
+                    // Step 3 — upload the video directly to Supabase via XHR with progress.
                     const contentType = inferVideoMimeType({
                       fileType: signed.contentType || file.type,
                       fileName: file.name,
                     });
-                    const xhrUrl = signed.signedUrl;
 
                     await new Promise<void>((resolve, reject) => {
                       const xhr = new XMLHttpRequest();
@@ -1000,7 +1098,7 @@ function ProductManager({ slug }: { slug: string }) {
                       xhr.addEventListener("error", () =>
                         reject(new Error(lang === "ja" ? "ネットワークエラー" : "Network error during upload"))
                       );
-                      xhr.open("PUT", xhrUrl);
+                      xhr.open("PUT", signed.signedUrl);
                       xhr.setRequestHeader("Content-Type", contentType);
                       xhr.send(file);
                     });
@@ -1137,6 +1235,8 @@ function ProductManager({ slug }: { slug: string }) {
                           playsInline
                           preload="metadata"
                           className="absolute inset-0 w-full h-full object-cover opacity-80"
+                          onLoadedMetadata={(e) => { e.currentTarget.currentTime = 0.001; }}
+                          onError={(e) => { e.currentTarget.style.display = "none"; }}
                         />
                         <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                           <Play className="h-3.5 w-3.5 text-white fill-white" />
@@ -3325,14 +3425,21 @@ function ImageField({
   );
 }
 
-function InputField({ label, value, onChange, placeholder, type = "text", required }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string; required?: boolean }) {
+function InputField({ label, value, onChange, placeholder, type = "text", required, error }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string; required?: boolean; error?: string }) {
   return (
     <div>
       <label className="text-sm font-medium block mb-1.5">
         {label}
         {required && <span className="text-destructive ml-0.5">*</span>}
       </label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="w-full h-11 px-4 rounded-lg border bg-background text-sm" />
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={`w-full h-11 px-4 rounded-lg border bg-background text-sm ${error ? "border-destructive ring-1 ring-destructive" : ""}`}
+      />
+      {error && <p className="text-xs text-destructive mt-1">{error}</p>}
     </div>
   );
 }

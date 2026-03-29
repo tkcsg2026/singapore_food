@@ -175,13 +175,14 @@ function getVideoThumbnail(url?: string): string | null {
 function VideoThumbnailCard({ url }: { url: string }) {
   return (
     <div className="aspect-[4/3] bg-gray-900 overflow-hidden relative">
-      {/* Attempt to paint the first frame; errors are silently ignored */}
+      {/* Seek to first frame after metadata loads; hide on error */}
       <video
         src={url}
         muted
         playsInline
         preload="metadata"
         className="absolute inset-0 w-full h-full object-cover opacity-80"
+        onLoadedMetadata={(e) => { e.currentTarget.currentTime = 0.001; }}
         onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = "none"; }}
       />
       {/* Play-icon overlay — always visible regardless of whether first frame loads */}
