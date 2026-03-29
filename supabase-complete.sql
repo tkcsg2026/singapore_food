@@ -1070,7 +1070,7 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 -- Public can read active notices only (future-proof; currently not shown in UI).
-DO $$ BEGIN
+DO $$ BEGIN 
   CREATE POLICY "job_notices_select_active"
   ON public.job_notices
   FOR SELECT
