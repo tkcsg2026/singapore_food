@@ -1,6 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  webpack: (config) => {
+    return {
+      ...config,
+      watchOptions: {
+        ...(config.watchOptions || {}),
+        ignored: "**/{System Volume Information,$RECYCLE.BIN}/**",
+      },
+    };
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.supabase.co", pathname: "/storage/v1/object/public/**" },

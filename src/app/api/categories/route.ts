@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient, createAdminSupabaseClient } from "@/lib/supabase-server";
 import { categories as mockSupplierCats, marketplaceCategories as mockMPCats } from "@/data/mockData";
+import { resolveCategoryDisplayLabels } from "@/lib/category-display";
 
 const mockCategories = [
   ...mockSupplierCats.map((c, i) => ({ id: `s${i}`, type: "supplier", value: c.value, label: c.label, sort_order: i })),
@@ -11,6 +12,13 @@ const mockCategories = [
   { id: "n4", type: "news", value: "event", label: "イベント", sort_order: 4 },
 ];
 
+function normalizeCategoryRows(rows: any[]) {
+  return rows.map((c: any) => {
+    const { enLabel, jaLabel } = resolveCategoryDisplayLabels(c);
+    return { ...c, label: enLabel, label_ja: jaLabel };
+  });
+}
+
 export async function GET(req: NextRequest) {
   const supabase = createServerSupabaseClient();
   const { searchParams } = new URL(req.url);
@@ -18,7 +26,7 @@ export async function GET(req: NextRequest) {
 
   if (!supabase) {
     const data = type ? mockCategories.filter((c) => c.type === type) : mockCategories;
-    return NextResponse.json(data);
+    return NextResponse.json(normalizeCategoryRows(data));
   }
 
   let query = supabase.from("categories").select("*").order("sort_order");
@@ -27,7 +35,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query;
   if (error) {
     const fallback = type ? mockCategories.filter((c) => c.type === type) : mockCategories;
-    return NextResponse.json(fallback);
+    return NextResponse.json(normalizeCategoryRows(fallback));
   }
 
   // Deduplicate by value — prevents double entries if SQL seed was run more than once
@@ -37,7 +45,7 @@ export async function GET(req: NextRequest) {
     seen.add(c.value);
     return true;
   });
-  return NextResponse.json(unique);
+  return NextResponse.json(normalizeCategoryRows(unique));
 }
 
 export async function POST(req: NextRequest) {

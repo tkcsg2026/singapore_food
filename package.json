@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "clean": "node scripts/clean-next.mjs",
+    "dev:stop": "node scripts/stop-next-dev.mjs",
     "dev": "next dev --webpack",
     "dev:turbo": "next dev --turbopack",
     "build": "next build --webpack",

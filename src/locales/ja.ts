@@ -180,6 +180,7 @@ const ja: Translations = {
       "kitchen-equipment": "厨房機器",
       utensils: "調理器具",
       tools: "調理器具",
+      tableware: "食器・備品",
       furniture: "家具",
       other: "その他",
     },

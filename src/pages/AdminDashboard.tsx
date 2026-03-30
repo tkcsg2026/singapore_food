@@ -17,6 +17,7 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { getSupabase } from "@/lib/supabase";
 import { sanitizeWhatsAppDigits } from "@/lib/jobs-whatsapp";
 import { inferVideoMimeType, VIDEO_EXTENSIONS, getFileExtension } from "@/lib/video";
+import { resolveCategoryDisplayLabels } from "@/lib/category-display";
 
 /** Returns true when a URL clearly points to a video file (by extension). */
 function isVideoFileUrl(url: string): boolean {
@@ -1977,16 +1978,18 @@ function CategoryManager() {
         <div key={type} className="mb-6">
           <h3 className="font-bold text-sm mb-3">{typeLabels[type] ?? type}</h3>
           <div className="flex flex-wrap gap-2">
-            {categories.filter((c: any) => c.type === type).map((c: any) => (
+            {categories.filter((c: any) => c.type === type).map((c: any) => {
+              const { enLabel, jaLabel } = resolveCategoryDisplayLabels(c);
+              return (
               <div key={c.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-sm border border-border/50">
-                <span className="font-medium">{c.label} <span className="text-[10px] font-normal text-muted-foreground">EN</span></span>
-                {c.label_ja
-                  ? <span className="text-muted-foreground text-xs">/ {c.label_ja} <span className="text-[10px]">JA</span></span>
+                <span className="font-medium">{enLabel} <span className="text-[10px] font-normal text-muted-foreground">EN</span></span>
+                {jaLabel
+                  ? <span className="text-muted-foreground text-xs">/ {jaLabel} <span className="text-[10px]">JA</span></span>
                   : <span className="text-[10px] text-amber-500 font-medium">JA未設定</span>
                 }
                 <span className="text-xs text-muted-foreground">({c.value})</span>
                 <button
-                  onClick={() => setEditingCat({ id: c.id, label: c.label, label_ja: c.label_ja || "" })}
+                  onClick={() => setEditingCat({ id: c.id, label: enLabel, label_ja: jaLabel })}
                   className="text-muted-foreground hover:text-primary ml-0.5"
                   title={lang === "ja" ? "編集" : "Edit"}
                 >
@@ -1994,7 +1997,8 @@ function CategoryManager() {
                 </button>
                 <button onClick={() => handleDelete(c.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
               </div>
-            ))}
+            );
+            })}
           </div>
         </div>
       ))}

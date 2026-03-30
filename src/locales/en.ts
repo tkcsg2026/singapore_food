@@ -178,6 +178,7 @@ const en = {
       "kitchen-equipment": "Kitchen Equipment",
       utensils: "Cooking Utensils",
       tools: "Cooking Utensils",
+      tableware: "Tableware & Supplies",
       furniture: "Furniture",
       other: "Other",
     },
