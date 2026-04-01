@@ -726,6 +726,7 @@ const en = {
     applyViaWA: "Enquire via WhatsApp",
     seekerLabel: "Job Seeker",
     contactSeekerWA: "Contact via WhatsApp",
+    myPostDelete: "Delete my post",
   },
 
   // ── Site assistant (floating chatbot) ─────────────────────────────────────

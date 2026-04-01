@@ -1048,7 +1048,8 @@ CREATE TABLE IF NOT EXISTS public.job_notices (
   agreed_at timestamptz,
   status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','deleted')),
   deleted_at timestamptz,
-  deleted_reason text
+  deleted_reason text,
+  created_by uuid REFERENCES public.profiles(id) ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS job_notices_created_at_idx ON public.job_notices (created_at DESC);
@@ -1056,6 +1057,7 @@ CREATE INDEX IF NOT EXISTS job_notices_status_idx ON public.job_notices (status)
 
 -- post_type: "job" (求人) or "seeker" (求職者). Defaults to "job" for legacy rows.
 ALTER TABLE public.job_notices ADD COLUMN IF NOT EXISTS post_type text NOT NULL DEFAULT 'job' CHECK (post_type IN ('job','seeker'));
+ALTER TABLE public.job_notices ADD COLUMN IF NOT EXISTS created_by uuid REFERENCES public.profiles(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS job_notices_post_type_idx ON public.job_notices (post_type);
 
 ALTER TABLE public.job_notices ENABLE ROW LEVEL SECURITY;

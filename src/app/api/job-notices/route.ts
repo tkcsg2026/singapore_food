@@ -59,6 +59,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const admin = createAdminSupabaseClient();
+  const server = createServerSupabaseClient();
   if (!admin) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   const body = await req.json().catch(() => ({}));
 
@@ -85,7 +86,17 @@ export async function POST(req: NextRequest) {
     agreed: true,
     agreed_at: new Date().toISOString(),
     status: "active" as const,
+    created_by: null as string | null,
   };
+  try {
+    const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+    if (token && server) {
+      const { data: { user } } = await server.auth.getUser(token);
+      if (user?.id) row.created_by = user.id;
+    }
+  } catch {
+    // Keep null for anonymous posts
+  }
 
   if (!row.title || !row.description) {
     return NextResponse.json({ error: "Missing title or description" }, { status: 400 });
@@ -103,9 +114,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const adminAuth = await requireAdmin(req);
-  if (adminAuth instanceof NextResponse) return adminAuth;
   const supabase = createAdminSupabaseClient();
+  const server = createServerSupabaseClient();
   if (!supabase) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
 
   const { searchParams } = new URL(req.url);
@@ -114,6 +124,26 @@ export async function DELETE(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}));
   const reason = clampText(body?.reason, 280);
+
+  const adminAuth = await requireAdmin(req);
+  let allowDelete = !(adminAuth instanceof NextResponse);
+
+  if (!allowDelete) {
+    const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+    if (token && server) {
+      const { data: { user } } = await server.auth.getUser(token);
+      if (user?.id) {
+        const { data: row } = await supabase
+          .from("job_notices")
+          .select("created_by")
+          .eq("id", id)
+          .single();
+        if (row?.created_by && row.created_by === user.id) allowDelete = true;
+      }
+    }
+  }
+
+  if (!allowDelete) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { data, error } = await supabase
     .from("job_notices")

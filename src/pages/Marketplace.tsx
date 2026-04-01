@@ -47,7 +47,7 @@ const Marketplace = () => {
         const itemCat = item.category?.toLowerCase() || "";
         const isOtherSelected = catKey === "other" || catKey === otherLabel.toLowerCase();
         if (isOtherSelected) {
-          if (!itemCat.startsWith(otherLabel.toLowerCase()) && itemCat !== catKey) return false;
+          if (!itemCat.startsWith("other:") && itemCat !== "other" && !itemCat.startsWith(otherLabel.toLowerCase())) return false;
         } else {
           if (item.category !== selectedCategory) return false;
         }

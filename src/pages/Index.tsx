@@ -70,6 +70,11 @@ const Index = () => {
   const tagDisplayMaps = useMemo(() => buildSupplierTagDisplayMaps(tagCategories || []), [tagCategories]);
   const sortedSuppliers = useMemo(() => sortSuppliersByPlan(suppliers || []), [suppliers]);
   const popularSuppliers = sortedSuppliers.slice(0, 6);
+  const planCounts = useMemo(() => ({
+    premium: sortedSuppliers.filter((s) => (s.plan || "basic") === "premium").length,
+    standard: sortedSuppliers.filter((s) => (s.plan || "basic") === "standard").length,
+    basic: sortedSuppliers.filter((s) => (s.plan || "basic") === "basic").length,
+  }), [sortedSuppliers]);
   const recentItems = (marketplaceItems || []).slice(0, 6);
   const latestNews = useMemo(
     () =>
@@ -277,6 +282,17 @@ const Index = () => {
           <Link href="/suppliers" className="link-more flex-shrink-0 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 hover:text-white">
             {t.common.viewAll} <ArrowRight className="h-3.5 w-3.5 link-more-arrow" />
           </Link>
+        </div>
+        <div className="flex flex-wrap gap-2 mb-4">
+          <span className="text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-semibold">
+            Full Profile: {planCounts.premium}
+          </span>
+          <span className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/30 font-semibold">
+            Standard Profile: {planCounts.standard}
+          </span>
+          <span className="text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground border border-border font-semibold">
+            Quick Profile: {planCounts.basic}
+          </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5 min-w-0">
           {suppliersLoading

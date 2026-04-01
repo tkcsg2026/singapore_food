@@ -113,8 +113,12 @@ function mulberry32(seed: number) {
  * Changes every day at midnight → different shuffle every day.
  */
 export function dailySeed(): number {
-  const dateStr = new Date().toLocaleDateString("en-CA"); // "2024-06-15"
-  return dateStr.split("-").reduce((acc, part) => acc * 1000 + parseInt(part, 10), 0);
+  const now = new Date();
+  // Use numeric date parts directly to avoid locale-format inconsistencies.
+  const y = now.getFullYear();
+  const m = now.getMonth() + 1;
+  const d = now.getDate();
+  return y * 10000 + m * 100 + d;
 }
 
 /** Fisher-Yates shuffle using a seeded PRNG — same seed → same order. */

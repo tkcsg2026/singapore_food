@@ -38,11 +38,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(normalizeCategoryRows(fallback));
   }
 
-  // Deduplicate by value — prevents double entries if SQL seed was run more than once
+  // Deduplicate by (type + value) — prevents accidental cross-type collisions.
   const seen = new Set<string>();
   const unique = (data || []).filter((c: { value: string }) => {
-    if (seen.has(c.value)) return false;
-    seen.add(c.value);
+    const key = `${(c as any).type ?? ""}:${c.value}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
   return NextResponse.json(normalizeCategoryRows(unique));

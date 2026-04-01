@@ -2223,6 +2223,7 @@ function AboutSiteManager() {
 function JobsManager() {
   const { t, lang } = useTranslation();
   const [whatsAppDigits, setWhatsAppDigits] = useState("");
+  const [instagramUrl, setInstagramUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -2236,6 +2237,13 @@ function JobsManager() {
       .then((d) => {
         const v = typeof d?.value === "string" ? d.value : "";
         setWhatsAppDigits(sanitizeWhatsAppDigits(v));
+      })
+      .catch(() => {});
+    fetch("/api/settings?key=social_instagram_url")
+      .then((r) => r.json())
+      .then((d) => {
+        const v = typeof d?.value === "string" ? d.value.trim() : "";
+        setInstagramUrl(v);
       })
       .catch(() => {});
   }, []);
@@ -2266,7 +2274,11 @@ function JobsManager() {
         method: "PUT",
         body: JSON.stringify({ key: "jobs_whatsapp", value: whatsAppDigits }),
       });
-      if (!res.ok) {
+      const res2 = await authFetch("/api/settings", {
+        method: "PUT",
+        body: JSON.stringify({ key: "social_instagram_url", value: instagramUrl.trim() }),
+      });
+      if (!res.ok || !res2.ok) {
         const err = await res.json().catch(() => ({}));
         setSaveError(err?.error ?? (lang === "ja" ? "保存に失敗しました。" : "Save failed."));
       } else {
@@ -2294,6 +2306,17 @@ function JobsManager() {
             inputMode="numeric"
           />
           <p className="text-xs text-muted-foreground mt-2 whitespace-pre-line">{t.admin.jobsWhatsAppHint}</p>
+        </div>
+        <div>
+          <label className="text-sm font-medium block mb-1.5">
+            {lang === "ja" ? "Instagram URL（FOLLOW US 用）" : "Instagram URL (for FOLLOW US)"}
+          </label>
+          <input
+            value={instagramUrl}
+            onChange={(e) => setInstagramUrl(e.target.value)}
+            placeholder="https://www.instagram.com/your-account/"
+            className="w-full h-11 px-4 rounded-lg border bg-background text-sm"
+          />
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <Button onClick={handleSave} className="rounded-xl gap-2" disabled={saving}>
@@ -2623,6 +2646,7 @@ function QRManager() {
 
 function ReportManager({ onReportChanged }: { onReportChanged?: () => void }) {
   const [reports, setReports] = useState<any[]>([]);
+  const [itemMeta, setItemMeta] = useState<Record<string, { title: string; slug?: string }>>({});
   const { t, lang } = useTranslation();
 
   useEffect(() => { fetchReports(); }, []);
@@ -2659,6 +2683,34 @@ function ReportManager({ onReportChanged }: { onReportChanged?: () => void }) {
     alert(t.admin.reportNotifyMsg);
   };
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadItemMeta = async () => {
+      const marketReports = reports.filter((r) => r.item_type === "marketplace_item" && r.item_id);
+      if (marketReports.length === 0) {
+        if (!cancelled) setItemMeta({});
+        return;
+      }
+      const entries = await Promise.all(
+        marketReports.map(async (r) => {
+          try {
+            const res = await fetch(`/api/marketplace/${encodeURIComponent(r.item_id)}?byId=true`);
+            if (!res.ok) return [r.item_id, { title: lang === "ja" ? "（削除済みまたは不明）" : "(deleted or unknown)" }] as const;
+            const item = await res.json();
+            return [r.item_id, { title: item?.title || item?.slug || r.item_id, slug: item?.slug }] as const;
+          } catch {
+            return [r.item_id, { title: r.item_id }] as const;
+          }
+        }),
+      );
+      if (!cancelled) setItemMeta(Object.fromEntries(entries));
+    };
+    loadItemMeta();
+    return () => {
+      cancelled = true;
+    };
+  }, [reports, lang]);
+
   return (
     <div>
       <h2 className="text-xl font-bold mb-6">{t.admin.reportManagerTitle}</h2>
@@ -2673,6 +2725,18 @@ function ReportManager({ onReportChanged }: { onReportChanged?: () => void }) {
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.status === "pending" ? "bg-yellow-100 text-yellow-700" : r.status === "reviewed" ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}>{r.status}</span>
               </div>
               <p className="text-sm font-medium mb-0.5">{r.item_type} · ID: {r.item_id}</p>
+              {r.item_type === "marketplace_item" && itemMeta[r.item_id] && (
+                <p className="text-xs text-primary mb-1">
+                  {lang === "ja" ? "対象アイテム: " : "Target item: "}
+                  {itemMeta[r.item_id].slug ? (
+                    <a href={`/marketplace/${itemMeta[r.item_id].slug}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                      {itemMeta[r.item_id].title}
+                    </a>
+                  ) : (
+                    itemMeta[r.item_id].title
+                  )}
+                </p>
+              )}
               <p className="text-sm text-muted-foreground">{r.reason}</p>
               {r.status === "pending" && (
                 <div className="flex flex-wrap gap-2 mt-3">

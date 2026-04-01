@@ -44,6 +44,10 @@ export async function GET(_req: NextRequest) {
     const base = includeInactive ? mockLinks : mockLinks.filter((l) => l.active);
     return NextResponse.json(base.sort((a, b) => a.sort_order - b.sort_order));
   }
+  if (!data || data.length === 0) {
+    const base = includeInactive ? mockLinks : mockLinks.filter((l) => l.active);
+    return NextResponse.json(base.sort((a, b) => a.sort_order - b.sort_order));
+  }
   const fallbackImg = "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80";
   const normalized = (data ?? []).map((row: Record<string, unknown>) => {
     const bg = typeof row.bg_image === "string" ? row.bg_image.trim() : "";

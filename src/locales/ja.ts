@@ -727,6 +727,7 @@ const ja: Translations = {
     applyViaWA: "WhatsApp で応募・問い合わせ",
     seekerLabel: "求職者",
     contactSeekerWA: "WhatsApp で連絡する",
+    myPostDelete: "自分の投稿を削除",
   },
 
   // ── Site assistant (floating chatbot) ─────────────────────────────────────

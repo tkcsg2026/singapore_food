@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Briefcase, CheckCircle2, ChevronDown, ChevronUp, ClipboardList,
-  ListOrdered, MapPin, MessageCircle, RefreshCw, Plus, User, X,
+  ListOrdered, MapPin, MessageCircle, RefreshCw, Plus, Trash2, User, X,
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { sanitizeWhatsAppDigits } from "@/lib/jobs-whatsapp";
+import { getSupabase } from "@/lib/supabase";
 
 type PostType = "job" | "seeker";
 type EmploymentKey = "fullTime" | "partTime" | "contract" | "temp" | "intern";
@@ -44,6 +45,7 @@ type EligibilityKey = "scPr" | "open" | "inDesc";
 
 interface JobNotice {
   id: string;
+  created_by?: string | null;
   post_type?: PostType;
   title: string;
   company?: string;
@@ -90,10 +92,14 @@ function JobListingCard({
   notice,
   j,
   phoneDigits,
+  canDelete,
+  onDelete,
 }: {
   notice: JobNotice;
   j: ReturnType<typeof useTranslation>["t"]["jobs"];
   phoneDigits: string;
+  canDelete: boolean;
+  onDelete: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const desc = notice.description ?? "";
@@ -188,6 +194,18 @@ function JobListingCard({
             <MessageCircle className="h-3.5 w-3.5" />
             {isSeeker ? (j.contactSeekerWA ?? "WhatsApp で連絡") : j.applyViaWA}
           </a>
+        </div>
+      )}
+      {canDelete && (
+        <div className="mt-1">
+          <button
+            type="button"
+            onClick={() => onDelete(notice.id)}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {j.myPostDelete ?? "Delete my post"}
+          </button>
         </div>
       )}
     </div>
@@ -502,8 +520,21 @@ export default function JobVacancies() {
   const [phoneDigits, setPhoneDigits] = useState(() =>
     sanitizeWhatsAppDigits(process.env.NEXT_PUBLIC_JOBS_WHATSAPP ?? "")
   );
+  const [currentUserId, setCurrentUserId] = useState<string>("");
   const [listings, setListings] = useState<JobNotice[]>([]);
   const [listingsLoading, setListingsLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const sb = getSupabase();
+    if (!sb) return;
+    sb.auth.getUser().then(({ data }) => {
+      if (!cancelled) setCurrentUserId(data.user?.id || "");
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -530,6 +561,28 @@ export default function JobVacancies() {
     } catch { /* silent */ }
     finally { setListingsLoading(false); }
   }, []);
+
+  const handleDeleteMyPost = useCallback(async (id: string) => {
+    if (!id) return;
+    const ok = window.confirm(lang === "ja" ? "この投稿を削除しますか？" : "Delete this post?");
+    if (!ok) return;
+    try {
+      const sb = getSupabase();
+      const session = sb ? (await sb.auth.getSession()).data.session : null;
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (session?.access_token) {
+        (headers as Record<string, string>).Authorization = `Bearer ${session.access_token}`;
+      }
+      const res = await fetch(`/api/job-notices?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers,
+        body: JSON.stringify({ reason: "Deleted by poster" }),
+      });
+      if (res.ok) await fetchListings();
+    } catch {
+      // silent
+    }
+  }, [fetchListings, lang]);
 
   useEffect(() => { fetchListings(); }, [fetchListings]);
 
@@ -740,6 +793,8 @@ export default function JobVacancies() {
                   notice={notice}
                   j={j}
                   phoneDigits={phoneDigits}
+                  canDelete={Boolean(currentUserId && notice.created_by === currentUserId)}
+                  onDelete={handleDeleteMyPost}
                 />
               ))}
             </div>

@@ -6,10 +6,13 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { useFetch } from "@/hooks/useSupabaseData";
+import { getCategoryDisplayName } from "@/lib/category-display";
+import type { CategoryRow } from "@/types/database";
 
 const NewItem = () => {
   const { user, profile, loading: authLoading } = useRequireAuth();
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [submitting, setSubmitting] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [termsText, setTermsText] = useState("");
@@ -32,25 +35,28 @@ const NewItem = () => {
     t.marketplace.areas.north,
     t.marketplace.areas.south,
   ];
-  const mpCategories = [
-    t.marketplace.categories.kitchen,
-    t.marketplace.categories.utensils,
-    t.marketplace.categories.furniture,
-    t.marketplace.categories.other,
-  ];
+  const { data: marketplaceCategories } = useFetch<CategoryRow[]>("/api/categories?type=marketplace");
+  const mpCategories = (marketplaceCategories || []).map((c) => c.value);
   const deliveryOptions = [
     t.marketplace.deliveryOptions.pickup,
     t.marketplace.deliveryOptions.delivery,
     t.marketplace.deliveryOptions.both,
   ];
 
-  const otherCategory = t.marketplace.categories.other;
+  const otherCategory = "other";
 
   const [form, setForm] = useState({
-    title: "", category: mpCategories[0], categoryOther: "", price: "", condition: conditions[0],
+    title: "", category: "kitchen", categoryOther: "", price: "", condition: conditions[0],
     years_used: "0", description: "", area: areas[0], delivery: deliveryOptions[0],
     sellerName: "",
   });
+
+  useEffect(() => {
+    if (!mpCategories.length) return;
+    if (!mpCategories.includes(form.category)) {
+      setForm((p) => ({ ...p, category: mpCategories[0] }));
+    }
+  }, [mpCategories, form.category]);
 
   useEffect(() => {
     const fallback = t.legal.termsFallback;
@@ -114,7 +120,7 @@ const NewItem = () => {
     setSubmitting(true);
 
     const finalCategory = form.category === otherCategory && form.categoryOther.trim()
-      ? `${otherCategory}: ${form.categoryOther.trim()}`
+      ? `${otherCategory}:${form.categoryOther.trim()}`
       : form.category;
 
     const imageUrls = await uploadImages();
@@ -172,7 +178,13 @@ const NewItem = () => {
             <div>
               <label className="text-sm font-medium block mb-1.5">{t.newItem.fieldCategory}</label>
               <select value={form.category} onChange={(e) => handleChange("category", e.target.value)} className="w-full h-11 px-4 rounded-lg border bg-background text-sm">
-                {mpCategories.map((c) => <option key={c}>{c}</option>)}
+                {mpCategories.map((c) => {
+                  const row = (marketplaceCategories || []).find((x) => x.value === c);
+                  const label = row
+                    ? (getCategoryDisplayName(row, lang) || c)
+                    : ((t.marketplace as { categories?: Record<string, string> }).categories?.[c] || c);
+                  return <option key={c} value={c}>{label}</option>;
+                })}
               </select>
               {form.category === otherCategory && (
                 <input
