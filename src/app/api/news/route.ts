@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient, createAdminSupabaseClient } from "@/lib/supabase-server";
+import { createServerSupabaseClient, createAdminSupabaseClient, requireAdmin } from "@/lib/supabase-server";
 
 const mockArticles = [
   { id: "1", slug: "singapore-food-safety-new-regulations-2025", title: "Singapore Introduces Stricter Food Safety Regulations for 2025", title_ja: "シンガポール、2025年に向けて食品安全規制を強化", excerpt: "The Singapore Food Agency (SFA) has announced a new set of food safety regulations set to take effect in Q2 2025, impacting all F&B establishments.", excerpt_ja: "シンガポール食品庁（SFA）は、2025年第2四半期から施行される新たな食品安全規制を発表しました。", content: "", content_ja: "", image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&h=340&fit=crop", category: "regulation", author: "F&B Portal", published: true, created_at: "2025-01-15T08:00:00Z" },
@@ -37,8 +37,27 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(result);
   }
 
+  // Admin list (drafts + published): must use service role; anon RLS cannot see unpublished rows.
+  if (all === "true") {
+    const auth = await requireAdmin(req);
+    if (auth instanceof NextResponse) return auth;
+    const admin = createAdminSupabaseClient();
+    if (!admin) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
+    let query = admin.from("news_articles").select("*");
+    if (category) query = query.eq("category", category);
+    query = query.order("created_at", { ascending: false });
+    const { data, error } = await query;
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const items = (data ?? []) as Array<{ published_at?: string | null; created_at: string }>;
+    items.sort(
+      (a, b) =>
+        new Date(b.published_at || b.created_at).getTime() - new Date(a.published_at || a.created_at).getTime(),
+    );
+    return NextResponse.json(items);
+  }
+
   let query = supabase.from("news_articles").select("*");
-  if (!all) query = query.eq("published", true);
+  query = query.eq("published", true);
   if (category) query = query.eq("category", category);
   query = query.order("created_at", { ascending: false });
 
@@ -50,10 +69,20 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdmin(req);
+  if (auth instanceof NextResponse) return auth;
+
   const supabase = createAdminSupabaseClient();
   if (!supabase) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   const body = await req.json();
-  const { data, error } = await supabase.from("news_articles").insert(body).select().single();
+  const titleEn = typeof body.title === "string" ? body.title.trim() : "";
+  const titleJa = typeof body.title_ja === "string" ? body.title_ja.trim() : "";
+  const payload = {
+    ...body,
+    title: titleEn || titleJa || "Untitled",
+    title_ja: titleJa || titleEn || "",
+  };
+  const { data, error } = await supabase.from("news_articles").insert(payload).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }

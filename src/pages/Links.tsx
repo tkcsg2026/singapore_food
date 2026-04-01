@@ -1,7 +1,9 @@
 "use client";
 import { ExternalLink, Globe } from "lucide-react";
+import { useMemo, useState } from "react";
 import Layout from "@/components/Layout";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { useFetch } from "@/hooks/useSupabaseData";
 
 export const LINKS_DATA = [
   {
@@ -410,6 +412,17 @@ export const LINKS_DATA = [
 const Links = () => {
   const { t, lang } = useTranslation();
   const tl = t.links;
+  const { data: linksData } = useFetch<any[]>("/api/links");
+  const links = linksData || [];
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+
+  const grouped = useMemo(() => {
+    const order = ["government", "association", "platform", "resource"];
+    return order.map((category) => ({
+      category,
+      items: links.filter((l) => l.category === category),
+    }));
+  }, [links]);
 
   return (
     <Layout>
@@ -423,7 +436,7 @@ const Links = () => {
         </div>
 
         <div className="space-y-12">
-          {LINKS_DATA.map(({ category, items }, sectionIdx) => (
+          {grouped.map(({ category, items }, sectionIdx) => (
             <section key={`${category}-${sectionIdx}`}>
               <h2 className="text-lg font-bold mb-5 flex items-center gap-2 text-foreground">
                 <span className="w-1 h-5 bg-primary rounded-full inline-block" />
@@ -439,13 +452,20 @@ const Links = () => {
                     className="group bg-card border border-border p-5 card-hover flex flex-col gap-3 hover:border-primary/40 transition-colors"
                   >
                     <div className="relative h-28 -m-5 mb-3 overflow-hidden border-b border-border rounded-t-sm">
-                      <img
-                        src={link.bgImage}
-                        alt={lang === "ja" ? link.nameJa : link.name}
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-                      />
+                      {!failedImages[String(link.id)] && (link.bg_image || link.bgImage || "").toString().trim() ? (
+                        <img
+                          src={(link.bg_image || link.bgImage || "").toString().trim()}
+                          alt={lang === "ja" ? (link.name_ja || link.nameJa || link.name) : link.name}
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                          onError={() => setFailedImages((prev) => ({ ...prev, [String(link.id)]: true }))}
+                        />
+                      ) : (
+                        <div className="h-full w-full bg-gradient-to-br from-muted to-muted/60 flex items-center justify-center text-2xl">
+                          {link.icon || "🔗"}
+                        </div>
+                      )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
                       <div className="absolute left-3 top-3 rounded-md bg-white/90 px-2 py-1 text-xl leading-none shadow-sm">
                         {link.icon}
@@ -454,10 +474,10 @@ const Links = () => {
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-sm leading-snug group-hover:text-primary transition-colors">
-                        {lang === "ja" ? link.nameJa : link.name}
+                        {lang === "ja" ? (link.name_ja || link.nameJa || link.name) : link.name}
                       </h3>
                       <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed line-clamp-3">
-                        {lang === "ja" ? link.descriptionJa : link.description}
+                        {lang === "ja" ? (link.description_ja || link.descriptionJa || link.description) : link.description}
                       </p>
                     </div>
                     <span className="text-xs font-semibold text-primary flex items-center gap-1 mt-auto">

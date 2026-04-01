@@ -14,6 +14,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { AnimatedGridItem } from "@/components/AnimatedGridItem";
 import { sortSuppliersByPlan } from "@/lib/plans";
+import { buildSupplierTagDisplayMaps, getCategoryDisplayName } from "@/lib/category-display";
 import type { SupplierRow, MarketplaceItemRow, CategoryRow, NewsArticleRow } from "@/types/database";
 
 function SupplierSkeleton() {
@@ -63,8 +64,10 @@ const Index = () => {
   const { data: suppliers, loading: suppliersLoading } = useFetch<SupplierRow[]>("/api/suppliers");
   const { data: marketplaceItems } = useFetch<MarketplaceItemRow[]>("/api/marketplace");
   const { data: categories } = useFetch<CategoryRow[]>("/api/categories?type=supplier");
+  const { data: tagCategories } = useFetch<CategoryRow[]>("/api/categories?type=tag");
   const { data: newsArticles } = useFetch<NewsArticleRow[]>("/api/news");
 
+  const tagDisplayMaps = useMemo(() => buildSupplierTagDisplayMaps(tagCategories || []), [tagCategories]);
   const sortedSuppliers = useMemo(() => sortSuppliersByPlan(suppliers || []), [suppliers]);
   const popularSuppliers = sortedSuppliers.slice(0, 6);
   const recentItems = (marketplaceItems || []).slice(0, 6);
@@ -82,6 +85,7 @@ const Index = () => {
 
   const { data: linksData } = useFetch<any[]>("/api/links");
   const featuredLinks = linksData || [];
+  const [failedLinkImages, setFailedLinkImages] = useState<Record<string, boolean>>({});
   const isMobile = useIsMobile();
   const VISIBLE = isMobile ? 1 : 3;
   const [linksIndex, setLinksIndex] = useState(0);
@@ -185,7 +189,9 @@ const Index = () => {
                   <option value="">{t.home.categoryPlaceholder}</option>
                   {(categories || []).map((cat) => (
                     <option key={cat.value} value={cat.value}>
-                      {(t.suppliers as { categories?: Record<string, string> }).categories?.[cat.value] ?? cat.label}
+                      {getCategoryDisplayName(cat, lang) ||
+                        (t.suppliers as { categories?: Record<string, string> }).categories?.[cat.value] ||
+                        cat.label}
                     </option>
                   ))}
                 </select>
@@ -277,7 +283,7 @@ const Index = () => {
             ? Array.from({ length: 6 }).map((_, i) => <SupplierSkeleton key={i} />)
             : popularSuppliers.map((s, i) => (
                 <AnimatedGridItem key={s.id} index={i}>
-                  <SupplierCard supplier={s} />
+                  <SupplierCard supplier={s} tagDisplayMaps={tagDisplayMaps} />
                 </AnimatedGridItem>
               ))
           }
@@ -421,12 +427,22 @@ const Index = () => {
                       rel="noopener noreferrer"
                       className="group relative block w-full aspect-[208/144] overflow-hidden shadow-card card-lift"
                     >
-                      <img
-                        src={link.bg_image || link.bgImage}
-                        alt=""
-                        aria-hidden="true"
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                      />
+                      {!failedLinkImages[String(link.id ?? link.url)] &&
+                      (link.bg_image || link.bgImage || "").toString().trim() ? (
+                        <img
+                          src={(link.bg_image || link.bgImage || "").toString().trim()}
+                          alt=""
+                          aria-hidden="true"
+                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                          onError={() =>
+                            setFailedLinkImages((prev) => ({ ...prev, [String(link.id ?? link.url)]: true }))
+                          }
+                        />
+                      ) : (
+                        <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/70 flex items-center justify-center text-2xl">
+                          {link.icon || "🔗"}
+                        </div>
+                      )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-black/10 transition-opacity duration-300 group-hover:from-black/85 group-hover:via-black/45" />
                       <div className="absolute inset-0 p-3.5 flex flex-col justify-between">
                         <div className="self-end">

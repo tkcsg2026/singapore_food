@@ -8,9 +8,15 @@ import { SupplierCard } from "@/components/SupplierCard";
 import { useFetch } from "@/hooks/useSupabaseData";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { sortSuppliersByPlan } from "@/lib/plans";
+import { buildSupplierTagDisplayMaps, getCategoryDisplayName } from "@/lib/category-display";
 import type { SupplierRow, CategoryRow } from "@/types/database";
 
 const Suppliers = () => {
+  const TARGET_PLAN_COUNTS: Record<"premium" | "standard" | "basic", number> = {
+    premium: 9,
+    standard: 6,
+    basic: 3,
+  };
   const searchParams = useSearchParams();
   const router = useRouter();
   const [query, setQuery] = useState(searchParams?.get("q") || "");
@@ -41,17 +47,7 @@ const Suppliers = () => {
   const { data: categories } = useFetch<CategoryRow[]>("/api/categories?type=supplier");
   const { data: tagCategories } = useFetch<(CategoryRow & { type: "tag"; label_ja?: string | null })[]>("/api/categories?type=tag");
 
-  const tagLabelMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const cat of tagCategories || []) {
-      const labelEn = cat.label?.trim();
-      const labelJa = cat.label_ja?.trim();
-      if (labelJa && labelEn) map[labelJa] = labelEn;
-      if (cat.value && labelEn) map[cat.value] = labelEn;
-      if (labelEn) map[labelEn] = labelEn;
-    }
-    return map;
-  }, [tagCategories]);
+  const tagDisplayMaps = useMemo(() => buildSupplierTagDisplayMaps(tagCategories || []), [tagCategories]);
 
   const areas = [
     { value: "central", label: t.suppliers.areas.central },
@@ -95,9 +91,9 @@ const Suppliers = () => {
         <div className="space-y-2.5">
           {[
             { value: "", label: t.common.all },
-            { value: "premium", label: t.suppliers.planPremium },
-            { value: "standard", label: t.suppliers.planStandard },
-            { value: "basic", label: t.suppliers.planBasic },
+            { value: "premium", label: `${t.suppliers.planPremium} (${TARGET_PLAN_COUNTS.premium})` },
+            { value: "standard", label: `${t.suppliers.planStandard} (${TARGET_PLAN_COUNTS.standard})` },
+            { value: "basic", label: `${t.suppliers.planBasic} (${TARGET_PLAN_COUNTS.basic})` },
           ].map(({ value, label }) => (
             <label key={value || "all"} className="flex items-center gap-2.5 text-sm cursor-pointer hover:text-foreground transition-colors">
               <input type="radio" name="plan" checked={selectedPlan === value} onChange={() => setPlanFilter(value)} className="rounded-full border-border accent-primary" />
@@ -112,7 +108,7 @@ const Suppliers = () => {
           {(categories || []).map((cat) => (
             <label key={cat.value} className="flex items-center gap-2.5 text-sm cursor-pointer hover:text-foreground transition-colors">
               <input type="checkbox" checked={selectedCategories.includes(cat.value)} onChange={() => toggleCategory(cat.value)} className="rounded border-border accent-primary" />
-              {lang === "ja" ? (cat.label_ja || cat.label) : cat.label}
+              {getCategoryDisplayName(cat, lang)}
             </label>
           ))}
         </div>
@@ -212,7 +208,7 @@ const Suppliers = () => {
                   <div className={`min-w-0 ${viewMode === "list" ? "space-y-3" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"}`}>
                     {filtered.map((s, i) => (
                       <AnimatedGridItem key={s.id} index={i}>
-                        <SupplierCard supplier={s} variant={viewMode} rank={selectedCategories.length === 1 ? i + 1 : undefined} tagLabelMap={tagLabelMap} />
+                        <SupplierCard supplier={s} variant={viewMode} rank={selectedCategories.length === 1 ? i + 1 : undefined} tagDisplayMaps={tagDisplayMaps} />
                       </AnimatedGridItem>
                     ))}
                   </div>
@@ -246,12 +242,12 @@ const Suppliers = () => {
                           <span className={`text-sm font-bold uppercase tracking-wider ${planText[plan]}`}>
                             {planLabel[plan]}
                           </span>
-                          <span className="text-xs text-muted-foreground">({group.length})</span>
+                          <span className="text-xs text-muted-foreground">({TARGET_PLAN_COUNTS[plan]})</span>
                         </div>
                         <div className={`min-w-0 ${viewMode === "list" ? "space-y-3" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"}`}>
                           {group.map((s, i) => (
                             <AnimatedGridItem key={s.id} index={i}>
-                              <SupplierCard supplier={s} variant={viewMode} rank={selectedCategories.length === 1 ? i + 1 : undefined} tagLabelMap={tagLabelMap} />
+                              <SupplierCard supplier={s} variant={viewMode} rank={selectedCategories.length === 1 ? i + 1 : undefined} tagDisplayMaps={tagDisplayMaps} />
                             </AnimatedGridItem>
                           ))}
                         </div>

@@ -483,7 +483,7 @@ const ja: Translations = {
     tags: "タグ (カンマ区切り)",
     aboutJa: "概要 (日本語)",
     planLabel: "掲載プラン",
-    certifications: "認証 (カンマ区切り)",
+    certifications: "認証 (カンマ区切り・英語入力)",
     imageHint: "PDF等は画像化（PNG/JPG）のうえ画像ホスティングへアップロードし、そのURLを入力してください",
     aboutEn: "概要 (英語)",
     descriptionEn: "説明 (英語)",
@@ -624,14 +624,14 @@ const ja: Translations = {
   jobs: {
     pageTitle: "求人情報（掲示板）",
     pageSubtitle:
-      "F&B向けの簡易求人告知を作成し、WhatsAppで送信できます。シンガポールの求人広告に関する考慮事項に沿うよう、項目を選んでください。",
+      "F&B向けの簡易求人告知をこの掲示板に投稿できます。シンガポールの求人広告に関する考慮事項に沿うよう、項目を選んでください。",
     bulletinLabel: "掲示板",
     disclaimer:
-      "本ページは無料の簡易ツールです。雇用主はシンガポールの雇用・求人広告関連法令（MOM・Fair Consideration Framework 等の該当時）の遵守、正確な情報、公正な採用について責任を負います。当サイトは内容を審査しません。",
+      "本ページは無料のセルフ投稿ツールです。雇用主は、Ministry of Manpower (MOM) の法令、Fair Consideration Framework (FCF)、Tripartite Guidelines on Fair Employment Practices を含むシンガポールの雇用関連法令・ガイドラインを遵守する責任を負います。掲載内容は正確であり、年齢・性別・人種・宗教・国籍・婚姻状況・障害等に基づく差別的表現を含まない、公正な採用を反映したものである必要があります。当プラットフォームは求人内容の審査・保証を行わず、掲載内容の正確性や合法性について責任を負いません。",
     consentText:
-      "本ページは無料の簡易ツールです。雇用主はシンガポールの雇用・求人広告関連法令（MOM・Fair Consideration Framework 等の該当時）の遵守、正確な情報、公正な採用について責任を負います。当サイトは内容を審査しません。",
+      "本ページは無料のセルフ投稿ツールです。\n\n雇用主は、Ministry of Manpower (MOM) の法令、Fair Consideration Framework (FCF)、Tripartite Guidelines on Fair Employment Practices を含むシンガポールの雇用関連法令・ガイドラインを遵守する責任を負います。\n\n掲載内容は正確であり、年齢・性別・人種・宗教・国籍・婚姻状況・障害等に基づく差別的表現を含まない、公正な採用を反映したものである必要があります。\n\n当プラットフォームは求人内容の審査・保証を行わず、掲載内容の正確性や合法性について責任を負いません。",
     consentHint: "上記に同意した場合のみ投稿できます。",
-    postAndSend: "承諾して投稿",
+    postAndSend: "投稿する",
     posting: "投稿中...",
     postFailed: "投稿に失敗しました。もう一度お試しください。",
     postSetupPending:
@@ -650,7 +650,9 @@ const ja: Translations = {
     descriptionPh:
       "勤務時間、業務内容、語学、資格（食品衛生など）、開始時期、応募方法などを記載してください。",
     selectPlaceholder: "選択…",
-    preview: "WhatsApp送信文のプレビュー",
+    preview: "投稿内容の確認",
+    previewHelp:
+      "掲示板に表示される内容です。投稿前に上記の項目を編集できます。",
     whatsappHelp:
       "求人内容が入力されたWhatsAppが開きます。送信前に編集できます。",
     whatsappMissing:
@@ -712,10 +714,10 @@ const ja: Translations = {
     msgBody: "内容",
     howItWorks: "ご利用の流れ",
     step1: "職種名・任意の会社名・仕事内容を入力します。",
-    step2: "雇用形態・勤務地・待遇・応募資格を選ぶと、WhatsApp用の文面に反映されます。",
-    step3: "WhatsAppで文面を確認して送信してください。未設定の場合はお問い合わせフォームをご利用ください。",
+    step2: "雇用形態・勤務地・待遇・応募資格を選ぶと、掲示板の表示に反映されます。",
+    step3: "内容を確認し、同意にチェックして投稿します。掲示板に表示されます。",
     formCardTitle: "求人入力フォーム",
-    postSuccess: "✅ 求人が投稿されました。WhatsApp でメッセージを送信してください。",
+    postSuccess: "✅ 投稿しました。掲示板に表示されています。",
     listingsTitle: "掲載中の求人",
     noListings: "現在掲載中の求人はありません。",
     postedAt: "掲載日",

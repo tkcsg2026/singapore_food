@@ -198,13 +198,11 @@ function JobListingCard({
 function PostForm({
   postType,
   j,
-  phoneDigits,
   onSuccess,
   onClose,
 }: {
   postType: PostType;
   j: ReturnType<typeof useTranslation>["t"]["jobs"];
-  phoneDigits: string;
   onSuccess: () => void;
   onClose: () => void;
 }) {
@@ -243,7 +241,7 @@ function PostForm({
   const whatsappMessage =
     rawMessage.length <= WA_MAX ? rawMessage : `${rawMessage.slice(0, WA_MAX - 20)}\n\n[…]`;
 
-  const canSendBase = jobTitle.trim().length > 0 && description.trim().length > 0 && phoneDigits.length >= 8;
+  const canSendBase = jobTitle.trim().length > 0 && description.trim().length > 0;
   const canSend = canSendBase && agreed && !posting;
 
   const handlePost = async () => {
@@ -277,8 +275,6 @@ function PostForm({
         }
         return;
       }
-      const encoded = encodeURIComponent(whatsappMessage);
-      window.open(`https://wa.me/${phoneDigits}?text=${encoded}`, "_blank", "noopener,noreferrer");
       onSuccess();
       onClose();
     } catch {
@@ -450,52 +446,41 @@ function PostForm({
           <pre className="text-[11px] sm:text-xs whitespace-pre-wrap break-words rounded-lg bg-background border border-border p-3 max-h-44 overflow-y-auto text-muted-foreground">
             {whatsappMessage}
           </pre>
-          <p className="text-[11px] text-muted-foreground">{j.whatsappHelp}</p>
+          <p className="text-[11px] text-muted-foreground">{j.previewHelp}</p>
         </div>
 
         <div className="flex flex-col gap-3 pt-1">
-          {phoneDigits.length >= 8 ? (
-            <>
-              <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
-                <label className="flex items-start gap-3 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={agreed}
-                    onChange={(e) => setAgreed(e.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-border"
-                  />
-                  <span className="text-xs text-muted-foreground leading-relaxed">
-                    {j.consentText}
-                  </span>
-                </label>
-                <p className="text-[11px] text-muted-foreground">{j.consentHint}</p>
-              </div>
+          <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+            <label className="flex items-start gap-3 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-border"
+              />
+              <span className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
+                {j.consentText}
+              </span>
+            </label>
+            <p className="text-[11px] text-muted-foreground font-medium">{j.consentHint}</p>
+          </div>
 
-              {canSendBase ? (
-                <Button
-                  onClick={handlePost}
-                  disabled={!canSend}
-                  className="w-full rounded-xl min-h-[44px] font-bold"
-                >
-                  {posting ? j.posting : j.postAndSend}
-                </Button>
-              ) : (
-                <div className="flex min-h-[44px] w-full items-center justify-center rounded-xl border border-dashed border-muted-foreground/35 bg-muted/30 px-4 text-sm text-muted-foreground text-center">
-                  {j.requiredHint}
-                </div>
-              )}
-
-              {postError && (
-                <div className="text-sm text-destructive font-medium">{postError}</div>
-              )}
-            </>
+          {canSendBase ? (
+            <Button
+              onClick={handlePost}
+              disabled={!canSend}
+              className="w-full rounded-xl min-h-[44px] font-bold"
+            >
+              {posting ? j.posting : j.postAndSend}
+            </Button>
           ) : (
-            <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground space-y-3">
-              <p>{j.whatsappMissing}</p>
-              <Button variant="outline" asChild className="w-full rounded-xl">
-                <Link href="/contact">{j.contactInstead}</Link>
-              </Button>
+            <div className="flex min-h-[44px] w-full items-center justify-center rounded-xl border border-dashed border-muted-foreground/35 bg-muted/30 px-4 text-sm text-muted-foreground text-center">
+              {j.requiredHint}
             </div>
+          )}
+
+          {postError && (
+            <div className="text-sm text-destructive font-medium">{postError}</div>
           )}
         </div>
       </CardContent>
@@ -685,7 +670,6 @@ export default function JobVacancies() {
           <PostForm
             postType={formType}
             j={j}
-            phoneDigits={phoneDigits}
             onSuccess={() => { setPostSuccess(true); fetchListings(); }}
             onClose={() => setShowForm(false)}
           />

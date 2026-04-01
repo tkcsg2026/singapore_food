@@ -1,25 +1,59 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient, createAdminSupabaseClient } from "@/lib/supabase-server";
+import { createServerSupabaseClient, createAdminSupabaseClient, requireAdmin } from "@/lib/supabase-server";
 import { sendReportNotification } from "@/lib/email";
 
-export async function GET() {
-  const supabase = createServerSupabaseClient();
-  if (!supabase) return NextResponse.json([]);
-  const { data, error } = await supabase
-    .from("reports").select("*").order("created_at", { ascending: false });
-  if (error) return NextResponse.json([]);
-  return NextResponse.json(data);
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const itemType = searchParams.get("item_type");
+  const itemId = searchParams.get("item_id");
+  const reporterId = searchParams.get("reporter_id");
+
+  const admin = createAdminSupabaseClient();
+  if (!admin) {
+    return NextResponse.json({ error: "Database not configured" }, { status: 503 });
+  }
+
+  // Logged-in user checking whether they already reported an item (MarketplaceItem)
+  if (itemType && itemId && reporterId) {
+    const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+    const server = createServerSupabaseClient();
+    if (!token || !server) {
+      return NextResponse.json([]);
+    }
+    const {
+      data: { user },
+    } = await server.auth.getUser(token);
+    if (!user || user.id !== reporterId) {
+      return NextResponse.json([]);
+    }
+    const { data, error } = await admin
+      .from("reports")
+      .select("id,status,created_at")
+      .eq("item_type", itemType)
+      .eq("item_id", itemId)
+      .eq("reporter_id", reporterId);
+    if (error) return NextResponse.json([]);
+    return NextResponse.json(data ?? []);
+  }
+
+  const auth = await requireAdmin(req);
+  if (auth instanceof NextResponse) return auth;
+
+  let query = admin.from("reports").select("*").order("created_at", { ascending: false });
+  if (itemType) query = query.eq("item_type", itemType);
+  if (itemId) query = query.eq("item_id", itemId);
+  const { data, error } = await query;
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data ?? []);
 }
 
 export async function POST(req: NextRequest) {
-  // Use admin client so RLS never blocks a legitimate report submission.
   const supabase = createAdminSupabaseClient();
   if (!supabase) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   const body = await req.json();
   const { data, error } = await supabase.from("reports").insert(body).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Notify admin of new report
   try {
     await sendReportNotification({
       itemId: String(body.item_id || "unknown"),
@@ -31,12 +65,19 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const supabase = createServerSupabaseClient();
+  const auth = await requireAdmin(req);
+  if (auth instanceof NextResponse) return auth;
+
+  const supabase = createAdminSupabaseClient();
   if (!supabase) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   const body = await req.json();
   const { id, status } = body;
   const { data, error } = await supabase
-    .from("reports").update({ status }).eq("id", id).select().single();
+    .from("reports")
+    .update({ status })
+    .eq("id", id)
+    .select()
+    .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }

@@ -19,21 +19,21 @@ function normaliseMock(item: any) {
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const { searchParams } = new URL(_req.url);
+  const byId = searchParams.get("byId") === "true";
   const supabase = createServerSupabaseClient();
 
   if (!supabase) {
-    const mock = mockItems.find((i) => i.slug === slug);
+    const mock = byId ? mockItems.find((i) => i.id === slug) : mockItems.find((i) => i.slug === slug);
     if (!mock) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(normaliseMock(mock));
   }
 
-  const { data, error } = await supabase
-    .from("marketplace_items")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+  let query = supabase.from("marketplace_items").select("*");
+  query = byId ? query.eq("id", slug) : query.eq("slug", slug);
+  const { data, error } = await query.single();
   if (error || !data) {
-    const mock = mockItems.find((i) => i.slug === slug);
+    const mock = byId ? mockItems.find((i) => i.id === slug) : mockItems.find((i) => i.slug === slug);
     if (!mock) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(normaliseMock(mock));
   }
@@ -83,11 +83,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ slug
   return NextResponse.json(data);
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const { searchParams } = new URL(req.url);
+  const byId = searchParams.get("byId") === "true";
   const supabase = createAdminSupabaseClient();
   if (!supabase) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
-  const { error } = await supabase.from("marketplace_items").delete().eq("slug", slug);
+  const q = supabase.from("marketplace_items").delete();
+  const { error } = byId ? await q.eq("id", slug) : await q.eq("slug", slug);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

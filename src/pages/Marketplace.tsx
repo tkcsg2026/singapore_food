@@ -8,6 +8,7 @@ import { useFetch } from "@/hooks/useSupabaseData";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useLoginPrompt } from "@/components/LoginPromptModal";
 import type { MarketplaceItemRow, CategoryRow } from "@/types/database";
+import { getCategoryDisplayName } from "@/lib/category-display";
 
 type SortOption = "newest" | "price-asc" | "price-desc";
 
@@ -76,9 +77,9 @@ const Marketplace = () => {
             <option value="">{t.common.allCategories}</option>
             {(categories || []).map((c) => (
               <option key={c.value} value={c.value}>
-                {lang === "ja"
-                  ? (c.label_ja || c.label || (t.marketplace as { categories?: Record<string, string> }).categories?.[c.value] || c.value)
-                  : ((t.marketplace as { categories?: Record<string, string> }).categories?.[c.value] || c.label || c.value)}
+                {getCategoryDisplayName(c, lang) ||
+                  (t.marketplace as { categories?: Record<string, string> }).categories?.[c.value] ||
+                  c.value}
               </option>
             ))}
           </select>

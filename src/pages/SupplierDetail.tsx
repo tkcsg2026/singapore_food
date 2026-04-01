@@ -2,13 +2,14 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { MapPin, ArrowLeft, Award, Phone, ChevronLeft, ChevronRight, MessageCircle, Video, Play } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Layout from "@/components/Layout";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { useFetch } from "@/hooks/useSupabaseData";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useLoginPrompt } from "@/components/LoginPromptModal";
 import type { CategoryRow } from "@/types/database";
+import { buildSupplierTagDisplayMaps } from "@/lib/category-display";
 import { getPreferredPlaybackUrl, VIDEO_EXTENSIONS, getFileExtension } from "@/lib/video";
 
 function isYouTube(url: string) {
@@ -189,6 +190,14 @@ function getVideoThumbnail(url?: string): string | null {
   return null;
 }
 
+/** English line first (bold), Japanese second when both exist — same typography for both. */
+function productDisplayNames(p: { name?: string; name_en?: string }) {
+  const ja = (p.name || "").trim();
+  const en = (p.name_en || "").trim();
+  if (en && ja) return { primary: en, secondary: ja };
+  return { primary: en || ja, secondary: "" };
+}
+
 /**
  * Thumbnail card for direct video URLs.
  * Always shows a dark card with play-icon overlay immediately so the card
@@ -323,25 +332,19 @@ const SupplierDetail = () => {
   ].filter(Boolean) as string[];
   const displayArea = lang === "ja" ? (supplier?.area_ja || supplier?.area) : (supplier?.area || supplier?.area_ja);
   const tagMap = (t.suppliers as { tagMap?: Record<string, string> }).tagMap ?? {};
-  const dynamicTagMap = new Map<string, string>(
-    (tagCategories || []).flatMap((cat) => {
-      const labelEn = cat.label?.trim();
-      const labelJa = cat.label_ja?.trim();
-      if (!labelEn) return [];
-      const pairs: Array<[string, string]> = [[labelEn, labelEn]];
-      if (labelJa) pairs.push([labelJa, labelEn]);
-      if (cat.value) pairs.push([cat.value, labelEn]);
-      return pairs;
-    })
-  );
-  const translateTag = (tag: string) => dynamicTagMap.get(tag) ?? tagMap[tag] ?? tag;
+  const tagDisplayMaps = useMemo(() => buildSupplierTagDisplayMaps(tagCategories || []), [tagCategories]);
+  const translateTag = (tag: string) => {
+    const m = lang === "ja" ? tagDisplayMaps.toJa : tagDisplayMaps.toEn;
+    if (m[tag]) return m[tag];
+    return tagMap[tag] ?? tag;
+  };
   const galleryImages = [supplier?.logo, supplier?.image_2, supplier?.image_3].filter(Boolean) as string[];
   const catalogUrl = supplier?.catalog_url?.trim();
   const contactName = supplier?.whatsapp_contact_name?.trim();
   const contactMsg = `Supply.\n\nName :\nCompany :\nMessage :`;
   const labels = lang === "ja"
-    ? { origin: "原産国", weight: "重量", quantity: "入数", storage: "保存方法", temp: "温度帯", size: "サイズ（W×D×H）" }
-    : { origin: "Country of Origin", weight: "Weight", quantity: "Quantity", storage: "Storage Condition", temp: "Temperature", size: "Size (W×D×H)" };
+    ? { origin: "原産国", weight: "重量", quantity: "入数", moq: "MOQ", storage: "保存方法", temp: "温度帯", size: "サイズ（W×D×H）" }
+    : { origin: "Country of Origin", weight: "Weight", quantity: "Quantity", moq: "MOQ", storage: "Storage Condition", temp: "Temperature", size: "Size (W×D×H)" };
 
   if (loading) {
     return <Layout><div className="container py-16 text-center text-muted-foreground">{t.common.loading}</div></Layout>;
@@ -498,8 +501,17 @@ const SupplierDetail = () => {
                       )}
                     </div>
                     <div className="p-2 sm:p-3">
-                      <div className="text-xs sm:text-sm font-semibold leading-snug break-words">{p.name}</div>
-                      {p.name_en && <div className="text-xs text-muted-foreground break-words">{p.name_en}</div>}
+                      {(() => {
+                        const { primary, secondary } = productDisplayNames(p);
+                        return (
+                          <>
+                            <div className="text-xs sm:text-sm font-bold leading-snug break-words">{primary}</div>
+                            {secondary ? (
+                              <div className="text-xs sm:text-sm font-bold leading-snug break-words mt-0.5">{secondary}</div>
+                            ) : null}
+                          </>
+                        );
+                      })()}
                       {p.temperature && <div className="text-xs text-primary font-medium mt-0.5">{p.temperature}</div>}
                       {(lang === "ja" ? p.country_of_origin : (p.country_of_origin_en || p.country_of_origin)) && (
                         <div className="text-xs text-muted-foreground">
@@ -508,6 +520,7 @@ const SupplierDetail = () => {
                       )}
                       {p.weight && <div className="text-xs text-muted-foreground">{labels.weight}: {p.weight}</div>}
                       {p.quantity && <div className="text-xs text-muted-foreground">{labels.quantity}: {p.quantity}</div>}
+                      {p.moq && <div className="text-xs text-muted-foreground">{labels.moq}: {p.moq}</div>}
                       {(p.size_w || p.size_d || p.size_h) && (
                         <div className="text-xs text-muted-foreground">
                           {labels.size}: {[p.size_w, p.size_d, p.size_h].filter(Boolean).join(" × ")}{p.size_unit ? ` ${p.size_unit}` : ""}
@@ -558,8 +571,15 @@ const SupplierDetail = () => {
             <div className="relative bg-background rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90dvh] overflow-y-auto shadow-2xl">
               <ProductModalMedia product={product} />
               <div className="p-4">
-                <h3 className="text-base font-bold">{product.name}</h3>
-                {product.name_en && <p className="text-sm text-muted-foreground">{product.name_en}</p>}
+                {(() => {
+                  const { primary, secondary } = productDisplayNames(product);
+                  return (
+                    <>
+                      <h3 className="text-base font-bold">{primary}</h3>
+                      {secondary ? <p className="text-base font-bold mt-1">{secondary}</p> : null}
+                    </>
+                  );
+                })()}
                 <div className="mt-3 space-y-2">
                   {product.temperature && (
                     <span className="inline-block bg-primary/10 text-primary text-xs font-semibold px-2 py-1 rounded-md">{product.temperature}</span>
@@ -568,6 +588,7 @@ const SupplierDetail = () => {
                     <div><dt className="text-xs text-muted-foreground">{labels.origin}</dt><dd className="text-sm font-medium">{lang === "ja" ? (product.country_of_origin || "—") : (product.country_of_origin_en || product.country_of_origin || "—")}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">{labels.weight}</dt><dd className="text-sm font-medium">{product.weight || "—"}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">{labels.quantity}</dt><dd className="text-sm font-medium">{product.quantity || "—"}</dd></div>
+                    <div><dt className="text-xs text-muted-foreground">{labels.moq}</dt><dd className="text-sm font-medium">{product.moq || "—"}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">{labels.storage}</dt><dd className="text-sm font-medium">{product.storage_condition || "—"}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">{labels.temp}</dt><dd className="text-sm font-medium">{product.temperature || "—"}</dd></div>
                     {(product.size_w || product.size_d || product.size_h) && (

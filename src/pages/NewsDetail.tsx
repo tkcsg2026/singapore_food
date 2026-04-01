@@ -6,6 +6,7 @@ import { ArrowLeft, Calendar, User } from "lucide-react";
 import Layout from "@/components/Layout";
 import { useFetch } from "@/hooks/useSupabaseData";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { resolveNewsAuthor } from "@/lib/news-author";
 
 const NewsDetail = () => {
   const params = useParams();
@@ -49,6 +50,7 @@ const NewsDetail = () => {
   const displayTitle = lang === "ja" ? (article.title_ja || article.title) : (article.title || article.title_ja);
   const content = lang === "ja" ? (article.content_ja || article.content || "") : (article.content || article.content_ja || "");
   const categoryLabel = (t.news as { categories?: Record<string, string> }).categories?.[article.category] ?? article.category;
+  const displayAuthor = resolveNewsAuthor(article.author, lang as "ja" | "en");
 
   return (
     <Layout>
@@ -69,10 +71,10 @@ const NewsDetail = () => {
             <Calendar className="h-3 w-3" />
             {new Date(article.published_at || article.created_at).toLocaleDateString(lang === "ja" ? "ja-JP" : "en-SG")}
           </span>
-          {article.author && (
+          {displayAuthor && (
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               <User className="h-3 w-3" />
-              {article.author}
+              {displayAuthor}
             </span>
           )}
         </div>

@@ -189,6 +189,7 @@ ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS country_of_origin 
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS country_of_origin_en text DEFAULT '';
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS weight            text DEFAULT '';
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS quantity          text DEFAULT '';
+ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS moq               text DEFAULT '';
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS storage_condition text DEFAULT '';
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS temperature       text DEFAULT '';
 -- Video URL: direct MP4/WebM upload URL or YouTube / Vimeo embed URL
@@ -1223,6 +1224,28 @@ SELECT table_name, rows FROM (
   SELECT 'site_settings', COUNT(*) FROM public.site_settings UNION ALL
   SELECT 'reports', COUNT(*) FROM public.reports
 ) t ORDER BY table_name;
+
+-- ── Portal links (managed in Admin → Links) ─────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.portal_links (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  name text NOT NULL DEFAULT '',
+  name_ja text DEFAULT '',
+  description text DEFAULT '',
+  description_ja text DEFAULT '',
+  url text NOT NULL DEFAULT '',
+  icon text DEFAULT '🔗',
+  bg_image text DEFAULT '',
+  category text DEFAULT 'government',
+  sort_order integer DEFAULT 0,
+  active boolean DEFAULT true
+);
+ALTER TABLE public.portal_links ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public read portal_links" ON public.portal_links;
+DROP POLICY IF EXISTS "Admin full portal_links" ON public.portal_links;
+CREATE POLICY "Public read portal_links" ON public.portal_links FOR SELECT USING (true);
+CREATE POLICY "Admin full portal_links" ON public.portal_links FOR ALL USING (
+  EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+);
 
 -- Refresh PostgREST schema cache immediately (helps avoid "column not found in schema cache" errors).
 NOTIFY pgrst, 'reload schema';

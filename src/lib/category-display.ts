@@ -66,3 +66,23 @@ export function getCategoryDisplayName(
   if (lang === "ja") return jaLabel || enLabel;
   return enLabel;
 }
+
+export type SupplierTagDisplayMaps = { toEn: Record<string, string>; toJa: Record<string, string> };
+
+/** Maps stored tag tokens (value, EN label, JA label) → display labels per language (admin type=tag rows). */
+export function buildSupplierTagDisplayMaps(
+  tagCategories: (Pick<CategoryRow, "type" | "value" | "label"> & { label_ja?: string | null })[]
+): SupplierTagDisplayMaps {
+  const toEn: Record<string, string> = {};
+  const toJa: Record<string, string> = {};
+  for (const cat of tagCategories) {
+    const { enLabel, jaLabel } = resolveCategoryDisplayLabels(cat);
+    const ja = (jaLabel || "").trim() || enLabel;
+    const en = enLabel;
+    for (const key of [cat.value, en, ja].filter(Boolean) as string[]) {
+      toEn[key] = en;
+      toJa[key] = ja;
+    }
+  }
+  return { toEn, toJa };
+}

@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { WhatsAppButton } from "./WhatsAppButton";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { getPlanConfig } from "@/lib/plans";
+import type { SupplierTagDisplayMaps } from "@/lib/category-display";
 import { toggleFavorite, getFavoriteIds, syncFromStorage } from "@/lib/favorites";
 import { useLoginPrompt } from "./LoginPromptModal";
 
@@ -36,6 +37,9 @@ interface SupplierCardProps {
   };
   variant?: "grid" | "list";
   rank?: number;
+  /** Resolved EN/JA labels for admin tag categories (type=tag). Required for correct English/Japanese tag text on cards. */
+  tagDisplayMaps?: SupplierTagDisplayMaps;
+  /** @deprecated use tagDisplayMaps */
   tagLabelMap?: Record<string, string>;
 }
 
@@ -86,7 +90,7 @@ function useFavorites() {
   return { favorites, toggle: toggleFavorite };
 }
 
-export function SupplierCard({ supplier, variant = "grid", rank, tagLabelMap }: SupplierCardProps) {
+export function SupplierCard({ supplier, variant = "grid", rank, tagDisplayMaps, tagLabelMap }: SupplierCardProps) {
   const { t, lang } = useTranslation();
   const cfg = getPlanConfig(supplier.plan);
   const { favorites, toggle } = useFavorites();
@@ -99,7 +103,14 @@ export function SupplierCard({ supplier, variant = "grid", rank, tagLabelMap }: 
   const contactName = supplier.whatsapp_contact_name?.trim();
 
   const tagMap = (t.suppliers as { tagMap?: Record<string, string> }).tagMap ?? {};
-  const translateTag = (tag: string) => tagLabelMap?.[tag] ?? tagMap[tag] ?? tag;
+  const translateTag = (tag: string) => {
+    if (tagDisplayMaps) {
+      const m = lang === "ja" ? tagDisplayMaps.toJa : tagDisplayMaps.toEn;
+      if (m[tag]) return m[tag];
+    }
+    if (tagLabelMap?.[tag]) return tagLabelMap[tag];
+    return tagMap[tag] ?? tag;
+  };
 
   const categories = (lang === "ja"
     ? [supplier.category_ja || supplier.categoryJa, supplier.category_2_ja, supplier.category_3_ja]

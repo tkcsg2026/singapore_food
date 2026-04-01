@@ -482,7 +482,7 @@ const en = {
     tags: "Tags (comma separated)",
     aboutJa: "About (Japanese)",
     planLabel: "Listing plan",
-    certifications: "Certifications (comma separated)",
+    certifications: "Certifications (comma separated, English)",
     imageHint: "Convert PDFs to images (PNG/JPG), upload to image hosting, and enter the URL here.",
     aboutEn: "About (English)",
     descriptionEn: "Description (English)",
@@ -623,14 +623,14 @@ const en = {
   jobs: {
     pageTitle: "Job Vacancies",
     pageSubtitle:
-      "Post a simple F&B job notice and send it to us via WhatsApp. Use the options below to keep your ad structured and compliant-minded.",
+      "Post a simple F&B job notice on this board. Use the structured fields below to keep your ad clear and compliance-minded.",
     bulletinLabel: "Notice board",
     disclaimer:
-      "This page is a free notice-style tool only. Employers remain responsible for complying with Singapore employment advertising rules (including MOM / Fair Consideration Framework where applicable), accurate job information, and fair hiring practices. We do not verify listings.",
+      "This page is provided as a free self-service posting tool. Employers are solely responsible for ensuring that all job advertisements comply with applicable Singapore employment laws and guidelines, including but not limited to the Ministry of Manpower (MOM) regulations, the Fair Consideration Framework (FCF), and the Tripartite Guidelines on Fair Employment Practices. Employers must ensure that all information provided is accurate, non-discriminatory, and reflects fair hiring practices. Job advertisements must not contain misleading, false, or discriminatory content based on age, gender, race, religion, nationality, marital status, disability, or other protected characteristics. This platform does not review, verify, or endorse any job postings and shall not be held responsible for the accuracy or legality of the content submitted.",
     consentText:
-      "This page is a free notice-style tool only. Employers remain responsible for complying with Singapore employment advertising rules (including MOM / Fair Consideration Framework where applicable), accurate job information, and fair hiring practices. We do not verify listings.",
-    consentHint: "You must accept the statement above before posting.",
-    postAndSend: "Accept & post",
+      "This page is provided as a free self-service posting tool.\n\nEmployers are solely responsible for ensuring that all job advertisements comply with applicable Singapore employment laws and guidelines, including but not limited to the Ministry of Manpower (MOM) regulations, the Fair Consideration Framework (FCF), and the Tripartite Guidelines on Fair Employment Practices.\n\nEmployers must ensure that all information provided is accurate, non-discriminatory, and reflects fair hiring practices. Job advertisements must not contain misleading, false, or discriminatory content based on age, gender, race, religion, nationality, marital status, disability, or other protected characteristics.\n\nThis platform does not review, verify, or endorse any job postings and shall not be held responsible for the accuracy or legality of the content submitted.",
+    consentHint: "By proceeding, you acknowledge and agree to the above.",
+    postAndSend: "Post",
     posting: "Posting...",
     postFailed: "Failed to post. Please try again.",
     postSetupPending:
@@ -649,7 +649,9 @@ const en = {
     descriptionPh:
       "Hours, duties, languages, certifications (e.g. Food Hygiene), start date, and how applicants should follow up.",
     selectPlaceholder: "Select…",
-    preview: "WhatsApp message preview",
+    preview: "Submission summary",
+    previewHelp:
+      "This is how your notice will appear on the board. Edit the fields above before posting.",
     whatsappHelp:
       "Opens WhatsApp with your notice pre-filled. You can edit the message before sending.",
     whatsappMissing:
@@ -711,10 +713,10 @@ const en = {
     msgBody: "Description",
     howItWorks: "How it works",
     step1: "Enter the job title, optional company name, and a clear role description.",
-    step2: "Choose employment type, location, pay band, and eligibility — they are merged into the WhatsApp draft.",
-    step3: "Open WhatsApp, review the message, and send. If WhatsApp is not configured, use the contact form instead.",
+    step2: "Choose employment type, location, pay band, and eligibility — they are shown in your listing.",
+    step3: "Review the summary, accept the terms, and post. Your notice appears on this page.",
     formCardTitle: "Job listing form",
-    postSuccess: "✅ Job posted successfully. Please send the message on WhatsApp.",
+    postSuccess: "✅ Posted successfully. Your notice is now on the board.",
     listingsTitle: "Current Job Listings",
     noListings: "No job listings at the moment.",
     postedAt: "Posted",

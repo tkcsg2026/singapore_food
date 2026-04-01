@@ -30,13 +30,26 @@ const mockLinks = [
 ];
 
 export async function GET(_req: NextRequest) {
+  const { searchParams } = new URL(_req.url);
+  const includeInactive = searchParams.get("includeInactive") === "true";
   const supabase = createServerSupabaseClient();
   if (!supabase) {
-    return NextResponse.json(mockLinks.filter((l) => l.active).sort((a, b) => a.sort_order - b.sort_order));
+    const base = includeInactive ? mockLinks : mockLinks.filter((l) => l.active);
+    return NextResponse.json(base.sort((a, b) => a.sort_order - b.sort_order));
   }
-  const { data, error } = await supabase.from("portal_links").select("*").eq("active", true).order("sort_order");
-  if (error) return NextResponse.json(mockLinks.filter((l) => l.active).sort((a, b) => a.sort_order - b.sort_order));
-  return NextResponse.json(data);
+  let query = supabase.from("portal_links").select("*").order("sort_order");
+  if (!includeInactive) query = query.eq("active", true);
+  const { data, error } = await query;
+  if (error) {
+    const base = includeInactive ? mockLinks : mockLinks.filter((l) => l.active);
+    return NextResponse.json(base.sort((a, b) => a.sort_order - b.sort_order));
+  }
+  const fallbackImg = "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80";
+  const normalized = (data ?? []).map((row: Record<string, unknown>) => {
+    const bg = typeof row.bg_image === "string" ? row.bg_image.trim() : "";
+    return { ...row, bg_image: bg || fallbackImg };
+  });
+  return NextResponse.json(normalized);
 }
 
 export async function POST(req: NextRequest) {

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Store, ShoppingBag, CheckCircle, XCircle, Plus, Trash2, Edit2, Link2,
   BarChart3, Tag, Image, AlertTriangle, Shield, Save, Eye, Newspaper, Globe, ExternalLink, FileText, Palette, Users,
@@ -96,6 +96,7 @@ const AdminDashboard = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("suppliers");
   const [pendingCount, setPendingCount] = useState(0);
+  const [reportPendingCount, setReportPendingCount] = useState(0);
 
   useEffect(() => {
     if (!authLoading && user && profile?.role === "admin") {
@@ -105,6 +106,22 @@ const AdminDashboard = () => {
         .catch(() => {});
     }
   }, [authLoading, user, profile]);
+
+  const refreshReportBadge = useCallback(() => {
+    if (!user || profile?.role !== "admin") return;
+    authFetch("/api/reports")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) =>
+        setReportPendingCount(
+          Array.isArray(d) ? d.filter((x: { status?: string }) => x.status === "pending").length : 0,
+        ),
+      )
+      .catch(() => setReportPendingCount(0));
+  }, [user, profile?.role]);
+
+  useEffect(() => {
+    if (!authLoading && user && profile?.role === "admin") refreshReportBadge();
+  }, [authLoading, user, profile?.role, refreshReportBadge]);
 
   const adminTabs = [
     { id: "suppliers",  label: t.admin.tabSuppliers,  icon: Store },
@@ -157,6 +174,11 @@ const AdminDashboard = () => {
                       {pendingCount}
                     </span>
                   )}
+                  {tab.id === "reports" && reportPendingCount > 0 && (
+                    <span className="ml-auto min-w-[1.25rem] h-5 px-1 flex items-center justify-center text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full">
+                      {reportPendingCount}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -178,6 +200,11 @@ const AdminDashboard = () => {
                       {pendingCount}
                     </span>
                   )}
+                  {tab.id === "reports" && reportPendingCount > 0 && (
+                    <span className="min-w-[1.125rem] h-[1.125rem] px-0.5 flex items-center justify-center text-[9px] font-bold bg-destructive text-destructive-foreground rounded-full">
+                      {reportPendingCount}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -194,7 +221,7 @@ const AdminDashboard = () => {
             {activeTab === "terms" && <TermsManager />}
             {activeTab === "privacy" && <PrivacyManager />}
             {activeTab === "qr" && <QRManager />}
-            {activeTab === "reports" && <ReportManager />}
+            {activeTab === "reports" && <ReportManager onReportChanged={refreshReportBadge} />}
             {activeTab === "analytics" && <AnalyticsPanel />}
             {activeTab === "appearance" && <AppearanceManager />}
             {activeTab === "audit-log" && <AuditLogViewer />}
@@ -494,7 +521,11 @@ function SupplierManager() {
           <InputField label={t.admin.catalogUrl} value={form.catalog_url} onChange={(v) => setForm((p) => ({ ...p, catalog_url: v }))} placeholder="https://..." />
           <ImageField label={t.admin.image2} value={form.image_2} onChange={(v) => setForm((p) => ({ ...p, image_2: v }))} hint={t.admin.imageHint} uploadLabel={t.admin.imageUploadOrUrl} />
           <ImageField label={t.admin.image3} value={form.image_3} onChange={(v) => setForm((p) => ({ ...p, image_3: v }))} hint={t.admin.imageHint} uploadLabel={t.admin.imageUploadOrUrl} />
-          <InputField label={t.admin.certifications} value={form.certifications} onChange={(v) => setForm((p) => ({ ...p, certifications: v }))} />
+          <InputField
+            label={lang === "ja" ? `${t.admin.certifications}（英語入力）` : `${t.admin.certifications} (English input)`}
+            value={form.certifications}
+            onChange={(v) => setForm((p) => ({ ...p, certifications: v }))}
+          />
           <div>
             <label className="text-sm font-medium block mb-1.5">{t.admin.aboutEn}</label>
             <textarea value={form.about} onChange={(e) => setForm((p) => ({ ...p, about: e.target.value }))} className="w-full h-20 p-3 rounded-lg border bg-background text-sm resize-none" />
@@ -1592,18 +1623,22 @@ function NewsManager() {
   const [imageUploading, setImageUploading] = useState(false);
   const [form, setForm] = useState({
     title: "", title_ja: "", slug: "", excerpt: "", excerpt_ja: "", content: "", content_ja: "",
-    image: "", category: "industry", author: "", published: false, published_at: "",
+    image: "", category: "industry", author: "", published: true, published_at: "",
   });
 
   useEffect(() => { fetchArticles(); }, []);
 
   const fetchArticles = async () => {
-    const res = await fetch("/api/news?all=true");
+    const res = await authFetch("/api/news?all=true");
+    if (!res.ok) {
+      setArticles([]);
+      return;
+    }
     setArticles(await res.json());
   };
 
   const resetForm = () => {
-    setForm({ title: "", title_ja: "", slug: "", excerpt: "", excerpt_ja: "", content: "", content_ja: "", image: "", category: "industry", author: "", published: false, published_at: "" });
+    setForm({ title: "", title_ja: "", slug: "", excerpt: "", excerpt_ja: "", content: "", content_ja: "", image: "", category: "industry", author: "", published: true, published_at: "" });
     setEditSlug(null);
   };
 
@@ -1621,10 +1656,13 @@ function NewsManager() {
     }
     const body: Record<string, unknown> = { ...form, title: titleTrimmed || form.title, title_ja: titleJaTrimmed || form.title_ja, slug: slugTrimmed };
     body.published_at = form.published_at ? new Date(form.published_at).toISOString() : null;
-    if (editSlug) {
-      await fetch(`/api/news/${editSlug}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    } else {
-      await fetch("/api/news", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const res = editSlug
+      ? await authFetch(`/api/news/${editSlug}`, { method: "PUT", body: JSON.stringify(body) })
+      : await authFetch("/api/news", { method: "POST", body: JSON.stringify(body) });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({} as any));
+      alert((lang === "ja" ? "記事の保存に失敗しました: " : "Failed to save article: ") + (err?.error || `HTTP ${res.status}`));
+      return;
     }
     setShowForm(false);
     resetForm();
@@ -1644,7 +1682,7 @@ function NewsManager() {
 
   const handleDelete = async (slug: string) => {
     if (!confirm(t.admin.deleteConfirm)) return;
-    await fetch(`/api/news/${slug}`, { method: "DELETE" });
+    await authFetch(`/api/news/${slug}`, { method: "DELETE" });
     fetchArticles();
   };
 
@@ -2583,30 +2621,37 @@ function QRManager() {
   );
 }
 
-function ReportManager() {
+function ReportManager({ onReportChanged }: { onReportChanged?: () => void }) {
   const [reports, setReports] = useState<any[]>([]);
   const { t, lang } = useTranslation();
 
   useEffect(() => { fetchReports(); }, []);
 
   const fetchReports = async () => {
-    const res = await fetch("/api/reports");
+    const res = await authFetch("/api/reports");
+    if (!res.ok) {
+      setReports([]);
+      return;
+    }
     setReports(await res.json());
   };
 
   const handleStatus = async (id: string, status: string) => {
-    await fetch("/api/reports", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status }) });
-    fetchReports();
+    await authFetch("/api/reports", { method: "PUT", body: JSON.stringify({ id, status }) });
+    await fetchReports();
+    onReportChanged?.();
   };
 
   const handleDeleteItem = async (r: any) => {
     if (!confirm(t.admin.reportDeleteConfirm)) return;
     if (r.item_type === "marketplace_item" && r.item_id) {
-      const itemRes = await fetch(`/api/marketplace/${r.item_id}?byId=true`);
+      const itemRes = await fetch(`/api/marketplace/${encodeURIComponent(r.item_id)}?byId=true`);
       if (itemRes.ok) {
         const item = await itemRes.json();
-        if (item?.slug) {
-          await fetch(`/api/marketplace/${item.slug}`, { method: "DELETE" });
+        if (item?.id) {
+          await fetch(`/api/marketplace/${encodeURIComponent(item.id)}?byId=true`, { method: "DELETE" });
+        } else if (item?.slug) {
+          await fetch(`/api/marketplace/${encodeURIComponent(item.slug)}`, { method: "DELETE" });
         }
       }
     }
@@ -2659,9 +2704,13 @@ function AnalyticsPanel() {
   const [pvMonths, setPvMonths] = useState(6);
   const [svMonths, setSvMonths] = useState(6);
   const [mvMonths, setMvMonths] = useState(6);
+  const [expandSupplierChart, setExpandSupplierChart] = useState(false);
 
   useEffect(() => {
-    fetch("/api/suppliers").then((r) => r.json()).then(setSuppliers).catch(() => {});
+    authFetch("/api/admin/suppliers")
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setSuppliers)
+      .catch(() => setSuppliers([]));
     fetch("/api/marketplace?status=approved").then((r) => r.json()).then(setItems).catch(() => {});
   }, []);
 
@@ -2874,15 +2923,30 @@ function AnalyticsPanel() {
 
       {/* ── Top suppliers by cumulative views ── */}
       <div>
-        <h3 className="font-bold text-sm mb-1">{t.admin.analytics.topByViews}</h3>
+        <div className="flex flex-wrap items-end justify-between gap-2 mb-1">
+          <h3 className="font-bold text-sm">{t.admin.analytics.topByViews}</h3>
+          <button
+            type="button"
+            onClick={() => setExpandSupplierChart((v) => !v)}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            {expandSupplierChart
+              ? lang === "ja"
+                ? "グラフを上位5社のみ表示"
+                : "Show top 5 in chart"
+              : lang === "ja"
+                ? "全社をグラフに表示"
+                : "Show all suppliers in chart"}
+          </button>
+        </div>
         <p className="text-xs text-muted-foreground mb-3">{t.admin.analytics.cumulativeNote}</p>
-        <div className="h-52 w-full max-w-xl mb-4">
+        <div className={`w-full max-w-xl mb-4 ${expandSupplierChart ? "h-[min(70vh,28rem)]" : "h-52"}`}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               layout="vertical"
               data={[...suppliers]
                 .sort((a: any, b: any) => (b.views || 0) - (a.views || 0))
-                .slice(0, 5)
+                .slice(0, expandSupplierChart ? undefined : 5)
                 .map((s: any) => ({ name: lang === "ja" ? (s.name_ja || s.name) : (s.name || s.name_ja), views: s.views || 0 }))}
               margin={{ top: 8, right: 24, left: 8, bottom: 8 }}
             >
@@ -2893,8 +2957,8 @@ function AnalyticsPanel() {
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div className="space-y-2">
-          {[...suppliers].sort((a: any, b: any) => (b.views || 0) - (a.views || 0)).slice(0, 5).map((s: any) => (
+        <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
+          {[...suppliers].sort((a: any, b: any) => (b.views || 0) - (a.views || 0)).map((s: any) => (
             <div key={s.id} className="flex items-center gap-3 bg-card border p-3">
               <img src={s.logo} alt="" className="w-10 h-10 rounded-lg object-cover" />
               <div className="flex-1"><p className="text-sm font-semibold">{lang === "ja" ? (s.name_ja || s.name) : (s.name || s.name_ja)}</p></div>
@@ -3079,7 +3143,7 @@ function LinksManager() {
   useEffect(() => { fetchLinks(); }, []);
 
   const fetchLinks = async () => {
-    const res = await fetch("/api/links");
+    const res = await fetch("/api/links?includeInactive=true");
     if (res.ok) setLinks(await res.json());
   };
 

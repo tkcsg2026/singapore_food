@@ -6,6 +6,7 @@ import Layout from "@/components/Layout";
 import { useFetch } from "@/hooks/useSupabaseData";
 import { useTranslation } from "@/contexts/LanguageContext";
 import type { NewsArticleRow, CategoryRow } from "@/types/database";
+import { getCategoryDisplayName } from "@/lib/category-display";
 
 const PER_PAGE = 9;
 
@@ -62,9 +63,9 @@ const News = () => {
                 selectedCategory === cat.value ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
-              {lang === "ja"
-                ? (cat.label_ja || cat.label || (t.news as { categories?: Record<string, string> }).categories?.[cat.value] || cat.value)
-                : ((t.news as { categories?: Record<string, string> }).categories?.[cat.value] || cat.label || cat.value)}
+              {getCategoryDisplayName(cat, lang) ||
+                (t.news as { categories?: Record<string, string> }).categories?.[cat.value] ||
+                cat.value}
             </button>
           ))}
         </div>
@@ -87,14 +88,12 @@ const News = () => {
                   <div className="p-5">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="tag-badge">
-                        {lang === "ja"
-                          ? ((categories || []).find((c) => c.value === article.category)?.label_ja
-                              || (t.news as { categories?: Record<string, string> }).categories?.[article.category]
-                              || (categories || []).find((c) => c.value === article.category)?.label
-                              || article.category)
-                          : ((t.news as { categories?: Record<string, string> }).categories?.[article.category]
-                              || (categories || []).find((c) => c.value === article.category)?.label
-                              || article.category)}
+                        {(() => {
+                          const row = (categories || []).find((c) => c.value === article.category);
+                          return row
+                            ? getCategoryDisplayName(row, lang)
+                            : (t.news as { categories?: Record<string, string> }).categories?.[article.category] || article.category;
+                        })()}
                       </span>
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
