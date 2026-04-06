@@ -1894,9 +1894,8 @@ function CategoryManager() {
       setAddError(lang === "ja" ? "ラベル（EN）は必須です。" : "Label (EN) is required.");
       return;
     }
-    const res = await fetch("/api/categories", {
+    const res = await authFetch("/api/categories", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...newCat, value: valueTrimmed, label: labelTrimmed }),
     });
     if (!res.ok) {
@@ -1910,16 +1909,25 @@ function CategoryManager() {
 
   const handleDelete = async (id: string) => {
     if (!confirm(t.admin.deleteConfirm)) return;
-    await fetch(`/api/categories?id=${id}`, { method: "DELETE" });
+    try {
+      const res = await authFetch(`/api/categories?id=${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err?.error ?? (lang === "ja" ? "削除に失敗しました。" : "Delete failed."));
+        return;
+      }
+    } catch {
+      alert(lang === "ja" ? "削除に失敗しました。" : "Delete failed.");
+      return;
+    }
     fetchCategories();
   };
 
   const handleEditSave = async () => {
     if (!editingCat) return;
     setEditSaving(true);
-    const res = await fetch(`/api/categories?id=${editingCat.id}`, {
+    const res = await authFetch(`/api/categories?id=${editingCat.id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ label: editingCat.label, label_ja: editingCat.label_ja }),
     });
     setEditSaving(false);

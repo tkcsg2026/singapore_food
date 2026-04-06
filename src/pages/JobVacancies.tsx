@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Briefcase, CheckCircle2, ChevronDown, ChevronUp, ClipboardList,
-  ListOrdered, MapPin, MessageCircle, RefreshCw, Plus, Trash2, User, X,
+  ListOrdered, MapPin, MessageCircle, RefreshCw, Plus, Shield, Trash2, User, X,
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { useAuth } from "@/hooks/useAuth";
 import { sanitizeWhatsAppDigits } from "@/lib/jobs-whatsapp";
 import { getSupabase } from "@/lib/supabase";
 
@@ -93,13 +94,17 @@ function JobListingCard({
   j,
   phoneDigits,
   canDelete,
+  showAdminDelete,
   onDelete,
+  onAdminDelete,
 }: {
   notice: JobNotice;
   j: ReturnType<typeof useTranslation>["t"]["jobs"];
   phoneDigits: string;
   canDelete: boolean;
+  showAdminDelete: boolean;
   onDelete: (id: string) => void;
+  onAdminDelete: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const desc = notice.description ?? "";
@@ -196,16 +201,28 @@ function JobListingCard({
           </a>
         </div>
       )}
-      {canDelete && (
-        <div className="mt-1">
-          <button
-            type="button"
-            onClick={() => onDelete(notice.id)}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            {j.myPostDelete ?? "Delete my post"}
-          </button>
+      {(canDelete || showAdminDelete) && (
+        <div className="mt-1 flex flex-wrap gap-2">
+          {canDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(notice.id)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {j.myPostDelete ?? "Delete my post"}
+            </button>
+          )}
+          {showAdminDelete && (
+            <button
+              type="button"
+              onClick={() => onAdminDelete(notice.id)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-amber-600/35 text-amber-900 dark:text-amber-100 hover:bg-amber-500/10 transition-colors"
+            >
+              <Shield className="h-3.5 w-3.5" />
+              {j.adminDeleteListing ?? "Remove listing (admin)"}
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -267,9 +284,15 @@ function PostForm({
     setPosting(true);
     setPostError(null);
     try {
+      const sb = getSupabase();
+      const session = sb ? (await sb.auth.getSession()).data.session : null;
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (session?.access_token) {
+        (headers as Record<string, string>).Authorization = `Bearer ${session.access_token}`;
+      }
       const res = await fetch("/api/job-notices", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           post_type: postType,
           title: jobTitle,
@@ -286,7 +309,15 @@ function PostForm({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        if (err?.code === "JOB_NOTICES_NOT_READY") {
+        if (res.status === 403) {
+          setPostError(j.postForbiddenNotAdmin ?? "Forbidden");
+          return;
+        }
+        const errText = String((err as { error?: string })?.error ?? "");
+        if (
+          err?.code === "JOB_NOTICES_NOT_READY" ||
+          /job_notices|schema cache/i.test(errText)
+        ) {
           setPostError(j.postSetupPending);
         } else {
           setPostError(err?.error ?? j.postFailed);
@@ -510,6 +541,8 @@ function PostForm({
 export default function JobVacancies() {
   const { t, lang } = useTranslation();
   const j = t.jobs;
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === "admin";
 
   const [activeTab, setActiveTab] = useState<PostType>("job");
   const [showForm, setShowForm] = useState(false);
@@ -523,6 +556,8 @@ export default function JobVacancies() {
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [listings, setListings] = useState<JobNotice[]>([]);
   const [listingsLoading, setListingsLoading] = useState(false);
+  /** false = API reports job_notices missing / schema cache; true = OK; null = not checked yet */
+  const [jobNoticesDbReady, setJobNoticesDbReady] = useState<boolean | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -531,8 +566,12 @@ export default function JobVacancies() {
     sb.auth.getUser().then(({ data }) => {
       if (!cancelled) setCurrentUserId(data.user?.id || "");
     }).catch(() => {});
+    const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
+      if (!cancelled) setCurrentUserId(session?.user?.id || "");
+    });
     return () => {
       cancelled = true;
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -554,37 +593,77 @@ export default function JobVacancies() {
     setListingsLoading(true);
     try {
       const res = await fetch("/api/job-notices?limit=50");
-      if (res.ok) {
-        const data = await res.json().catch(() => []);
-        setListings(Array.isArray(data) ? data : []);
+      const payload = await res.json().catch(() => null);
+      if (res.ok && Array.isArray(payload)) {
+        setJobNoticesDbReady(true);
+        setListings(payload);
+      } else if (
+        !res.ok &&
+        payload &&
+        typeof payload === "object" &&
+        (payload as { code?: string }).code === "JOB_NOTICES_NOT_READY"
+      ) {
+        setJobNoticesDbReady(false);
+        setListings([]);
+      } else {
+        setJobNoticesDbReady(true);
+        setListings(Array.isArray(payload) ? payload : []);
       }
-    } catch { /* silent */ }
-    finally { setListingsLoading(false); }
+    } catch {
+      setListings([]);
+      setJobNoticesDbReady(true);
+    } finally {
+      setListingsLoading(false);
+    }
   }, []);
 
-  const handleDeleteMyPost = useCallback(async (id: string) => {
-    if (!id) return;
-    const ok = window.confirm(lang === "ja" ? "この投稿を削除しますか？" : "Delete this post?");
-    if (!ok) return;
-    try {
-      const sb = getSupabase();
-      const session = sb ? (await sb.auth.getSession()).data.session : null;
-      const headers: HeadersInit = { "Content-Type": "application/json" };
-      if (session?.access_token) {
-        (headers as Record<string, string>).Authorization = `Bearer ${session.access_token}`;
+  const handleDeleteListing = useCallback(
+    async (id: string, mode: "owner" | "admin") => {
+      if (!id) return;
+      const confirmMsg =
+        mode === "admin"
+          ? (j.adminDeleteConfirm ?? "Remove this listing?")
+          : lang === "ja"
+            ? "この投稿を削除しますか？"
+            : "Delete this post?";
+      if (!window.confirm(confirmMsg)) return;
+      try {
+        const sb = getSupabase();
+        const session = sb ? (await sb.auth.getSession()).data.session : null;
+        const headers: HeadersInit = { "Content-Type": "application/json" };
+        if (session?.access_token) {
+          (headers as Record<string, string>).Authorization = `Bearer ${session.access_token}`;
+        }
+        const res = await fetch(`/api/job-notices?id=${encodeURIComponent(id)}`, {
+          method: "DELETE",
+          headers,
+          body: JSON.stringify({
+            reason: mode === "admin" ? "Deleted by administrator" : "Deleted by poster",
+          }),
+        });
+        if (res.ok) {
+          await fetchListings();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          const msg =
+            err?.error ??
+            (lang === "ja"
+              ? "削除できませんでした。ログイン状態をご確認ください。"
+              : "Could not delete. Check that you are logged in and allowed to remove this listing.");
+          window.alert(msg);
+        }
+      } catch {
+        window.alert(lang === "ja" ? "削除に失敗しました。" : "Delete failed.");
       }
-      const res = await fetch(`/api/job-notices?id=${encodeURIComponent(id)}`, {
-        method: "DELETE",
-        headers,
-        body: JSON.stringify({ reason: "Deleted by poster" }),
-      });
-      if (res.ok) await fetchListings();
-    } catch {
-      // silent
-    }
-  }, [fetchListings, lang]);
+    },
+    [fetchListings, j.adminDeleteConfirm, lang]
+  );
 
   useEffect(() => { fetchListings(); }, [fetchListings]);
+
+  useEffect(() => {
+    if (!currentUserId && showForm) setShowForm(false);
+  }, [currentUserId, showForm]);
 
   useEffect(() => {
     if (!postSuccess) return;
@@ -665,24 +744,32 @@ export default function JobVacancies() {
         </div>
       </section>
 
-      {/* Post buttons (prominent, below hero) */}
+      {/* Post buttons — any logged-in user can post */}
       <div className="border-b border-border bg-muted/30">
         <div className="container max-w-6xl py-4 flex flex-wrap gap-3 items-center">
-          <Button
-            onClick={() => openForm("job")}
-            className="rounded-xl gap-2 font-bold min-h-[44px]"
-          >
-            <Plus className="h-4 w-4" />
-            {lang === "ja" ? "求人を投稿する" : "Post a Job"}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => openForm("seeker")}
-            className="rounded-xl gap-2 font-bold min-h-[44px]"
-          >
-            <User className="h-4 w-4" />
-            {lang === "ja" ? "求職者として投稿する" : "Post as Job Seeker"}
-          </Button>
+          {currentUserId ? (
+            <>
+              <Button
+                onClick={() => openForm("job")}
+                className="rounded-xl gap-2 font-bold min-h-[44px]"
+              >
+                <Plus className="h-4 w-4" />
+                {lang === "ja" ? "求人を投稿する" : "Post a Job"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => openForm("seeker")}
+                className="rounded-xl gap-2 font-bold min-h-[44px]"
+              >
+                <User className="h-4 w-4" />
+                {lang === "ja" ? "求職者として投稿する" : "Post as Job Seeker"}
+              </Button>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground max-w-3xl leading-relaxed">
+              {j.postingAdminOnly}
+            </p>
+          )}
         </div>
       </div>
 
@@ -731,6 +818,15 @@ export default function JobVacancies() {
 
       {/* ── Listings (tabbed) ─────────────────────────────────────────────── */}
       <section className="container max-w-6xl py-10 md:py-14 min-w-0 w-full">
+        {jobNoticesDbReady === false && (
+          <div
+            role="alert"
+            className="mb-6 rounded-xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-100"
+          >
+            <p className="font-semibold leading-snug">{j.jobBoardDbBanner}</p>
+          </div>
+        )}
+
         {/* Tab bar */}
         <div className="flex items-center gap-2 mb-6 border-b border-border">
           <button
@@ -787,16 +883,26 @@ export default function JobVacancies() {
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {tabListings.map((notice) => (
-                <JobListingCard
-                  key={notice.id}
-                  notice={notice}
-                  j={j}
-                  phoneDigits={phoneDigits}
-                  canDelete={Boolean(currentUserId && notice.created_by === currentUserId)}
-                  onDelete={handleDeleteMyPost}
-                />
-              ))}
+              {tabListings.map((notice) => {
+                const isOwner = Boolean(
+                  currentUserId && notice.created_by === currentUserId
+                );
+                // Admins see admin-delete on every post; regular users see owner-delete only on their own
+                const canOwnerDelete = !isAdmin && isOwner;
+                const showAdminDelete = Boolean(isAdmin);
+                return (
+                  <JobListingCard
+                    key={notice.id}
+                    notice={notice}
+                    j={j}
+                    phoneDigits={phoneDigits}
+                    canDelete={canOwnerDelete}
+                    showAdminDelete={showAdminDelete}
+                    onDelete={(id) => handleDeleteListing(id, "owner")}
+                    onAdminDelete={(id) => handleDeleteListing(id, "admin")}
+                  />
+                );
+              })}
             </div>
             <p className="mt-4 text-center text-xs text-muted-foreground">{j.listingsNote}</p>
           </>

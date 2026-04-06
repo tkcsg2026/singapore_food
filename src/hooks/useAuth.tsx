@@ -78,6 +78,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
+  /** Browser fetch to Supabase (session/refresh) often throws this; it must not become an unhandled rejection in Next.js overlay */
+  const isLikelyNetworkFetchFailure = useCallback((reason: unknown) => {
+    const name = (reason as Error)?.name;
+    const msg = ((reason as Error)?.message ?? String(reason)).toLowerCase();
+    if (name !== "TypeError") return false;
+    return (
+      msg.includes("failed to fetch") ||
+      msg.includes("load failed") ||
+      msg.includes("networkerror") ||
+      msg.includes("network request failed")
+    );
+  }, []);
+
   const clearStaleSession = useCallback(async () => {
     const sb = getSupabase();
     if (sb) await sb.auth.signOut();
@@ -93,12 +106,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Catch Supabase "Invalid Refresh Token" errors thrown asynchronously
-    // (e.g. during background token refresh) so they don't show as unhandled rejections
+    // Catch Supabase auth noise (refresh token + offline / CORS / bad URL) so Next.js
+    // does not surface it as a blocking "Console TypeError" overlay.
     const handleRejection = (event: PromiseRejectionEvent) => {
-      if (isRefreshTokenError(event?.reason)) {
+      const r = event?.reason;
+      if (isRefreshTokenError(r)) {
         event.preventDefault();
         void clearStaleSession();
+        return;
+      }
+      if (isLikelyNetworkFetchFailure(r)) {
+        const stack = String((r as Error)?.stack ?? "");
+        const fromSupabaseLib = /supabase|gotrue|@supabase/i.test(stack);
+        const emptyStack = !stack.trim();
+        if (fromSupabaseLib || emptyStack) {
+          event.preventDefault();
+        }
       }
     };
     window.addEventListener("unhandledrejection", handleRejection);
@@ -139,7 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("unhandledrejection", handleRejection);
       subscription.unsubscribe();
     };
-  }, [fetchProfile, isRefreshTokenError, clearStaleSession]);
+  }, [fetchProfile, isRefreshTokenError, isLikelyNetworkFetchFailure, clearStaleSession]);
 
   /** Upload avatar to Storage and return the public URL (or null on failure) */
   const uploadAvatar = async (userId: string, file: File): Promise<string | null> => {

@@ -634,7 +634,9 @@ const en = {
     posting: "Posting...",
     postFailed: "Failed to post. Please try again.",
     postSetupPending:
-      "The job posting system setup is still being applied. Please try again shortly.",
+      "The database table for job posts is missing or the API schema is stale. In Supabase → SQL Editor, run the file `supabase-job-notices.sql` from this project, wait a moment, then try again.",
+    jobBoardDbBanner:
+      "Job listings cannot load: Supabase does not have the `job_notices` table yet (or PostgREST has not reloaded). Open Supabase Dashboard → SQL Editor, run `supabase-job-notices.sql` from this repository, then click Refresh below.",
     jobTitle: "Job title",
     jobTitlePh: "e.g. Line Cook, Restaurant Manager",
     company: "Company / outlet name (optional)",
@@ -714,7 +716,8 @@ const en = {
     howItWorks: "How it works",
     step1: "Enter the job title, optional company name, and a clear role description.",
     step2: "Choose employment type, location, pay band, and eligibility — they are shown in your listing.",
-    step3: "Review the summary, accept the terms, and post. Your notice appears on this page.",
+    step3:
+      "Listings are published by site administrators. Use Contact if you would like to submit a notice for the board.",
     formCardTitle: "Job listing form",
     postSuccess: "✅ Posted successfully. Your notice is now on the board.",
     listingsTitle: "Current Job Listings",
@@ -727,6 +730,12 @@ const en = {
     seekerLabel: "Job Seeker",
     contactSeekerWA: "Contact via WhatsApp",
     myPostDelete: "Delete my post",
+    postingAdminOnly:
+      "Please log in to post a job listing or job seeker profile.",
+    adminDeleteListing: "Remove listing (admin)",
+    adminDeleteConfirm:
+      "Remove this listing from the public board? This is an administrator action.",
+    postForbiddenNotAdmin: "You must be logged in to publish job board listings.",
   },
 
   // ── Site assistant (floating chatbot) ─────────────────────────────────────

@@ -635,7 +635,9 @@ const ja: Translations = {
     posting: "投稿中...",
     postFailed: "投稿に失敗しました。もう一度お試しください。",
     postSetupPending:
-      "現在、求人投稿機能のシステム設定を反映中です。少し時間をおいて再度お試しください。",
+      "求人掲示板用のデータベーステーブルが未作成か、APIのスキーマが古い可能性があります。Supabaseの SQL Editor で、このプロジェクトの `supabase-job-notices.sql` を実行し、少し待ってから再度お試しください。",
+    jobBoardDbBanner:
+      "求人が表示できません。Supabase に `job_notices` テーブルがないか、PostgREST がスキーマを再読み込みしていません。Supabase ダッシュボード → SQL Editor で、リポジトリの `supabase-job-notices.sql` を実行し、下の「更新」を押してください。",
     jobTitle: "職種・ポジション名",
     jobTitlePh: "例：ラインクック、店長",
     company: "会社・店舗名（任意）",
@@ -715,7 +717,8 @@ const ja: Translations = {
     howItWorks: "ご利用の流れ",
     step1: "職種名・任意の会社名・仕事内容を入力します。",
     step2: "雇用形態・勤務地・待遇・応募資格を選ぶと、掲示板の表示に反映されます。",
-    step3: "内容を確認し、同意にチェックして投稿します。掲示板に表示されます。",
+    step3:
+      "掲載はサイト管理者が行います。掲示板への掲載をご希望の場合はお問い合わせページからご連絡ください。",
     formCardTitle: "求人入力フォーム",
     postSuccess: "✅ 投稿しました。掲示板に表示されています。",
     listingsTitle: "掲載中の求人",
@@ -728,6 +731,11 @@ const ja: Translations = {
     seekerLabel: "求職者",
     contactSeekerWA: "WhatsApp で連絡する",
     myPostDelete: "自分の投稿を削除",
+    postingAdminOnly:
+      "求人情報や求職者プロフィールを投稿するにはログインしてください。",
+    adminDeleteListing: "管理者として削除",
+    adminDeleteConfirm: "この投稿を掲示板から削除しますか？（管理者による操作です）",
+    postForbiddenNotAdmin: "投稿するにはログインが必要です。",
   },
 
   // ── Site assistant (floating chatbot) ─────────────────────────────────────

@@ -37,6 +37,44 @@ export function createAdminSupabaseClient(): SupabaseClient | null {
  * Returns `{ adminId: string }` on success, or a NextResponse error that
  * should be returned immediately from the route handler.
  */
+/**
+ * Reads the Bearer token from the Authorization header, verifies it with
+ * Supabase, and confirms the caller is a logged-in, non-banned user.
+ *
+ * Returns `{ userId: string; role: string }` on success, or a NextResponse
+ * error that should be returned immediately from the route handler.
+ */
+export async function requireAuth(
+  req: NextRequest,
+): Promise<{ userId: string; role: string } | NextResponse> {
+  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (!token) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const supabase = createServerSupabaseClient();
+  if (!supabase) {
+    return NextResponse.json({ error: "Database not configured" }, { status: 503 });
+  }
+
+  const { data: { user } } = await supabase.auth.getUser(token);
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, banned")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.banned) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  return { userId: user.id, role: profile.role ?? "user" };
+}
+
 export async function requireAdmin(
   req: NextRequest,
 ): Promise<{ adminId: string } | NextResponse> {

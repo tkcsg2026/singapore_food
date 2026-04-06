@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminSupabaseClient, createServerSupabaseClient, requireAdmin } from "@/lib/supabase-server";
+import { createAdminSupabaseClient, createServerSupabaseClient, requireAdmin, requireAuth } from "@/lib/supabase-server";
 
 function clampText(value: unknown, maxLen: number): string {
   const s = typeof value === "string" ? value.trim() : "";
@@ -7,9 +7,23 @@ function clampText(value: unknown, maxLen: number): string {
   return s.length > maxLen ? s.slice(0, maxLen) : s;
 }
 
-function isMissingTableError(error: unknown): boolean {
-  const code = (error as { code?: string } | null)?.code;
-  return code === "42P01";
+/**
+ * Postgres undefined_table (42P01) or PostgREST "schema cache" / PGRST205 when
+ * `job_notices` was never created or API reload has not picked it up yet.
+ */
+function isJobNoticesUnavailableError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const o = error as { code?: string; message?: string; details?: string; hint?: string };
+  const code = o.code ?? "";
+  if (code === "42P01" || code === "PGRST205") return true;
+  const blob = [o.message, o.details, o.hint].filter(Boolean).join(" ").toLowerCase();
+  if (!blob.includes("job_notices")) return false;
+  return (
+    blob.includes("schema cache") ||
+    blob.includes("does not exist") ||
+    blob.includes("could not find") ||
+    blob.includes("not found")
+  );
 }
 
 export async function GET(req: NextRequest) {
@@ -31,7 +45,7 @@ export async function GET(req: NextRequest) {
       .select("*")
       .order("created_at", { ascending: false })
       .limit(limit);
-    if (error && isMissingTableError(error)) {
+    if (error && isJobNoticesUnavailableError(error)) {
       return NextResponse.json(
         { error: "job_notices setup is pending", code: "JOB_NOTICES_NOT_READY" },
         { status: 503 }
@@ -47,7 +61,7 @@ export async function GET(req: NextRequest) {
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(limit);
-  if (error && isMissingTableError(error)) {
+  if (error && isJobNoticesUnavailableError(error)) {
     return NextResponse.json(
       { error: "job_notices setup is pending", code: "JOB_NOTICES_NOT_READY" },
       { status: 503 }
@@ -58,8 +72,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth instanceof NextResponse) return auth;
+
   const admin = createAdminSupabaseClient();
-  const server = createServerSupabaseClient();
   if (!admin) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   const body = await req.json().catch(() => ({}));
 
@@ -86,24 +102,15 @@ export async function POST(req: NextRequest) {
     agreed: true,
     agreed_at: new Date().toISOString(),
     status: "active" as const,
-    created_by: null as string | null,
+    created_by: auth.userId,
   };
-  try {
-    const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-    if (token && server) {
-      const { data: { user } } = await server.auth.getUser(token);
-      if (user?.id) row.created_by = user.id;
-    }
-  } catch {
-    // Keep null for anonymous posts
-  }
 
   if (!row.title || !row.description) {
     return NextResponse.json({ error: "Missing title or description" }, { status: 400 });
   }
 
   const { data, error } = await admin.from("job_notices").insert(row).select("*").single();
-  if (error && isMissingTableError(error)) {
+  if (error && isJobNoticesUnavailableError(error)) {
     return NextResponse.json(
       { error: "job_notices setup is pending", code: "JOB_NOTICES_NOT_READY" },
       { status: 503 }
@@ -151,7 +158,7 @@ export async function DELETE(req: NextRequest) {
     .eq("id", id)
     .select("*")
     .single();
-  if (error && isMissingTableError(error)) {
+  if (error && isJobNoticesUnavailableError(error)) {
     return NextResponse.json(
       { error: "job_notices setup is pending", code: "JOB_NOTICES_NOT_READY" },
       { status: 503 }

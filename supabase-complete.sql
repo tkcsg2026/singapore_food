@@ -418,6 +418,22 @@ CREATE POLICY "Videos service delete"
   USING (bucket_id = 'videos');
 
 -- ──────────────────────────────────────────────────────────────
+-- 5b. CATEGORIES — dedupe + unique (type, value) so admin delete/tag UX is consistent
+--     (Deduplicates rows and adds a unique constraint.)
+-- ──────────────────────────────────────────────────────────────
+DELETE FROM public.categories c
+WHERE c.id IN (
+  SELECT id FROM (
+    SELECT id,
+           ROW_NUMBER() OVER (PARTITION BY type, value ORDER BY sort_order ASC NULLS LAST, id ASC) AS rn
+    FROM public.categories
+  ) sub
+  WHERE sub.rn > 1
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS categories_type_value_unique_idx ON public.categories (type, value);
+
+-- ──────────────────────────────────────────────────────────────
 -- 6. SEED — settings & categories
 -- ──────────────────────────────────────────────────────────────
 INSERT INTO public.site_settings (key, value) VALUES
@@ -445,7 +461,7 @@ INSERT INTO public.categories (type, value, label, sort_order) VALUES
   ('news',         'regulation',        '規制・法律',  2),
   ('news',         'trend',             'トレンド',    3),
   ('news',         'event',             'イベント',    4)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (type, value) DO NOTHING;
 
 -- ──────────────────────────────────────────────────────────────
 -- 7. SEED — suppliers
@@ -924,6 +940,30 @@ DO $$ BEGIN
 END $$;
 
 -- ──────────────────────────────────────────────────────────────
+-- 10c. CHATBOT LOGS — optional site assistant exchange logging
+-- (Merged from scripts/chatbot_logs.sql)
+-- ──────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.chatbot_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users (id) ON DELETE SET NULL,
+  session_id text NOT NULL,
+  language text NOT NULL,
+  user_message text NOT NULL,
+  assistant_message text NOT NULL,
+  source_type text NOT NULL CHECK (source_type IN ('faq', 'ai')),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS chatbot_logs_created_at_idx ON public.chatbot_logs (created_at DESC);
+CREATE INDEX IF NOT EXISTS chatbot_logs_session_id_idx ON public.chatbot_logs (session_id);
+
+ALTER TABLE public.chatbot_logs ENABLE ROW LEVEL SECURITY;
+
+-- No public policies: only service role (server) inserts/reads.
+
+COMMENT ON TABLE public.chatbot_logs IS 'Optional site assistant exchanges; written by API with service role when ENABLE_CHATBOT_LOGGING=true';
+
+-- ──────────────────────────────────────────────────────────────
 -- 11. ADMIN USER SETUP
 -- Creates admin user Admin@gmail.com with password "Admin@gmail.com"
 -- (or updates profile if user already exists).
@@ -1082,28 +1122,7 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
--- ──────────────────────────────────────────────────────────────
--- 13. VERIFY — row counts after setup
--- ──────────────────────────────────────────────────────────────
-SELECT table_name, rows FROM (
-  SELECT 'profiles'          AS table_name, COUNT(*) AS rows FROM public.profiles          UNION ALL
-  SELECT
-    'job_notices' AS table_name,
-    CASE
-      WHEN to_regclass('public.job_notices') IS NULL THEN 0
-      ELSE (SELECT COUNT(*) FROM public.job_notices)
-    END AS rows
-  UNION ALL
-  SELECT 'suppliers',                       COUNT(*)         FROM public.suppliers          UNION ALL
-  SELECT 'supplier_products',               COUNT(*)         FROM public.supplier_products  UNION ALL
-  SELECT 'marketplace_items',               COUNT(*)         FROM public.marketplace_items  UNION ALL
-  SELECT 'news_articles',                   COUNT(*)         FROM public.news_articles      UNION ALL
-  SELECT 'categories',                      COUNT(*)         FROM public.categories         UNION ALL
-  SELECT 'site_settings',                   COUNT(*)         FROM public.site_settings      UNION ALL
-  SELECT 'reports',                         COUNT(*)         FROM public.reports
-) t ORDER BY table_name;
-
--- Admin (service-role bypasses RLS; for JWT-admin use, add explicit admin policy if needed).
+-- Additional supplier_products dimensions
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS video_url  text DEFAULT '';
 -- Product dimensions (W × D × H) — for refrigerators, POS terminals, equipment etc.
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS size_w    text DEFAULT '';
@@ -1210,24 +1229,7 @@ FOR ALL
 USING (auth.role() = 'service_role')
 WITH CHECK (auth.role() = 'service_role');
 
--- Final verify including transcode queue table
-SELECT table_name, rows FROM (
-  SELECT 'profiles' AS table_name, COUNT(*) AS rows FROM public.profiles UNION ALL
-  SELECT 'suppliers', COUNT(*) FROM public.suppliers UNION ALL
-  SELECT 'supplier_products', COUNT(*) FROM public.supplier_products UNION ALL
-  SELECT 'video_transcode_jobs',
-    CASE
-      WHEN to_regclass('public.video_transcode_jobs') IS NULL THEN 0
-      ELSE (SELECT COUNT(*) FROM public.video_transcode_jobs)
-    END AS rows UNION ALL
-  SELECT 'marketplace_items', COUNT(*) FROM public.marketplace_items UNION ALL
-  SELECT 'news_articles', COUNT(*) FROM public.news_articles UNION ALL
-  SELECT 'categories', COUNT(*) FROM public.categories UNION ALL
-  SELECT 'site_settings', COUNT(*) FROM public.site_settings UNION ALL
-  SELECT 'reports', COUNT(*) FROM public.reports
-) t ORDER BY table_name;
-
--- ── Portal links (managed in Admin → Links) ─────────────────────────────────
+-- ── 15. Portal links (managed in Admin → Links) ─────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.portal_links (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   name text NOT NULL DEFAULT '',
@@ -1248,6 +1250,27 @@ CREATE POLICY "Public read portal_links" ON public.portal_links FOR SELECT USING
 CREATE POLICY "Admin full portal_links" ON public.portal_links FOR ALL USING (
   EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
 );
+
+-- ──────────────────────────────────────────────────────────────
+-- 16. VERIFY — row counts after full setup
+-- ──────────────────────────────────────────────────────────────
+SELECT table_name, rows FROM (
+  SELECT 'profiles'              AS table_name, COUNT(*) AS rows FROM public.profiles              UNION ALL
+  SELECT 'suppliers',                           COUNT(*)         FROM public.suppliers              UNION ALL
+  SELECT 'supplier_products',                   COUNT(*)         FROM public.supplier_products      UNION ALL
+  SELECT 'marketplace_items',                   COUNT(*)         FROM public.marketplace_items      UNION ALL
+  SELECT 'news_articles',                       COUNT(*)         FROM public.news_articles          UNION ALL
+  SELECT 'categories',                          COUNT(*)         FROM public.categories             UNION ALL
+  SELECT 'site_settings',                       COUNT(*)         FROM public.site_settings          UNION ALL
+  SELECT 'reports',                             COUNT(*)         FROM public.reports                UNION ALL
+  SELECT 'page_views',                          COUNT(*)         FROM public.page_views             UNION ALL
+  SELECT 'supplier_view_logs',                  COUNT(*)         FROM public.supplier_view_logs     UNION ALL
+  SELECT 'audit_logs',                          COUNT(*)         FROM public.audit_logs             UNION ALL
+  SELECT 'job_notices',                         COUNT(*)         FROM public.job_notices            UNION ALL
+  SELECT 'video_transcode_jobs',                COUNT(*)         FROM public.video_transcode_jobs   UNION ALL
+  SELECT 'portal_links',                        COUNT(*)         FROM public.portal_links           UNION ALL
+  SELECT 'chatbot_logs',                        COUNT(*)         FROM public.chatbot_logs
+) t ORDER BY table_name;
 
 -- Refresh PostgREST schema cache immediately (helps avoid "column not found in schema cache" errors).
 NOTIFY pgrst, 'reload schema';
