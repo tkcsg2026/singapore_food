@@ -29,6 +29,38 @@ const mockLinks = [
   { id: "25", name: "Healthy 365 — HPB", name_ja: "ヘルシー365 — 健康促進庁（HPB）", description: "Health Promotion Board's app for nutritional information and healthier dining choices.", description_ja: "健康促進庁のアプリ。栄養情報とヘルシーな食事選択に関する情報を提供。", url: "https://www.healthhub.sg/programmes/183/healthier-sg", icon: "💚", bg_image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&q=80", category: "resource", sort_order: 25, active: true },
 ];
 
+const FALLBACK_IMG = "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80";
+
+/**
+ * Public site: when `portal_links` has only a few rows (or partial seed), still show the
+ * curated default list. DB rows override by URL; DB-only URLs are appended.
+ * Admin (`includeInactive=true`) uses raw DB rows only.
+ */
+function mergePortalLinksWithDefaults(
+  dbRows: Record<string, unknown>[],
+  defaults: typeof mockLinks,
+  includeInactive: boolean
+) {
+  const byUrl = new Map<string, Record<string, unknown>>();
+  for (const m of defaults) {
+    byUrl.set(String(m.url).trim(), { ...m });
+  }
+  for (const row of dbRows) {
+    const u = String(row.url ?? "").trim();
+    if (!u) continue;
+    const base = byUrl.get(u) ?? {};
+    const merged = { ...base, ...row } as Record<string, unknown>;
+    const bg = typeof merged.bg_image === "string" ? merged.bg_image.trim() : "";
+    merged.bg_image = bg || FALLBACK_IMG;
+    byUrl.set(u, merged);
+  }
+  let list = Array.from(byUrl.values());
+  if (!includeInactive) {
+    list = list.filter((r) => r.active !== false);
+  }
+  return list.sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
+}
+
 export async function GET(_req: NextRequest) {
   const { searchParams } = new URL(_req.url);
   const includeInactive = searchParams.get("includeInactive") === "true";
@@ -48,12 +80,17 @@ export async function GET(_req: NextRequest) {
     const base = includeInactive ? mockLinks : mockLinks.filter((l) => l.active);
     return NextResponse.json(base.sort((a, b) => a.sort_order - b.sort_order));
   }
-  const fallbackImg = "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80";
+
   const normalized = (data ?? []).map((row: Record<string, unknown>) => {
     const bg = typeof row.bg_image === "string" ? row.bg_image.trim() : "";
-    return { ...row, bg_image: bg || fallbackImg };
+    return { ...row, bg_image: bg || FALLBACK_IMG };
   });
-  return NextResponse.json(normalized);
+
+  if (includeInactive) {
+    return NextResponse.json(normalized);
+  }
+
+  return NextResponse.json(mergePortalLinksWithDefaults(normalized, mockLinks, false));
 }
 
 export async function POST(req: NextRequest) {
