@@ -112,14 +112,6 @@ export function SupplierCard({ supplier, variant = "grid", rank, tagDisplayMaps,
     return tagMap[tag] ?? tag;
   };
 
-  const categories = (lang === "ja"
-    ? [supplier.category_ja || supplier.categoryJa, supplier.category_2_ja, supplier.category_3_ja]
-    : [
-        (t.suppliers as { categories?: Record<string, string> }).categories?.[supplier.category ?? ""] ?? supplier.category ?? "",
-        (t.suppliers as { categories?: Record<string, string> }).categories?.[supplier.category_2 ?? ""] ?? supplier.category_2 ?? "",
-        (t.suppliers as { categories?: Record<string, string> }).categories?.[supplier.category_3 ?? ""] ?? supplier.category_3 ?? "",
-      ]
-  ).filter(Boolean) as string[];
   const areaLabel =
     lang === "ja"
       ? (supplier.area_ja || supplier.areaJa || "")
@@ -160,12 +152,14 @@ export function SupplierCard({ supplier, variant = "grid", rank, tagDisplayMaps,
       {!isList && (
         <p className="text-xs text-muted-foreground line-clamp-2 mb-2 leading-relaxed flex-shrink-0" title={description}>{description}</p>
       )}
-      <div className={`flex flex-wrap gap-1.5 flex-shrink-0 min-w-0`} title={[...categories.slice(0, 3), ...(supplier.tags ?? [])].map(translateTag).join(", ")}>
-        {categories.slice(0, 3).map((cat) => (
-          <span key={cat} className="tag-badge tag-badge-fixed" title={cat}>{cat}</span>
-        ))}
-        {!isList && (supplier.tags ?? []).map((tag) => (
-          <span key={tag} className="tag-badge tag-badge-fixed" title={translateTag(tag)}>{translateTag(tag)}</span>
+      <div
+        className={`flex flex-wrap gap-1.5 flex-shrink-0 min-w-0`}
+        title={(supplier.tags ?? []).map(translateTag).join(", ")}
+      >
+        {(supplier.tags ?? []).map((tag) => (
+          <span key={tag} className="tag-badge tag-badge-fixed" title={translateTag(tag)}>
+            {translateTag(tag)}
+          </span>
         ))}
       </div>
       <div className={`flex gap-2 flex-shrink-0 flex-nowrap items-center ${isList ? "" : "mt-auto"}`}>

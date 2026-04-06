@@ -444,23 +444,32 @@ INSERT INTO public.site_settings (key, value) VALUES
   ('areas', '[{"value":"central","label":"中央エリア"},{"value":"east","label":"東部エリア"},{"value":"west","label":"西部エリア"},{"value":"north","label":"北部エリア"},{"value":"south","label":"南部エリア"}]')
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
-INSERT INTO public.categories (type, value, label, sort_order) VALUES
-  ('supplier',     'seafood',           '海鮮・鮮魚',  1),
-  ('supplier',     'meat',              '肉類',        2),
-  ('supplier',     'vegetables',        '野菜・青果',  3),
-  ('supplier',     'dairy',             '乳製品',      4),
-  ('supplier',     'dry-goods',         '乾物・調味料',5),
-  ('supplier',     'beverages',         '飲料・酒類',  6),
-  ('supplier',     'equipment',         '厨房機器',    7),
-  ('supplier',     'packaging',         '包装・容器',  8),
-  ('marketplace',  'kitchen-equipment', '厨房機器',    1),
-  ('marketplace',  'tools',             '調理器具',    2),
-  ('marketplace',  'furniture',         '家具',        3),
-  ('marketplace',  'other',             'その他',      4),
-  ('news',         'industry',          '業界ニュース',1),
-  ('news',         'regulation',        '規制・法律',  2),
-  ('news',         'trend',             'トレンド',    3),
-  ('news',         'event',             'イベント',    4)
+INSERT INTO public.categories (type, value, label, label_ja, sort_order) VALUES
+  ('supplier',     'seafood',           '海鮮・鮮魚',       '',                1),
+  ('supplier',     'meat',              '肉類',             '',                2),
+  ('supplier',     'vegetables',        '野菜・青果',       '',                3),
+  ('supplier',     'dairy',             '乳製品',           '',                4),
+  ('supplier',     'dry-goods',         '乾物・調味料',     '',                5),
+  ('supplier',     'beverages',         '飲料・酒類',       '',                6),
+  ('supplier',     'equipment',         '厨房機器',         '',                7),
+  ('supplier',     'packaging',         '包装・容器',       '',                8),
+  ('marketplace',  'kitchen-equipment', '厨房機器',         '',                1),
+  ('marketplace',  'tools',             '調理器具',         '',                2),
+  ('marketplace',  'furniture',         '家具',             '',                3),
+  ('marketplace',  'other',             'その他',           '',                4),
+  ('news',         'industry',          '業界ニュース',     '',                1),
+  ('news',         'regulation',        '規制・法律',       '',                2),
+  ('news',         'trend',             'トレンド',         '',                3),
+  ('news',         'event',             'イベント',         '',                4),
+  ('tag',          'small-lot',         'Small Lot OK',     '少量対応',         1),
+  ('tag',          'japanese-ok',       'Japanese OK',      '日本語対応',       2),
+  ('tag',          'halal',             'Halal',            'ハラール',         3),
+  ('tag',          'organic',           'Organic',          'オーガニック',     4),
+  ('tag',          'bulk-order',        'Bulk Order OK',    '大量注文可',       5),
+  ('tag',          'next-day',          'Next-Day Delivery','翌日配送',         6),
+  ('tag',          'sake-specialist',   'Sake Specialist',  '日本酒専門',       7),
+  ('tag',          'installation',      'Installation Support','設置サポート',   8),
+  ('tag',          'maintenance',       'Maintenance Support','メンテナンス対応', 9)
 ON CONFLICT (type, value) DO NOTHING;
 
 -- ──────────────────────────────────────────────────────────────

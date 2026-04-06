@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient, createAdminSupabaseClient, requireAdmin } from "@/lib/supabase-server";
-import { categories as mockSupplierCats, marketplaceCategories as mockMPCats } from "@/data/mockData";
+import { categories as mockSupplierCats, marketplaceCategories as mockMPCats, tagCategories as mockTagCats } from "@/data/mockData";
 import { resolveCategoryDisplayLabels } from "@/lib/category-display";
 
 const mockCategories = [
@@ -11,6 +11,7 @@ const mockCategories = [
   { id: "n2", type: "news", value: "regulation", label: "規制・法律", sort_order: 2 },
   { id: "n3", type: "news", value: "trend", label: "トレンド", sort_order: 3 },
   { id: "n4", type: "news", value: "event", label: "イベント", sort_order: 4 },
+  ...mockTagCats.map((c, i) => ({ id: `t${i}`, type: "tag", value: c.value, label: c.label, label_ja: c.label_ja, sort_order: i })),
 ];
 
 function normalizeCategoryRows(rows: any[]) {

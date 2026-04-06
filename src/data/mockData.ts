@@ -966,6 +966,18 @@ export const marketplaceCategories = [
   { value: 'other', label: 'その他' },
 ];
 
+export const tagCategories = [
+  { value: 'small-lot',       label: 'Small Lot OK',          label_ja: '少量対応' },
+  { value: 'japanese-ok',     label: 'Japanese OK',           label_ja: '日本語対応' },
+  { value: 'halal',           label: 'Halal',                 label_ja: 'ハラール' },
+  { value: 'organic',         label: 'Organic',               label_ja: 'オーガニック' },
+  { value: 'bulk-order',      label: 'Bulk Order OK',         label_ja: '大量注文可' },
+  { value: 'next-day',        label: 'Next-Day Delivery',     label_ja: '翌日配送' },
+  { value: 'sake-specialist', label: 'Sake Specialist',       label_ja: '日本酒専門' },
+  { value: 'installation',    label: 'Installation Support',  label_ja: '設置サポート' },
+  { value: 'maintenance',     label: 'Maintenance Support',   label_ja: 'メンテナンス対応' },
+];
+
 export const conditions = [
   { value: 'like-new', label: '新品同様' },
   { value: 'good', label: '良好' },
