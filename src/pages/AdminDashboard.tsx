@@ -354,8 +354,8 @@ function SupplierManager() {
       };
 
       const res = editSlug
-        ? await fetch(`/api/suppliers/${editSlug}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
-        : await fetch("/api/suppliers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        ? await authFetch(`/api/suppliers/${editSlug}`, { method: "PUT", body: JSON.stringify(body) })
+        : await authFetch("/api/suppliers", { method: "POST", body: JSON.stringify(body) });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -377,7 +377,7 @@ function SupplierManager() {
 
   const handleDelete = async (slug: string) => {
     if (!confirm(t.admin.deleteSupplierConfirm)) return;
-    const res = await fetch(`/api/suppliers/${encodeURIComponent(slug)}`, { method: "DELETE" });
+    const res = await authFetch(`/api/suppliers/${encodeURIComponent(slug)}`, { method: "DELETE" });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       alert(lang === "ja"
@@ -943,9 +943,8 @@ function ProductManager({ slug }: { slug: string }) {
     try {
       const method = editingId ? "PUT" : "POST";
       const body = editingId ? { id: editingId, ...form } : form;
-      const res = await fetch(`/api/suppliers/${encodeURIComponent(slug)}/products`, {
+      const res = await authFetch(`/api/suppliers/${encodeURIComponent(slug)}/products`, {
         method,
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
@@ -964,9 +963,8 @@ function ProductManager({ slug }: { slug: string }) {
 
   const handleDelete = async (id: string) => {
     if (!confirm(t.admin.deleteProductConfirm)) return;
-    const res = await fetch(`/api/suppliers/${encodeURIComponent(slug)}/products`, {
+    const res = await authFetch(`/api/suppliers/${encodeURIComponent(slug)}/products`, {
       method: "DELETE",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
     if (!res.ok) {
