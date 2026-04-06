@@ -71,7 +71,7 @@ const Index = () => {
 
   const tagDisplayMaps = useMemo(() => buildSupplierTagDisplayMaps(tagCategories || []), [tagCategories]);
   const sortedSuppliers = useMemo(() => sortSuppliersByPlan(suppliers || []), [suppliers]);
-  const popularSuppliers = sortedSuppliers.slice(0, 6);
+  const popularSuppliers = sortedSuppliers;
   const planCounts: PlanCounts = planCountsData ?? { premium: 0, standard: 0, basic: 0 };
   const recentItems = (marketplaceItems || []).slice(0, 6);
   const latestNews = useMemo(
@@ -320,9 +320,9 @@ const Index = () => {
             </div>
             <Link
               href="/suppliers"
-              className="link-more flex-shrink-0 self-start xl:self-center px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 hover:text-white"
+              className="link-more flex-shrink-0 self-end xl:self-center px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 hover:text-white"
             >
-              {t.common.viewAll} <ArrowRight className="h-3.5 w-3.5 link-more-arrow" />
+              {t.common.viewDetails} <ArrowRight className="h-3.5 w-3.5 link-more-arrow" />
             </Link>
           </div>
         </div>

@@ -7,6 +7,7 @@ const ja: Translations = {
     loading: "読み込み中...",
     search: "検索",
     viewAll: "全て見る",
+    viewDetails: "詳細を見る",
     readMore: "続きを読む",
     back: "戻る",
     save: "保存",

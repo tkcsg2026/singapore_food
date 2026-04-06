@@ -5,6 +5,7 @@ const en = {
     loading: "Loading...",
     search: "Search",
     viewAll: "View All",
+    viewDetails: "View Details",
     readMore: "Read more",
     back: "Back",
     save: "Save",
