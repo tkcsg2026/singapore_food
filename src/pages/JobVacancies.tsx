@@ -207,9 +207,9 @@ function JobListingCard({
             <button
               type="button"
               onClick={() => onDelete(notice.id)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-red-800/40 bg-red-600 text-black hover:bg-red-700 hover:text-black transition-colors"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-3.5 w-3.5 shrink-0 text-black" />
               {j.myPostDelete ?? "Delete my post"}
             </button>
           )}
