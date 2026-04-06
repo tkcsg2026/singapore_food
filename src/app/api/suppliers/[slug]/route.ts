@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient, createAdminSupabaseClient } from "@/lib/supabase-server";
+import { createServerSupabaseClient, createAdminSupabaseClient, requireAdmin } from "@/lib/supabase-server";
 import { suppliers as mockSuppliers } from "@/data/mockData";
 
 function normaliseMock(s: any) {
@@ -79,6 +79,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  const adminAuth = await requireAdmin(req);
+  if (adminAuth instanceof NextResponse) return adminAuth;
+
   const { slug: slugParam } = await params;
   const slug = decodeURIComponent(slugParam);
   const supabase = createAdminSupabaseClient();
@@ -98,7 +101,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ slug
   return NextResponse.json(data);
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  const adminAuth = await requireAdmin(req);
+  if (adminAuth instanceof NextResponse) return adminAuth;
+
   const { slug: slugParam } = await params;
   const slug = decodeURIComponent(slugParam);
   const supabase = createAdminSupabaseClient();

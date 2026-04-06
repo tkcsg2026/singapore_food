@@ -16,6 +16,8 @@ export interface Supplier {
   products: Product[];
   certifications: string[];
   about: string;
+  plan?: string;
+  featured?: boolean;
 }
 
 export interface Product {
@@ -98,6 +100,8 @@ export const suppliers: Supplier[] = [
     ],
     certifications: ['HACCP', 'ISO 22000', 'ハラール認証'],
     about: '2005年創業。シンガポールの日本料理店を中心に、最高品質の鮮魚を毎日お届けしています。築地市場との直接取引により、常に新鮮な商品をご提供いたします。',
+    plan: 'premium',
+    featured: true,
   },
   {
     id: '2',
@@ -120,6 +124,8 @@ export const suppliers: Supplier[] = [
     ],
     certifications: ['有機JAS', 'GlobalGAP'],
     about: 'シンガポール北部の自社農園で栽培したオーガニック野菜を、レストランやカフェに直接お届けしています。',
+    plan: 'standard',
+    featured: false,
   },
   {
     id: '3',
@@ -142,6 +148,8 @@ export const suppliers: Supplier[] = [
     ],
     certifications: ['ハラール認証', 'HACCP'],
     about: 'アジア各国から厳選した肉類を、シンガポール全土のレストランにお届けしています。ハラール認証取得済み。',
+    plan: 'premium',
+    featured: true,
   },
   {
     id: '4',
@@ -163,6 +171,8 @@ export const suppliers: Supplier[] = [
     ],
     certifications: ['酒類販売免許'],
     about: '日本全国の蔵元と直接取引し、シンガポールの日本料理店に最高品質の日本酒をお届けしています。',
+    plan: 'standard',
+    featured: false,
   },
   {
     id: '5',
@@ -185,6 +195,8 @@ export const suppliers: Supplier[] = [
     ],
     certifications: ['食品衛生管理者'],
     about: '日本の伝統的な調味料と乾物を専門に取り扱う卸売業者です。シンガポール在住の日本人シェフに愛用されています。',
+    plan: 'basic',
+    featured: false,
   },
   {
     id: '6',
@@ -206,6 +218,8 @@ export const suppliers: Supplier[] = [
     ],
     certifications: ['ISO 9001'],
     about: 'シンガポール全土のレストラン・ホテルに業務用厨房機器を提供しています。設置からアフターメンテナンスまで一貫サポート。',
+    plan: 'basic',
+    featured: false,
   },
 ];
 

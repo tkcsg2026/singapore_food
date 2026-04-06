@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient, createAdminSupabaseClient } from "@/lib/supabase-server";
+import { createServerSupabaseClient, createAdminSupabaseClient, requireAdmin } from "@/lib/supabase-server";
 import { suppliers as mockSuppliers } from "@/data/mockData";
 
 // Shape mock data to match DB column names
@@ -10,6 +10,8 @@ function normaliseMock(s: any) {
     category_ja: s.categoryJa ?? s.category_ja ?? s.category,
     area_ja: s.areaJa ?? s.area_ja ?? s.area,
     description_ja: s.descriptionJa ?? s.description_ja ?? s.description,
+    plan: s.plan ?? 'basic',
+    featured: s.featured ?? false,
   };
 }
 
@@ -52,6 +54,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const adminAuth = await requireAdmin(req);
+  if (adminAuth instanceof NextResponse) return adminAuth;
+
   const supabase = createAdminSupabaseClient();
   if (!supabase) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   const body = await req.json();
