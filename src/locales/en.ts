@@ -104,6 +104,9 @@ const en = {
     popularPlanFull: "Full Profile",
     popularPlanStandard: "Standard Profile",
     popularPlanQuick: "Quick Profile",
+    /** Home chips only — third tier label matches marketing copy */
+    popularPlanSimplified: "Simplified Profile",
+    popularPlanCompaniesSuffix: "companies",
   },
 
   // ── Suppliers ────────────────────────────────────────────────────────────

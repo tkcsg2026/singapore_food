@@ -172,3 +172,24 @@ export function sortSuppliersByPlan<T extends { plan?: string | null; featured?:
     ...sortTier(basic, seed + 20),
   ];
 }
+
+/** Home page: fixed showcase counts per tier (9 + 6 + 3 = 18 max). */
+export const HOME_SUPPLIERS_PER_TIER = { premium: 9, standard: 6, basic: 3 } as const;
+
+/**
+ * Picks up to {@link HOME_SUPPLIERS_PER_TIER} suppliers per plan tier after the same
+ * fair shuffle as {@link sortSuppliersByPlan}. The directory page uses the full list + live counts.
+ */
+export function takeHomeSuppliers<T extends { plan?: string | null; featured?: boolean }>(
+  suppliers: T[]
+): T[] {
+  const sorted = sortSuppliersByPlan(suppliers);
+  const premium = sorted.filter((s) => s.plan === "premium");
+  const standard = sorted.filter((s) => s.plan === "standard");
+  const basic = sorted.filter((s) => !s.plan || s.plan === "basic");
+  return [
+    ...premium.slice(0, HOME_SUPPLIERS_PER_TIER.premium),
+    ...standard.slice(0, HOME_SUPPLIERS_PER_TIER.standard),
+    ...basic.slice(0, HOME_SUPPLIERS_PER_TIER.basic),
+  ];
+}
