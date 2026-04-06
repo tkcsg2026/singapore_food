@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient, createAdminSupabaseClient, requireAdmin } from "@/lib/supabase-server";
 import { categories as mockSupplierCats, marketplaceCategories as mockMPCats } from "@/data/mockData";
 import { resolveCategoryDisplayLabels } from "@/lib/category-display";
@@ -81,7 +82,7 @@ export async function PATCH(req: NextRequest) {
   const adminAuth = await requireAdmin(req);
   if (adminAuth instanceof NextResponse) return adminAuth;
 
-  const supabase = createAdminSupabaseClient();
+  let supabase = createAdminSupabaseClient();
   if (!supabase) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
@@ -92,24 +93,27 @@ export async function PATCH(req: NextRequest) {
   if (typeof body.label_ja === "string") updates.label_ja = body.label_ja.trim();
   if (Object.keys(updates).length === 0) return NextResponse.json({ error: "No fields to update" }, { status: 400 });
 
-  const { data: target, error: fetchErr } = await supabase
-    .from("categories")
-    .select("type, value")
-    .eq("id", id)
-    .single();
-  if (fetchErr || !target) {
-    return NextResponse.json({ error: fetchErr?.message ?? "Category not found" }, { status: 404 });
+  // Fallback: authenticate with the caller's JWT when service-role key is absent
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+    if (token) {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      supabase = createClient(url, key, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+    }
   }
 
   const { data, error } = await supabase
     .from("categories")
     .update(updates)
-    .eq("type", target.type)
-    .eq("value", target.value)
+    .eq("id", id)
     .select();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   const first = Array.isArray(data) && data.length > 0 ? data[0] : null;
-  if (!first) return NextResponse.json({ error: "Update returned no rows" }, { status: 500 });
+  if (!first) return NextResponse.json({ error: "Category not found or could not be updated" }, { status: 404 });
   return NextResponse.json(first);
 }
 
@@ -117,21 +121,35 @@ export async function DELETE(req: NextRequest) {
   const adminAuth = await requireAdmin(req);
   if (adminAuth instanceof NextResponse) return adminAuth;
 
-  const supabase = createAdminSupabaseClient();
+  let supabase = createAdminSupabaseClient();
   if (!supabase) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
-  const { data: row, error: fetchErr } = await supabase
-    .from("categories")
-    .select("type, value")
-    .eq("id", id)
-    .maybeSingle();
-  if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
-  if (!row) return NextResponse.json({ error: "Category not found" }, { status: 404 });
+  // When no service-role key is configured the admin client falls back to the
+  // anon key.  RLS would silently block writes because auth.uid() is null.
+  // Re-create the client with the caller's JWT so RLS recognises the admin.
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+    if (token) {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      supabase = createClient(url, key, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+    }
+  }
 
-  const { error } = await supabase.from("categories").delete().eq("type", row.type).eq("value", row.value);
+  const { data, error } = await supabase
+    .from("categories")
+    .delete()
+    .eq("id", id)
+    .select();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!data || data.length === 0) {
+    return NextResponse.json({ error: "Category not found or could not be deleted" }, { status: 404 });
+  }
   return NextResponse.json({ success: true });
 }

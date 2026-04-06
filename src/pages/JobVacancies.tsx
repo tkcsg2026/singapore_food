@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Briefcase, CheckCircle2, ChevronDown, ChevronUp, ClipboardList,
-  ListOrdered, MapPin, MessageCircle, RefreshCw, Plus, Shield, Trash2, User, X,
+  ListOrdered, MapPin, MessageCircle, RefreshCw, Plus, Trash2, User, X,
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -106,6 +106,8 @@ function JobListingCard({
   onDelete: (id: string) => void;
   onAdminDelete: (id: string) => void;
 }) {
+  const deletePostBtnClass =
+    "inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-red-800/40 bg-red-600 text-black hover:bg-red-700 hover:text-black transition-colors";
   const [expanded, setExpanded] = useState(false);
   const desc = notice.description ?? "";
   const long = isLongText(desc);
@@ -204,22 +206,14 @@ function JobListingCard({
       {(canDelete || showAdminDelete) && (
         <div className="mt-1 flex flex-wrap gap-2">
           {canDelete && (
-            <button
-              type="button"
-              onClick={() => onDelete(notice.id)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-red-800/40 bg-red-600 text-black hover:bg-red-700 hover:text-black transition-colors"
-            >
+            <button type="button" onClick={() => onDelete(notice.id)} className={deletePostBtnClass}>
               <Trash2 className="h-3.5 w-3.5 shrink-0 text-black" />
               {j.myPostDelete ?? "Delete my post"}
             </button>
           )}
           {showAdminDelete && (
-            <button
-              type="button"
-              onClick={() => onAdminDelete(notice.id)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-amber-600/35 text-amber-900 dark:text-amber-100 hover:bg-amber-500/10 transition-colors"
-            >
-              <Shield className="h-3.5 w-3.5" />
+            <button type="button" onClick={() => onAdminDelete(notice.id)} className={deletePostBtnClass}>
+              <Trash2 className="h-3.5 w-3.5 shrink-0 text-black" />
               {j.adminDeleteListing ?? "Remove listing (admin)"}
             </button>
           )}

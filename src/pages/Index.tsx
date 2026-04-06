@@ -14,6 +14,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { AnimatedGridItem } from "@/components/AnimatedGridItem";
 import { sortSuppliersByPlan } from "@/lib/plans";
+import type { PlanCounts } from "@/lib/plans";
 import { buildSupplierTagDisplayMaps, getCategoryDisplayName } from "@/lib/category-display";
 import type { SupplierRow, MarketplaceItemRow, CategoryRow, NewsArticleRow } from "@/types/database";
 
@@ -62,6 +63,7 @@ const Index = () => {
   }, []);
 
   const { data: suppliers, loading: suppliersLoading } = useFetch<SupplierRow[]>("/api/suppliers");
+  const { data: planCountsData, loading: planCountsLoading } = useFetch<PlanCounts>("/api/suppliers/plan-counts");
   const { data: marketplaceItems } = useFetch<MarketplaceItemRow[]>("/api/marketplace");
   const { data: categories } = useFetch<CategoryRow[]>("/api/categories?type=supplier");
   const { data: tagCategories } = useFetch<CategoryRow[]>("/api/categories?type=tag");
@@ -70,11 +72,7 @@ const Index = () => {
   const tagDisplayMaps = useMemo(() => buildSupplierTagDisplayMaps(tagCategories || []), [tagCategories]);
   const sortedSuppliers = useMemo(() => sortSuppliersByPlan(suppliers || []), [suppliers]);
   const popularSuppliers = sortedSuppliers.slice(0, 6);
-  const planCounts = useMemo(() => ({
-    premium: sortedSuppliers.filter((s) => (s.plan || "basic") === "premium").length,
-    standard: sortedSuppliers.filter((s) => (s.plan || "basic") === "standard").length,
-    basic: sortedSuppliers.filter((s) => (s.plan || "basic") === "basic").length,
-  }), [sortedSuppliers]);
+  const planCounts: PlanCounts = planCountsData ?? { premium: 0, standard: 0, basic: 0 };
   const recentItems = (marketplaceItems || []).slice(0, 6);
   const latestNews = useMemo(
     () =>
@@ -273,26 +271,60 @@ const Index = () => {
         </div>
       </section>
 
-      {/* 2. Popular Suppliers (section-title + link-more style) */}
+      {/* 2. Popular Suppliers — plan counts match /api/suppliers (same as directory filters) */}
       <section className="container py-10 md:py-12 opacity-0-init animate-fade-in-up reveal-stagger-2 min-w-0 overflow-hidden">
-        <div className="flex items-center justify-between mb-6 gap-4 min-w-0">
-          <h2 className="section-title text-xl md:text-2xl flex items-center gap-2 min-w-0">
-            <TrendingUp className="h-5 w-5 text-primary flex-shrink-0" /> <span className="truncate">{t.home.popularSuppliers}</span>
-          </h2>
-          <Link href="/suppliers" className="link-more flex-shrink-0 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 hover:text-white">
-            {t.common.viewAll} <ArrowRight className="h-3.5 w-3.5 link-more-arrow" />
-          </Link>
-        </div>
-        <div className="flex flex-wrap gap-2 mb-4">
-          <span className="text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-semibold">
-            Full Profile: {planCounts.premium}
-          </span>
-          <span className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/30 font-semibold">
-            Standard Profile: {planCounts.standard}
-          </span>
-          <span className="text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground border border-border font-semibold">
-            Quick Profile: {planCounts.basic}
-          </span>
+        <div className="flex flex-col gap-4 mb-6 min-w-0">
+          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 min-w-0">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-5 min-w-0 flex-1">
+              <h2 className="section-title text-xl md:text-2xl flex items-center gap-2 min-w-0 shrink-0">
+                <TrendingUp className="h-5 w-5 text-primary flex-shrink-0" />
+                <span className="truncate">{t.home.popularSuppliers}</span>
+              </h2>
+              {!planCountsLoading && (
+                <div className="flex flex-wrap gap-2 items-center" aria-label={lang === "ja" ? "プラン別サプライヤー数" : "Suppliers by plan"}>
+                  <span className="text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200/90 font-semibold tabular-nums">
+                    {lang === "ja" ? (
+                      <>
+                        {t.home.popularPlanFull}-{planCounts.premium}社
+                      </>
+                    ) : (
+                      <>
+                        {t.home.popularPlanFull}: {planCounts.premium}
+                      </>
+                    )}
+                  </span>
+                  <span className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/35 font-semibold tabular-nums">
+                    {lang === "ja" ? (
+                      <>
+                        {t.home.popularPlanStandard}-{planCounts.standard}社
+                      </>
+                    ) : (
+                      <>
+                        {t.home.popularPlanStandard}: {planCounts.standard}
+                      </>
+                    )}
+                  </span>
+                  <span className="text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground border border-border font-semibold tabular-nums">
+                    {lang === "ja" ? (
+                      <>
+                        {t.home.popularPlanQuick}-{planCounts.basic}社
+                      </>
+                    ) : (
+                      <>
+                        {t.home.popularPlanQuick}: {planCounts.basic}
+                      </>
+                    )}
+                  </span>
+                </div>
+              )}
+            </div>
+            <Link
+              href="/suppliers"
+              className="link-more flex-shrink-0 self-start xl:self-center px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 hover:text-white"
+            >
+              {t.common.viewAll} <ArrowRight className="h-3.5 w-3.5 link-more-arrow" />
+            </Link>
+          </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5 min-w-0">
           {suppliersLoading

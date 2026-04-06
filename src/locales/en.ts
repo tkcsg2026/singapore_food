@@ -100,6 +100,9 @@ const en = {
     findSuppliersSub: "Discover new suppliers for ingredients & equipment",
     buyAndSell: "Buy & sell",
     buyAndSellSub: "Trade pre-owned equipment",
+    popularPlanFull: "Full Profile",
+    popularPlanStandard: "Standard Profile",
+    popularPlanQuick: "Quick Profile",
   },
 
   // ── Suppliers ────────────────────────────────────────────────────────────
@@ -250,6 +253,10 @@ const en = {
     homeSectionTitle: "Our Links",
     homeSectionSubtitle: "Useful industry resources & partners",
     visitSite: "Visit Site",
+    emptyPage:
+      "There are no links to show yet. We’ll list useful resources here when they’re ready. Admins can add and publish links under Links in the admin dashboard.",
+    emptyCategory: "No links in this category yet.",
+    loading: "Loading…",
     categories: {
       government: "Government",
       association: "Association",

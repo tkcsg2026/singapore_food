@@ -102,6 +102,9 @@ const ja: Translations = {
     findSuppliersSub: "食材・設備の新しいサプライヤーを見つける",
     buyAndSell: "売り買い",
     buyAndSellSub: "中古設備を取引する",
+    popularPlanFull: "フルプロフィール",
+    popularPlanStandard: "スタンダードプロフィール",
+    popularPlanQuick: "クイックプロフィール",
   },
 
   // ── Suppliers ────────────────────────────────────────────────────────────
@@ -251,6 +254,10 @@ const ja: Translations = {
     homeSectionTitle: "リンク集",
     homeSectionSubtitle: "業界の便利なリソース・パートナー",
     visitSite: "サイトを見る",
+    emptyPage:
+      "現在、表示できるリンクがありません。準備が整い次第、掲載いたします。管理者は管理画面の「リンク管理」から登録・公開できます。",
+    emptyCategory: "このカテゴリに掲載中のリンクはありません。",
+    loading: "読み込み中…",
     categories: {
       government: "政府機関",
       association: "業界団体",

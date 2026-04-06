@@ -412,7 +412,7 @@ export const LINKS_DATA = [
 const Links = () => {
   const { t, lang } = useTranslation();
   const tl = t.links;
-  const { data: linksData } = useFetch<any[]>("/api/links");
+  const { data: linksData, loading: linksLoading } = useFetch<any[]>("/api/links");
   const links = linksData || [];
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
@@ -423,6 +423,11 @@ const Links = () => {
       items: links.filter((l) => l.category === category),
     }));
   }, [links]);
+
+  const hasAnyVisibleLink = useMemo(
+    () => grouped.some((g) => g.items.length > 0),
+    [grouped]
+  );
 
   return (
     <Layout>
@@ -435,60 +440,75 @@ const Links = () => {
           <p className="text-sm text-muted-foreground mt-1">{tl.pageSubtitle}</p>
         </div>
 
-        <div className="space-y-12">
-          {grouped.map(({ category, items }, sectionIdx) => (
-            <section key={`${category}-${sectionIdx}`}>
-              <h2 className="text-lg font-bold mb-5 flex items-center gap-2 text-foreground">
-                <span className="w-1 h-5 bg-primary rounded-full inline-block" />
-                {tl.categories[category]}
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {items.map((link, linkIdx) => (
-                  <a
-                    key={`${sectionIdx}-${linkIdx}-${link.url}`}
-                    href={link.url}
-                    target={link.url.startsWith("http") ? "_blank" : "_self"}
-                    rel="noopener noreferrer"
-                    className="group bg-card border border-border p-5 card-hover flex flex-col gap-3 hover:border-primary/40 transition-colors"
-                  >
-                    <div className="relative h-28 -m-5 mb-3 overflow-hidden border-b border-border rounded-t-sm">
-                      {!failedImages[String(link.id)] && (link.bg_image || link.bgImage || "").toString().trim() ? (
-                        <img
-                          src={(link.bg_image || link.bgImage || "").toString().trim()}
-                          alt={lang === "ja" ? (link.name_ja || link.nameJa || link.name) : link.name}
-                          loading="lazy"
-                          referrerPolicy="no-referrer"
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-                          onError={() => setFailedImages((prev) => ({ ...prev, [String(link.id)]: true }))}
-                        />
-                      ) : (
-                        <div className="h-full w-full bg-gradient-to-br from-muted to-muted/60 flex items-center justify-center text-2xl">
-                          {link.icon || "🔗"}
+        {linksLoading ? (
+          <p className="text-sm text-muted-foreground py-12 text-center">{tl.loading}</p>
+        ) : !hasAnyVisibleLink ? (
+          <div
+            className="rounded-2xl border border-dashed border-border bg-muted/15 px-6 py-12 text-center text-sm text-muted-foreground leading-relaxed max-w-2xl mx-auto"
+            role="status"
+          >
+            {tl.emptyPage}
+          </div>
+        ) : (
+          <div className="space-y-12">
+            {grouped.map(({ category, items }, sectionIdx) => (
+              <section key={`${category}-${sectionIdx}`}>
+                <h2 className="text-lg font-bold mb-5 flex items-center gap-2 text-foreground">
+                  <span className="w-1 h-5 bg-primary rounded-full inline-block" />
+                  {tl.categories[category]}
+                </h2>
+                {items.length === 0 ? (
+                  <p className="text-sm text-muted-foreground pl-3 border-l-2 border-muted py-1">{tl.emptyCategory}</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {items.map((link, linkIdx) => (
+                      <a
+                        key={`${sectionIdx}-${linkIdx}-${link.url}`}
+                        href={link.url}
+                        target={link.url.startsWith("http") ? "_blank" : "_self"}
+                        rel="noopener noreferrer"
+                        className="group bg-card border border-border p-5 card-hover flex flex-col gap-3 hover:border-primary/40 transition-colors"
+                      >
+                        <div className="relative h-28 -m-5 mb-3 overflow-hidden border-b border-border rounded-t-sm">
+                          {!failedImages[String(link.id)] && (link.bg_image || link.bgImage || "").toString().trim() ? (
+                            <img
+                              src={(link.bg_image || link.bgImage || "").toString().trim()}
+                              alt={lang === "ja" ? (link.name_ja || link.nameJa || link.name) : link.name}
+                              loading="lazy"
+                              referrerPolicy="no-referrer"
+                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                              onError={() => setFailedImages((prev) => ({ ...prev, [String(link.id)]: true }))}
+                            />
+                          ) : (
+                            <div className="h-full w-full bg-gradient-to-br from-muted to-muted/60 flex items-center justify-center text-2xl">
+                              {link.icon || "🔗"}
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                          <div className="absolute left-3 top-3 rounded-md bg-white/90 px-2 py-1 text-xl leading-none shadow-sm">
+                            {link.icon}
+                          </div>
+                          <ExternalLink className="absolute right-3 top-3 h-3.5 w-3.5 text-white/90 group-hover:text-white transition-colors" />
                         </div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                      <div className="absolute left-3 top-3 rounded-md bg-white/90 px-2 py-1 text-xl leading-none shadow-sm">
-                        {link.icon}
-                      </div>
-                      <ExternalLink className="absolute right-3 top-3 h-3.5 w-3.5 text-white/90 group-hover:text-white transition-colors" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-sm leading-snug group-hover:text-primary transition-colors">
-                        {lang === "ja" ? (link.name_ja || link.nameJa || link.name) : link.name}
-                      </h3>
-                      <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed line-clamp-3">
-                        {lang === "ja" ? (link.description_ja || link.descriptionJa || link.description) : link.description}
-                      </p>
-                    </div>
-                    <span className="text-xs font-semibold text-primary flex items-center gap-1 mt-auto">
-                      {tl.visitSite} <ExternalLink className="h-3 w-3" />
-                    </span>
-                  </a>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-sm leading-snug group-hover:text-primary transition-colors">
+                            {lang === "ja" ? (link.name_ja || link.nameJa || link.name) : link.name}
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed line-clamp-3">
+                            {lang === "ja" ? (link.description_ja || link.descriptionJa || link.description) : link.description}
+                          </p>
+                        </div>
+                        <span className="text-xs font-semibold text-primary flex items-center gap-1 mt-auto">
+                          {tl.visitSite} <ExternalLink className="h-3 w-3" />
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </section>
+            ))}
+          </div>
+        )}
       </div>
     </Layout>
   );

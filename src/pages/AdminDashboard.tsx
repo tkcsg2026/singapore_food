@@ -2259,7 +2259,7 @@ function JobsManager() {
   const loadNotices = async () => {
     setLoadingNotices(true);
     try {
-      const res = await authFetch("/api/job-notices?includeDeleted=1&limit=50");
+      const res = await authFetch("/api/job-notices?includeDeleted=0&limit=50");
       const rows = await res.json().catch(() => []);
       setNotices(Array.isArray(rows) ? rows : []);
     } catch {
@@ -2351,52 +2351,39 @@ function JobsManager() {
                 <div key={n.id} className="p-4 flex flex-col sm:flex-row sm:items-start gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${
-                        n.status === "deleted"
-                          ? "bg-destructive/10 border-destructive/30 text-destructive"
-                          : "bg-emerald-50 border-emerald-200 text-emerald-700"
-                      }`}>
-                        {n.status === "deleted" ? t.admin.jobsStatusDeleted : t.admin.jobsStatusActive}
+                      <span className="text-[10px] px-2 py-0.5 rounded-full border font-bold bg-emerald-50 border-emerald-200 text-emerald-700">
+                        {t.admin.jobsStatusActive}
                       </span>
                       <span className="text-sm font-bold truncate">{n.title}</span>
                       {n.company && <span className="text-xs text-muted-foreground truncate">— {n.company}</span>}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       {new Date(n.created_at).toLocaleString()}
-                      {n.deleted_at ? ` / ${t.admin.jobsDeletedAt}: ${new Date(n.deleted_at).toLocaleString()}` : ""}
                     </p>
                     <p className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap break-words line-clamp-4">
                       {n.description}
                     </p>
-                    {n.deleted_reason && (
-                      <p className="text-xs text-destructive mt-2 whitespace-pre-wrap break-words">
-                        {t.admin.jobsDeletedReason}: {n.deleted_reason}
-                      </p>
-                    )}
                   </div>
                   <div className="flex gap-2 flex-shrink-0">
-                    {n.status !== "deleted" && (
-                      <Button
-                        variant="destructive"
-                        className="rounded-xl"
-                        disabled={deleteBusyId === n.id}
-                        onClick={async () => {
-                          const reason = window.prompt(t.admin.jobsDeletePrompt) ?? "";
-                          setDeleteBusyId(n.id);
-                          try {
-                            const res = await authFetch(`/api/job-notices?id=${encodeURIComponent(n.id)}`, {
-                              method: "DELETE",
-                              body: JSON.stringify({ reason }),
-                            });
-                            if (res.ok) await loadNotices();
-                          } finally {
-                            setDeleteBusyId(null);
-                          }
-                        }}
-                      >
-                        {t.admin.jobsDelete}
-                      </Button>
-                    )}
+                    <Button
+                      variant="destructive"
+                      className="rounded-xl"
+                      disabled={deleteBusyId === n.id}
+                      onClick={async () => {
+                        if (!confirm(lang === "ja" ? "この求人を削除しますか？" : "Delete this job notice?")) return;
+                        setDeleteBusyId(n.id);
+                        try {
+                          const res = await authFetch(`/api/job-notices?id=${encodeURIComponent(n.id)}`, {
+                            method: "DELETE",
+                          });
+                          if (res.ok) await loadNotices();
+                        } finally {
+                          setDeleteBusyId(null);
+                        }
+                      }}
+                    >
+                      {t.admin.jobsDelete}
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -2668,8 +2655,9 @@ function ReportManager({ onReportChanged }: { onReportChanged?: () => void }) {
     setReports(await res.json());
   };
 
-  const handleStatus = async (id: string, status: string) => {
-    await authFetch("/api/reports", { method: "PUT", body: JSON.stringify({ id, status }) });
+  const handleStatus = async (id: string, _status: string) => {
+    // Delete the report from the database so it disappears from the list
+    await authFetch(`/api/reports?id=${encodeURIComponent(id)}`, { method: "DELETE" });
     await fetchReports();
     onReportChanged?.();
   };
@@ -2687,7 +2675,10 @@ function ReportManager({ onReportChanged }: { onReportChanged?: () => void }) {
         }
       }
     }
-    await handleStatus(r.id, "reviewed");
+    // Delete the report from the database
+    await authFetch(`/api/reports?id=${encodeURIComponent(r.id)}`, { method: "DELETE" });
+    await fetchReports();
+    onReportChanged?.();
     alert(t.admin.reportNotifyMsg);
   };
 

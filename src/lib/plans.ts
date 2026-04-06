@@ -1,5 +1,8 @@
 export type PlanTier = "basic" | "standard" | "premium";
 
+/** Returned by GET /api/suppliers/plan-counts */
+export type PlanCounts = { premium: number; standard: number; basic: number };
+
 export interface PlanConfig {
   tier: PlanTier;
   /** Numeric weight used for sorting — higher = higher priority */
@@ -93,6 +96,16 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
 
 export function getPlanConfig(plan?: string | null): PlanConfig {
   return PLANS[(plan as PlanTier) ?? "basic"] ?? PLANS.basic;
+}
+
+/** Live counts from DB/API — premium = Full Profile, standard = Standard, basic = Quick Profile */
+export function countSuppliersByPlan(suppliers: { plan?: string | null }[]) {
+  const list = suppliers ?? [];
+  return {
+    premium: list.filter((s) => (s.plan || "basic") === "premium").length,
+    standard: list.filter((s) => (s.plan || "basic") === "standard").length,
+    basic: list.filter((s) => (s.plan || "basic") === "basic").length,
+  };
 }
 
 /**

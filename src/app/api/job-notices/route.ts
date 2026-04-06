@@ -154,10 +154,9 @@ export async function DELETE(req: NextRequest) {
 
   const { data, error } = await supabase
     .from("job_notices")
-    .update({ status: "deleted", deleted_at: new Date().toISOString(), deleted_reason: reason || null })
+    .delete()
     .eq("id", id)
-    .select("*")
-    .single();
+    .select("*");
   if (error && isJobNoticesUnavailableError(error)) {
     return NextResponse.json(
       { error: "job_notices setup is pending", code: "JOB_NOTICES_NOT_READY" },
@@ -165,6 +164,9 @@ export async function DELETE(req: NextRequest) {
     );
   }
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  if (!data || data.length === 0) {
+    return NextResponse.json({ error: "Job notice not found" }, { status: 404 });
+  }
+  return NextResponse.json(data[0]);
 }
 
