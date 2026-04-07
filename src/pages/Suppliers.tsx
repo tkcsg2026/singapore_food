@@ -21,7 +21,8 @@ const Suppliers = () => {
   );
   const [selectedPlan, setSelectedPlan] = useState<string>(searchParams?.get("plan") || "");
   const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
-  const [tagFilters, setTagFilters] = useState({ smallLot: false, japanese: false, halal: false });
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [showAllTags, setShowAllTags] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const { t, lang } = useTranslation();
@@ -59,8 +60,28 @@ const Suppliers = () => {
     setSelectedCategories((prev) => prev.includes(val) ? prev.filter((c) => c !== val) : [...prev, val]);
   const toggleArea = (val: string) =>
     setSelectedAreas((prev) => prev.includes(val) ? prev.filter((a) => a !== val) : [...prev, val]);
+  const toggleTag = (val: string) =>
+    setSelectedTags((prev) => prev.includes(val) ? prev.filter((t) => t !== val) : [...prev, val]);
 
   const supplierCategories = (s: SupplierRow) => [s.category, s.category_2, s.category_3].filter(Boolean);
+  const sortedTagCategories = useMemo(
+    () => [...(tagCategories || [])].sort((a, b) => a.sort_order - b.sort_order),
+    [tagCategories]
+  );
+  const visibleTagCategories = showAllTags ? sortedTagCategories : sortedTagCategories.slice(0, 3);
+  const matchSelectedTag = (supplier: SupplierRow, tagValue: string): boolean => {
+    const row = sortedTagCategories.find((c) => c.value === tagValue);
+    if (!row) return false;
+    const en = tagDisplayMaps.toEn[row.value] || row.label;
+    const ja = tagDisplayMaps.toJa[row.value] || row.label_ja || row.label;
+    const candidates = new Set([row.value, row.label, row.label_ja || "", en, ja].filter(Boolean));
+    return (supplier.tags ?? []).some((rawTag) => {
+      const tagEn = tagDisplayMaps.toEn[rawTag] || rawTag;
+      const tagJa = tagDisplayMaps.toJa[rawTag] || rawTag;
+      return candidates.has(rawTag) || candidates.has(tagEn) || candidates.has(tagJa);
+    });
+  };
+
   const filtered = useMemo(() => {
     const base = (suppliers || []).filter((s) => {
       if (selectedPlan && (s.plan || "basic") !== selectedPlan) return false;
@@ -73,14 +94,12 @@ const Suppliers = () => {
       }
       if (selectedCategories.length && !selectedCategories.some((c) => supplierCategories(s).includes(c))) return false;
       if (selectedAreas.length && !selectedAreas.includes(s.area)) return false;
-      if (tagFilters.smallLot && !s.tags.includes("少量対応")) return false;
-      if (tagFilters.japanese && !s.tags.includes("日本語対応")) return false;
-      if (tagFilters.halal && !s.tags.includes("ハラール")) return false;
+      if (selectedTags.length && !selectedTags.every((tagValue) => matchSelectedTag(s, tagValue))) return false;
       return true;
     });
     // Sort by plan tier, shuffle within each tier with a daily seed
     return sortSuppliersByPlan(base);
-  }, [suppliers, query, selectedCategories, selectedAreas, selectedPlan, tagFilters]);
+  }, [suppliers, query, selectedCategories, selectedAreas, selectedPlan, selectedTags, sortedTagCategories, tagDisplayMaps]);
 
   const FilterPanel = () => (
     <div className="space-y-6">
@@ -125,18 +144,28 @@ const Suppliers = () => {
       <div>
         <h3 className="font-bold text-sm mb-3">{t.suppliers.tags}</h3>
         <div className="space-y-2.5">
-          <label className="flex items-center gap-2.5 text-sm cursor-pointer">
-            <input type="checkbox" checked={tagFilters.smallLot} onChange={() => setTagFilters((p) => ({ ...p, smallLot: !p.smallLot }))} className="rounded border-border accent-primary" />
-            {t.suppliers.smallLot}
-          </label>
-          <label className="flex items-center gap-2.5 text-sm cursor-pointer">
-            <input type="checkbox" checked={tagFilters.japanese} onChange={() => setTagFilters((p) => ({ ...p, japanese: !p.japanese }))} className="rounded border-border accent-primary" />
-            {t.suppliers.japanese}
-          </label>
-          <label className="flex items-center gap-2.5 text-sm cursor-pointer">
-            <input type="checkbox" checked={tagFilters.halal} onChange={() => setTagFilters((p) => ({ ...p, halal: !p.halal }))} className="rounded border-border accent-primary" />
-            {t.suppliers.halal}
-          </label>
+          {visibleTagCategories.map((tag) => (
+            <label key={tag.value} className="flex items-center gap-2.5 text-sm cursor-pointer hover:text-foreground transition-colors">
+              <input
+                type="checkbox"
+                checked={selectedTags.includes(tag.value)}
+                onChange={() => toggleTag(tag.value)}
+                className="rounded border-border accent-primary"
+              />
+              {getCategoryDisplayName(tag, lang)}
+            </label>
+          ))}
+          {sortedTagCategories.length > 3 && (
+            <button
+              type="button"
+              onClick={() => setShowAllTags((prev) => !prev)}
+              className="text-xs font-semibold text-primary hover:underline"
+            >
+              {showAllTags
+                ? (lang === "ja" ? "一部のみ表示" : "Show less")
+                : `${t.common.viewAll} (${sortedTagCategories.length})`}
+            </button>
+          )}
         </div>
       </div>
     </div>

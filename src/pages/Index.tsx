@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, ArrowRight, ShoppingBag, TrendingUp, Sparkles, Newspaper, Globe, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ArrowRight, ShoppingBag, TrendingUp, Sparkles, Newspaper, Globe, ExternalLink, ChevronLeft, ChevronRight, Briefcase } from "lucide-react";
 import s1 from "@/assets/s1.jpg";
 import s2 from "@/assets/s2.jpg";
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
@@ -15,7 +15,7 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { AnimatedGridItem } from "@/components/AnimatedGridItem";
 import { takeHomeSuppliers, HOME_SUPPLIERS_PER_TIER } from "@/lib/plans";
 import { buildSupplierTagDisplayMaps, getCategoryDisplayName } from "@/lib/category-display";
-import type { SupplierRow, MarketplaceItemRow, CategoryRow, NewsArticleRow } from "@/types/database";
+import type { SupplierRow, MarketplaceItemRow, CategoryRow, NewsArticleRow, JobNoticeRow } from "@/types/database";
 
 function SupplierSkeleton() {
   return (
@@ -66,6 +66,7 @@ const Index = () => {
   const { data: categories } = useFetch<CategoryRow[]>("/api/categories?type=supplier");
   const { data: tagCategories } = useFetch<CategoryRow[]>("/api/categories?type=tag");
   const { data: newsArticles } = useFetch<NewsArticleRow[]>("/api/news");
+  const { data: jobNotices } = useFetch<JobNoticeRow[]>("/api/job-notices?limit=50");
 
   const tagDisplayMaps = useMemo(() => buildSupplierTagDisplayMaps(tagCategories || []), [tagCategories]);
   const popularSuppliers = useMemo(() => takeHomeSuppliers(suppliers || []), [suppliers]);
@@ -80,6 +81,14 @@ const Index = () => {
         })
         .slice(0, 10),
     [newsArticles]
+  );
+  const latestJobNotices = useMemo(
+    () =>
+      [...(jobNotices || [])]
+        .filter((n) => (n.post_type ?? "job") === "job")
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 3),
+    [jobNotices]
   );
 
   const { data: linksData } = useFetch<any[]>("/api/links");
@@ -356,9 +365,42 @@ const Index = () => {
         </div>
       </section>
 
+      {/* 4. Latest Jobs */}
+      {latestJobNotices.length > 0 && (
+        <section className="container py-10 md:py-12 min-w-0 overflow-hidden opacity-0-init animate-fade-in-up reveal-stagger-4">
+          <div className="flex items-center justify-between mb-6 gap-4 min-w-0">
+            <h2 className="section-title text-xl md:text-2xl flex items-center gap-2 min-w-0">
+              <Briefcase className="h-5 w-5 text-primary flex-shrink-0" />
+              <span className="truncate">{t.nav.jobs}</span>
+            </h2>
+            <Link href="/jobs" className="link-more flex-shrink-0 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 hover:text-white">
+              {t.common.viewAll} <ArrowRight className="h-3.5 w-3.5 link-more-arrow" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {latestJobNotices.map((notice) => (
+              <Link
+                key={notice.id}
+                href="/jobs"
+                className="block rounded-xl border bg-card p-4 hover:border-primary/40 hover:shadow-sm transition-all duration-200"
+              >
+                <p className="text-xs text-muted-foreground mb-2">
+                  {new Date(notice.created_at).toLocaleDateString(lang === "ja" ? "ja-JP" : "en-US")}
+                </p>
+                <h3 className="font-semibold text-sm line-clamp-2 mb-1">{notice.title}</h3>
+                {notice.company && (
+                  <p className="text-xs text-muted-foreground line-clamp-1 mb-2">{notice.company}</p>
+                )}
+                <p className="text-xs text-muted-foreground line-clamp-3">{notice.description}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* 4. Latest News */}
       {latestNews.length > 0 && (
-        <section className="container py-10 md:py-12 min-w-0 overflow-hidden opacity-0-init animate-fade-in-up reveal-stagger-4">
+        <section className="container py-10 md:py-12 min-w-0 overflow-hidden opacity-0-init animate-fade-in-up reveal-stagger-5">
           <div className="flex items-center justify-between mb-6 gap-4 min-w-0">
             <h2 className="section-title text-xl md:text-2xl flex items-center gap-2 min-w-0">
               <Newspaper className="h-5 w-5 text-primary flex-shrink-0" />
@@ -402,7 +444,7 @@ const Index = () => {
 
       {/* 5. Links (リンク集) */}
       {featuredLinks.length > 0 && (
-        <section className="bg-muted py-10 md:py-12 w-full overflow-hidden opacity-0-init animate-fade-in-up reveal-stagger-5">
+        <section className="bg-muted py-10 md:py-12 w-full overflow-hidden opacity-0-init animate-fade-in-up reveal-stagger-6">
           <div className="container min-w-0">
             <div className="flex items-center justify-between mb-2 gap-4 min-w-0">
               <h2 className="section-title text-xl md:text-2xl flex items-center gap-2 min-w-0">
