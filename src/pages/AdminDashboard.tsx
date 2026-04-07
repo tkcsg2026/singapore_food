@@ -1478,7 +1478,7 @@ function MarketplaceManager() {
 
   const handleDelete = async (slug: string) => {
     if (!confirm(lang === "ja" ? `「${slug}」を削除しますか？` : `Delete "${slug}"?`)) return;
-    await fetch(`/api/marketplace/${slug}`, { method: "DELETE" });
+    await authFetch(`/api/marketplace/${encodeURIComponent(slug)}`, { method: "DELETE" });
     fetchItems();
   };
 
@@ -2667,9 +2667,9 @@ function ReportManager({ onReportChanged }: { onReportChanged?: () => void }) {
       if (itemRes.ok) {
         const item = await itemRes.json();
         if (item?.id) {
-          await fetch(`/api/marketplace/${encodeURIComponent(item.id)}?byId=true`, { method: "DELETE" });
+          await authFetch(`/api/marketplace/${encodeURIComponent(item.id)}?byId=true`, { method: "DELETE" });
         } else if (item?.slug) {
-          await fetch(`/api/marketplace/${encodeURIComponent(item.slug)}`, { method: "DELETE" });
+          await authFetch(`/api/marketplace/${encodeURIComponent(item.slug)}`, { method: "DELETE" });
         }
       }
     }
@@ -3615,6 +3615,10 @@ function AuditLogViewer() {
     update_user: { en: "User updated",     ja: "ユーザー更新",  color: "text-amber-600" },
     ban_user:    { en: "User suspended",   ja: "ユーザー停止",  color: "text-orange-500" },
     unban_user:  { en: "User reactivated", ja: "停止解除",      color: "text-green-600" },
+    delete_marketplace_item: { en: "Marketplace listing removed", ja: "売買投稿の削除", color: "text-destructive" },
+    delete_supplier: { en: "Supplier deleted", ja: "サプライヤー削除", color: "text-destructive" },
+    delete_job_notice: { en: "Job notice deleted", ja: "求人の削除", color: "text-destructive" },
+    delete_seeker_notice: { en: "Seeker notice deleted", ja: "求職の削除", color: "text-destructive" },
   };
 
   return (

@@ -82,7 +82,16 @@ const Dashboard = () => {
 
   const handleDeleteListing = async (slug: string) => {
     if (!confirm(t.dashboard.deleteListingConfirm)) return;
-    await fetch(`/api/marketplace/${slug}`, { method: "DELETE" });
+    const sb = getSupabase();
+    const session = sb ? (await sb.auth.getSession()).data.session : null;
+    const headers: HeadersInit = {};
+    if (session?.access_token) (headers as Record<string, string>).Authorization = `Bearer ${session.access_token}`;
+    const res = await fetch(`/api/marketplace/${encodeURIComponent(slug)}`, { method: "DELETE", headers });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert((err as { error?: string })?.error || (lang === "ja" ? "削除に失敗しました。" : "Could not delete listing."));
+      return;
+    }
     setListings((prev) => prev.filter((l) => l.slug !== slug));
   };
 

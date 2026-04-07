@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminSupabaseClient, createServerSupabaseClient, requireAdmin, requireAuth } from "@/lib/supabase-server";
+import {
+  createAdminSupabaseClient,
+  createServerSupabaseClient,
+  requireAdmin,
+  requireAuth,
+  logAuditAction,
+} from "@/lib/supabase-server";
 
 function clampText(value: unknown, maxLen: number): string {
   const s = typeof value === "string" ? value.trim() : "";
@@ -133,7 +139,8 @@ export async function DELETE(req: NextRequest) {
   const reason = clampText(body?.reason, 280);
 
   const adminAuth = await requireAdmin(req);
-  let allowDelete = !(adminAuth instanceof NextResponse);
+  const isAdmin = !(adminAuth instanceof NextResponse);
+  let allowDelete = isAdmin;
 
   if (!allowDelete) {
     const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
@@ -167,6 +174,19 @@ export async function DELETE(req: NextRequest) {
   if (!data || data.length === 0) {
     return NextResponse.json({ error: "Job notice not found" }, { status: 404 });
   }
-  return NextResponse.json(data[0]);
+
+  const deleted = data[0];
+  if (isAdmin) {
+    const pt = deleted.post_type ?? "job";
+    await logAuditAction({
+      adminId: adminAuth.adminId,
+      action: pt === "seeker" ? "delete_seeker_notice" : "delete_job_notice",
+      targetType: "job_notice",
+      targetId: id,
+      detail: `${deleted.title ?? ""}${pt === "seeker" ? " (seeker)" : " (job)"}`.trim(),
+    });
+  }
+
+  return NextResponse.json(deleted);
 }
 

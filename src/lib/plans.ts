@@ -146,10 +146,10 @@ export function seededShuffle<T>(arr: T[], seed: number): T[] {
 }
 
 /**
- * Sorts suppliers by plan tier (premium first), featured first within each tier,
- * then shuffles within featured and within non-featured using today's date as seed.
+ * Sorts suppliers by plan tier (Full → Standard → Quick), then shuffles everyone
+ * within each tier with the same daily seed — no featured pinning (fair rotation).
  */
-export function sortSuppliersByPlan<T extends { plan?: string | null; featured?: boolean }>(
+export function sortSuppliersByPlan<T extends { plan?: string | null }>(
   suppliers: T[]
 ): T[] {
   const premium = suppliers.filter((s) => s.plan === "premium");
@@ -157,19 +157,10 @@ export function sortSuppliersByPlan<T extends { plan?: string | null; featured?:
   const basic = suppliers.filter((s) => !s.plan || s.plan === "basic");
 
   const seed = dailySeed();
-  const sortTier = (tier: T[], baseSeed: number) => {
-    const featured = tier.filter((s) => s.featured);
-    const rest = tier.filter((s) => !s.featured);
-    return [
-      ...seededShuffle(featured, baseSeed),
-      ...seededShuffle(rest, baseSeed + 1),
-    ];
-  };
-
   return [
-    ...sortTier(premium, seed),
-    ...sortTier(standard, seed + 10),
-    ...sortTier(basic, seed + 20),
+    ...seededShuffle(premium, seed),
+    ...seededShuffle(standard, seed + 10),
+    ...seededShuffle(basic, seed + 20),
   ];
 }
 
@@ -180,37 +171,16 @@ export const HOME_SUPPLIERS_PER_TIER = { premium: 9, standard: 6, basic: 3 } as 
  * Picks up to {@link HOME_SUPPLIERS_PER_TIER} suppliers per plan tier after the same
  * fair shuffle as {@link sortSuppliersByPlan}. The directory page uses the full list + live counts.
  */
-export function takeHomeSuppliers<T extends { plan?: string | null; featured?: boolean; views?: number | null }>(
+export function takeHomeSuppliers<T extends { plan?: string | null }>(
   suppliers: T[]
 ): T[] {
   const sorted = sortSuppliersByPlan(suppliers);
-
-  const byViewsDesc = (a: T, b: T) => (Number(b.views ?? 0) - Number(a.views ?? 0));
-  const pickTier = (tier: PlanTier, limit: number) => {
-    const sourceTier =
-      tier === "premium"
-        ? suppliers.filter((s) => s.plan === "premium")
-        : tier === "standard"
-          ? suppliers.filter((s) => s.plan === "standard")
-          : suppliers.filter((s) => !s.plan || s.plan === "basic");
-    // Keep manually curated/featured suppliers pinned first (stable by views),
-    // then fill the remaining slots from the daily shuffled list.
-    const pinnedFeatured = [...sourceTier].filter((s) => s.featured).sort(byViewsDesc);
-    const shuffledNonFeatured = sorted.filter((s) => {
-      const inTier =
-        tier === "premium"
-          ? s.plan === "premium"
-          : tier === "standard"
-            ? s.plan === "standard"
-            : !s.plan || s.plan === "basic";
-      return inTier && !s.featured;
-    });
-    return [...pinnedFeatured, ...shuffledNonFeatured].slice(0, limit);
-  };
-
+  const premium = sorted.filter((s) => s.plan === "premium");
+  const standard = sorted.filter((s) => s.plan === "standard");
+  const basic = sorted.filter((s) => !s.plan || s.plan === "basic");
   return [
-    ...pickTier("premium", HOME_SUPPLIERS_PER_TIER.premium),
-    ...pickTier("standard", HOME_SUPPLIERS_PER_TIER.standard),
-    ...pickTier("basic", HOME_SUPPLIERS_PER_TIER.basic),
+    ...premium.slice(0, HOME_SUPPLIERS_PER_TIER.premium),
+    ...standard.slice(0, HOME_SUPPLIERS_PER_TIER.standard),
+    ...basic.slice(0, HOME_SUPPLIERS_PER_TIER.basic),
   ];
 }

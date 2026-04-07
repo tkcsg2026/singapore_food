@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient, createAdminSupabaseClient } from "@/lib/supabase-server";
+import {
+  createServerSupabaseClient,
+  createAdminSupabaseClient,
+  requireAdmin,
+  requireAuth,
+  logAuditAction,
+} from "@/lib/supabase-server";
 import { marketplaceItems as mockItems } from "@/data/mockData";
 import { sendMarketplaceRejectionEmail } from "@/lib/email";
 
@@ -89,8 +95,39 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ s
   const byId = searchParams.get("byId") === "true";
   const supabase = createAdminSupabaseClient();
   if (!supabase) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
-  const q = supabase.from("marketplace_items").delete();
-  const { error } = byId ? await q.eq("id", slug) : await q.eq("slug", slug);
+
+  const col = byId ? "id" : "slug";
+  const { data: row, error: fetchErr } = await supabase
+    .from("marketplace_items")
+    .select("id, slug, title, seller_id")
+    .eq(col, slug)
+    .maybeSingle();
+  if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+  if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const adminAuth = await requireAdmin(req);
+  const isAdmin = !(adminAuth instanceof NextResponse);
+
+  if (isAdmin) {
+    const { error } = await supabase.from("marketplace_items").delete().eq("id", row.id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    await logAuditAction({
+      adminId: adminAuth.adminId,
+      action: "delete_marketplace_item",
+      targetType: "marketplace_item",
+      targetId: row.id,
+      detail: `${row.title || "(no title)"} · ${row.slug}`,
+    });
+    return NextResponse.json({ success: true });
+  }
+
+  const userAuth = await requireAuth(req);
+  if (userAuth instanceof NextResponse) return userAuth;
+  if (row.seller_id !== userAuth.userId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { error } = await supabase.from("marketplace_items").delete().eq("id", row.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient, createAdminSupabaseClient, requireAdmin } from "@/lib/supabase-server";
+import {
+  createServerSupabaseClient,
+  createAdminSupabaseClient,
+  requireAdmin,
+  logAuditAction,
+} from "@/lib/supabase-server";
 import { suppliers as mockSuppliers } from "@/data/mockData";
 
 function normaliseMock(s: any) {
@@ -109,7 +114,25 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ s
   const slug = decodeURIComponent(slugParam);
   const supabase = createAdminSupabaseClient();
   if (!supabase) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
+
+  const { data: row } = await supabase
+    .from("suppliers")
+    .select("id, name, name_ja, slug")
+    .eq("slug", slug)
+    .maybeSingle();
+
   const { error } = await supabase.from("suppliers").delete().eq("slug", slug);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if (row?.id) {
+    await logAuditAction({
+      adminId: adminAuth.adminId,
+      action: "delete_supplier",
+      targetType: "supplier",
+      targetId: row.id,
+      detail: `${row.name_ja || row.name || slug}`,
+    });
+  }
+
   return NextResponse.json({ success: true });
 }
