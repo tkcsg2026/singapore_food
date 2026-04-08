@@ -2832,48 +2832,79 @@ function AnalyticsPanel() {
   const [monthlySupplierViews, setMonthlySupplierViews] = useState<{ month: string; views: number }[]>([]);
   const [monthlyMarketplaceViews, setMonthlyMarketplaceViews] = useState<{ month: string; views: number }[]>([]);
   const [monthlyWhatsappTaps, setMonthlyWhatsappTaps] = useState<{ month: string; clicks: number }[]>([]);
+  const [monthlySupplierReportRows, setMonthlySupplierReportRows] = useState<
+    { supplier_id: string; slug: string; name: string; name_ja: string; views: number }[]
+  >([]);
   const [topMarketplaceItems, setTopMarketplaceItems] = useState<{ slug: string; views: number }[]>([]);
   const [pvMonths, setPvMonths] = useState(6);
   const [svMonths, setSvMonths] = useState(6);
   const [mvMonths, setMvMonths] = useState(6);
   const [wcMonths, setWcMonths] = useState(6);
+  const [reportMonth, setReportMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
   const [expandSupplierChart, setExpandSupplierChart] = useState(false);
   const [expandSupplierWaChart, setExpandSupplierWaChart] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
-    authFetch("/api/admin/suppliers")
+    const nonce = Date.now();
+    authFetch(`/api/admin/suppliers?_=${nonce}`)
       .then((r) => (r.ok ? r.json() : []))
       .then(setSuppliers)
       .catch(() => setSuppliers([]));
-    fetch("/api/marketplace?status=approved").then((r) => r.json()).then(setItems).catch(() => {});
-  }, []);
+    fetch(`/api/marketplace?status=approved&_=${nonce}`)
+      .then((r) => r.json())
+      .then(setItems)
+      .catch(() => {});
+  }, [refreshTick]);
 
   useEffect(() => {
-    fetch(`/api/analytics/pageview?months=${pvMonths}`)
+    const nonce = Date.now();
+    fetch(`/api/analytics/pageview?months=${pvMonths}&_=${nonce}`)
       .then((r) => r.json()).then(setMonthlyVisits).catch(() => {});
-  }, [pvMonths]);
+  }, [pvMonths, refreshTick]);
 
   useEffect(() => {
-    fetch(`/api/analytics/supplier-views?months=${svMonths}`)
+    const nonce = Date.now();
+    fetch(`/api/analytics/supplier-views?months=${svMonths}&_=${nonce}`)
       .then((r) => r.json()).then(setMonthlySupplierViews).catch(() => {});
-  }, [svMonths]);
+  }, [svMonths, refreshTick]);
 
   useEffect(() => {
-    fetch(`/api/analytics/supplier-whatsapp-click?months=${wcMonths}`)
+    const nonce = Date.now();
+    fetch(`/api/analytics/supplier-whatsapp-click?months=${wcMonths}&_=${nonce}`)
       .then((r) => r.json())
       .then(setMonthlyWhatsappTaps)
       .catch(() => {});
-  }, [wcMonths]);
+  }, [wcMonths, refreshTick]);
 
   useEffect(() => {
-    fetch(`/api/analytics/marketplace-views?months=${mvMonths}`)
+    const nonce = Date.now();
+    fetch(`/api/analytics/marketplace-views?months=${mvMonths}&_=${nonce}`)
       .then((r) => r.json())
       .then((d) => {
         setMonthlyMarketplaceViews(d.monthly ?? []);
         setTopMarketplaceItems(d.topItems ?? []);
       })
       .catch(() => {});
-  }, [mvMonths]);
+  }, [mvMonths, refreshTick]);
+
+  useEffect(() => {
+    const nonce = Date.now();
+    fetch(`/api/analytics/supplier-monthly-report?month=${encodeURIComponent(reportMonth)}&_=${nonce}`)
+      .then((r) => r.json())
+      .then((d) => setMonthlySupplierReportRows(Array.isArray(d?.rows) ? d.rows : []))
+      .catch(() => setMonthlySupplierReportRows([]));
+  }, [reportMonth, refreshTick]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setRefreshTick((v) => v + 1);
+    }, 15000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const monthOptions = [3, 6, 12];
   const formatMonth = (key: string) => {
@@ -2963,6 +2994,47 @@ function AnalyticsPanel() {
           </ResponsiveContainer>
         </div>
         <p className="text-xs text-muted-foreground mt-2">{t.admin.analytics.monthlySupplierViewsNote}</p>
+      </div>
+
+      {/* ── Supplier monthly report table (per supplier) ── */}
+      <div className="bg-card border p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <h3 className="font-bold text-sm">{t.admin.analytics.supplierMonthlyReportTitle}</h3>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-muted-foreground">{t.admin.analytics.monthLabel}</label>
+            <input
+              type="month"
+              value={reportMonth}
+              onChange={(e) => setReportMonth(e.target.value)}
+              className="h-9 px-3 rounded-lg border bg-background text-sm"
+            />
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground mb-3">{t.admin.analytics.supplierMonthlyReportNote}</p>
+        <div className="overflow-x-auto border rounded-lg">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-muted/50 border-b">
+                <th className="text-left py-2.5 px-3 font-semibold">{t.admin.analytics.supplierLabel}</th>
+                <th className="text-right py-2.5 px-3 font-semibold">{t.admin.analytics.monthlyViewsLabel}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {monthlySupplierReportRows.map((row) => (
+                <tr key={row.supplier_id} className="border-b last:border-0">
+                  <td className="py-2.5 px-3">
+                    <a href={`/suppliers/${row.slug}`} className="hover:underline">
+                      {lang === "ja" ? (row.name_ja || row.name) : (row.name || row.name_ja)}
+                    </a>
+                  </td>
+                  <td className="py-2.5 px-3 text-right font-semibold tabular-nums">
+                    {row.views.toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* ── Monthly WhatsApp taps (supplier listings) ── */}
