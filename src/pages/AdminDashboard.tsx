@@ -578,7 +578,7 @@ function SupplierManager() {
                           (t.suppliers as { categories?: Record<string, string> }).categories?.[s.category_3] ?? s.category_3,
                         ]
                     ).filter(Boolean).join(" · ") || "—"
-                  } · {lang === "ja" ? s.area_ja : ((t.suppliers as { areas?: Record<string, string> }).areas?.[s.area] ?? s.area)} · {s.views} views</p>
+                  } · {lang === "ja" ? s.area_ja : ((t.suppliers as { areas?: Record<string, string> }).areas?.[s.area] ?? s.area)} · {s.views} {t.admin.analytics.viewsLabel} · {(s.whatsapp_clicks ?? 0)} {t.admin.analytics.whatsappTapsShort}</p>
                 </div>
               </div>
               {/* Row 2: action buttons */}
@@ -607,10 +607,33 @@ function UsersManager() {
   const [addForm, setAddForm] = useState({ name: "", email: "", username: "", password: "", role: "user", company: "", whatsapp: "", avatar_url: "" });
   const [addError, setAddError] = useState("");
   const [addLoading, setAddLoading] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", username: "", role: "user", whatsapp: "", company: "", banned: false, avatar_url: "" });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    username: "",
+    role: "user",
+    whatsapp: "",
+    company: "",
+    banned: false,
+    avatar_url: "",
+    linkedSupplierId: "",
+  });
   const [banLoading, setBanLoading] = useState<string | null>(null);
+  const [supplierOptions, setSupplierOptions] = useState<{ id: string; name: string; name_ja: string }[]>([]);
 
   useEffect(() => { fetchUsers(); }, []);
+
+  useEffect(() => {
+    authFetch("/api/suppliers")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d: unknown) => {
+        if (!Array.isArray(d)) return;
+        setSupplierOptions(
+          d.map((s: { id: string; name: string; name_ja: string }) => ({ id: s.id, name: s.name, name_ja: s.name_ja })),
+        );
+      })
+      .catch(() => setSupplierOptions([]));
+  }, []);
 
   const fetchUsers = async () => {
     try {
@@ -622,18 +645,49 @@ function UsersManager() {
   };
 
   const clearForm = () => {
-    setForm({ name: "", email: "", username: "", role: "user", whatsapp: "", company: "", banned: false, avatar_url: "" });
+    setForm({
+      name: "",
+      email: "",
+      username: "",
+      role: "user",
+      whatsapp: "",
+      company: "",
+      banned: false,
+      avatar_url: "",
+      linkedSupplierId: "",
+    });
     setEditingId(null);
   };
 
   const handleEdit = (u: any) => {
-    setForm({ name: u.name ?? "", email: u.email ?? "", username: u.username ?? "", role: u.role ?? "user", whatsapp: u.whatsapp ?? "", company: u.company ?? "", banned: !!u.banned, avatar_url: u.avatar_url ?? "" });
+    const rep = u.supplier_representatives;
+    let linkedSupplierId = "";
+    if (rep) {
+      linkedSupplierId = Array.isArray(rep)
+        ? (rep[0]?.supplier_id ?? "")
+        : (rep.supplier_id ?? "");
+    }
+    setForm({
+      name: u.name ?? "",
+      email: u.email ?? "",
+      username: u.username ?? "",
+      role: u.role ?? "user",
+      whatsapp: u.whatsapp ?? "",
+      company: u.company ?? "",
+      banned: !!u.banned,
+      avatar_url: u.avatar_url ?? "",
+      linkedSupplierId,
+    });
     setEditingId(u.id);
   };
 
   const handleSave = async () => {
     if (!editingId) return;
-    const res = await authFetch(`/api/users/${editingId}`, { method: "PUT", body: JSON.stringify(form) });
+    const payload = {
+      ...form,
+      linkedSupplierId: form.linkedSupplierId.trim() || null,
+    };
+    const res = await authFetch(`/api/users/${editingId}`, { method: "PUT", body: JSON.stringify(payload) });
     if (!res.ok) { const err = await res.json().catch(() => ({})); alert(err?.error ?? res.statusText); return; }
     clearForm(); fetchUsers();
   };
@@ -772,6 +826,22 @@ function UsersManager() {
               <select value={form.role} onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))} className="h-11 px-4 rounded-lg border bg-background text-sm">
                 <option value="user">user</option>
                 <option value="admin">admin</option>
+              </select>
+            </div>
+            <div className="sm:col-span-2 flex flex-col gap-1">
+              <label className="text-sm font-medium">{t.admin.linkedSupplierLabel}</label>
+              <p className="text-xs text-muted-foreground">{t.admin.linkedSupplierHint}</p>
+              <select
+                value={form.linkedSupplierId}
+                onChange={(e) => setForm((p) => ({ ...p, linkedSupplierId: e.target.value }))}
+                className="h-11 px-4 rounded-lg border bg-background text-sm"
+              >
+                <option value="">—</option>
+                {supplierOptions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {lang === "ja" ? (s.name_ja || s.name) : (s.name || s.name_ja)}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="flex items-center gap-2 pt-2">
@@ -2761,11 +2831,14 @@ function AnalyticsPanel() {
   const [monthlyVisits, setMonthlyVisits] = useState<{ month: string; visits: number }[]>([]);
   const [monthlySupplierViews, setMonthlySupplierViews] = useState<{ month: string; views: number }[]>([]);
   const [monthlyMarketplaceViews, setMonthlyMarketplaceViews] = useState<{ month: string; views: number }[]>([]);
+  const [monthlyWhatsappTaps, setMonthlyWhatsappTaps] = useState<{ month: string; clicks: number }[]>([]);
   const [topMarketplaceItems, setTopMarketplaceItems] = useState<{ slug: string; views: number }[]>([]);
   const [pvMonths, setPvMonths] = useState(6);
   const [svMonths, setSvMonths] = useState(6);
   const [mvMonths, setMvMonths] = useState(6);
+  const [wcMonths, setWcMonths] = useState(6);
   const [expandSupplierChart, setExpandSupplierChart] = useState(false);
+  const [expandSupplierWaChart, setExpandSupplierWaChart] = useState(false);
 
   useEffect(() => {
     authFetch("/api/admin/suppliers")
@@ -2784,6 +2857,13 @@ function AnalyticsPanel() {
     fetch(`/api/analytics/supplier-views?months=${svMonths}`)
       .then((r) => r.json()).then(setMonthlySupplierViews).catch(() => {});
   }, [svMonths]);
+
+  useEffect(() => {
+    fetch(`/api/analytics/supplier-whatsapp-click?months=${wcMonths}`)
+      .then((r) => r.json())
+      .then(setMonthlyWhatsappTaps)
+      .catch(() => {});
+  }, [wcMonths]);
 
   useEffect(() => {
     fetch(`/api/analytics/marketplace-views?months=${mvMonths}`)
@@ -2806,7 +2886,7 @@ function AnalyticsPanel() {
       <h2 className="text-xl font-bold">{t.admin.analytics.title}</h2>
 
       {/* ── KPI cards ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
         <div className="bg-card border p-5 text-center">
           <p className="text-3xl font-black text-primary">{suppliers.length}</p>
           <p className="text-xs text-muted-foreground mt-1">{t.admin.analytics.suppliersCount}</p>
@@ -2822,6 +2902,12 @@ function AnalyticsPanel() {
         <div className="bg-card border p-5 text-center">
           <p className="text-3xl font-black text-primary">{monthlyMarketplaceViews.reduce((a, d) => a + d.views, 0).toLocaleString()}</p>
           <p className="text-xs text-muted-foreground mt-1">{t.admin.analytics.totalMarketplaceViews}</p>
+        </div>
+        <div className="bg-card border p-5 text-center col-span-2 md:col-span-1 xl:col-span-1">
+          <p className="text-3xl font-black text-emerald-600">
+            {suppliers.reduce((a: number, s: any) => a + (Number(s.whatsapp_clicks) || 0), 0).toLocaleString()}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">{t.admin.analytics.totalWhatsappTaps}</p>
         </div>
       </div>
 
@@ -2877,6 +2963,33 @@ function AnalyticsPanel() {
           </ResponsiveContainer>
         </div>
         <p className="text-xs text-muted-foreground mt-2">{t.admin.analytics.monthlySupplierViewsNote}</p>
+      </div>
+
+      {/* ── Monthly WhatsApp taps (supplier listings) ── */}
+      <div className="bg-card border p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-sm">{t.admin.analytics.monthlyWhatsappTaps}</h3>
+          <div className="flex gap-1">
+            {monthOptions.map((m) => (
+              <button key={m} onClick={() => setWcMonths(m)}
+                className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${wcMonths === m ? "bg-primary text-white border-primary" : "border-border text-muted-foreground hover:bg-muted"}`}>
+                {m}{lang === "ja" ? "ヶ月" : "mo"}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="h-52">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={monthlyWhatsappTaps.map((d) => ({ ...d, month: formatMonth(d.month) }))} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+              <Tooltip formatter={(v: number) => [v.toLocaleString(), t.admin.analytics.whatsappTapsLabel]} />
+              <Line type="monotone" dataKey="clicks" stroke="#059669" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">{t.admin.analytics.monthlyWhatsappTapsNote}</p>
       </div>
 
       {/* ── Monthly marketplace item views chart ── */}
@@ -3023,9 +3136,73 @@ function AnalyticsPanel() {
             <div key={s.id} className="flex items-center gap-3 bg-card border p-3">
               <img src={s.logo} alt="" className="w-10 h-10 rounded-lg object-cover" />
               <div className="flex-1"><p className="text-sm font-semibold">{lang === "ja" ? (s.name_ja || s.name) : (s.name || s.name_ja)}</p></div>
-              <p className="text-sm font-bold text-primary">{(s.views || 0).toLocaleString()} {t.admin.analytics.viewsLabel}</p>
+              <div className="flex flex-col items-end text-right gap-0.5 shrink-0">
+                <p className="text-sm font-bold text-primary">{(s.views || 0).toLocaleString()} {t.admin.analytics.viewsLabel}</p>
+                <p className="text-xs text-muted-foreground font-medium">
+                  {(Number(s.whatsapp_clicks) || 0).toLocaleString()} {t.admin.analytics.whatsappTapsShort}
+                </p>
+              </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* ── Top suppliers by WhatsApp taps (cumulative) ── */}
+      <div>
+        <div className="flex flex-wrap items-end justify-between gap-2 mb-1">
+          <h3 className="font-bold text-sm">{t.admin.analytics.topByWhatsapp}</h3>
+          <button
+            type="button"
+            onClick={() => setExpandSupplierWaChart((v) => !v)}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            {expandSupplierWaChart
+              ? lang === "ja"
+                ? "グラフを上位5社のみ表示"
+                : "Show top 5 in chart"
+              : lang === "ja"
+                ? "全社をグラフに表示"
+                : "Show all suppliers in chart"}
+          </button>
+        </div>
+        <p className="text-xs text-muted-foreground mb-3">{t.admin.analytics.whatsappCumulativeNote}</p>
+        <div className={`w-full max-w-xl mb-4 ${expandSupplierWaChart ? "h-[min(70vh,28rem)]" : "h-52"}`}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              layout="vertical"
+              data={[...suppliers]
+                .sort((a: any, b: any) => (Number(b.whatsapp_clicks) || 0) - (Number(a.whatsapp_clicks) || 0))
+                .slice(0, expandSupplierWaChart ? undefined : 5)
+                .map((s: any) => ({
+                  name: lang === "ja" ? (s.name_ja || s.name) : (s.name || s.name_ja),
+                  taps: Number(s.whatsapp_clicks) || 0,
+                }))}
+              margin={{ top: 8, right: 24, left: 8, bottom: 8 }}
+            >
+              <XAxis type="number" tick={{ fontSize: 11 }} />
+              <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 10 }} />
+              <Tooltip formatter={(value: number) => [value.toLocaleString(), t.admin.analytics.whatsappTapsLabel]} />
+              <Bar dataKey="taps" fill="#059669" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
+          {[...suppliers]
+            .sort((a: any, b: any) => (Number(b.whatsapp_clicks) || 0) - (Number(a.whatsapp_clicks) || 0))
+            .map((s: any) => (
+              <div key={s.id} className="flex items-center gap-3 bg-card border p-3">
+                <img src={s.logo} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                <div className="flex-1"><p className="text-sm font-semibold">{lang === "ja" ? (s.name_ja || s.name) : (s.name || s.name_ja)}</p></div>
+                <div className="flex flex-col items-end text-right gap-0.5 shrink-0">
+                  <p className="text-sm font-bold text-emerald-600">
+                    {(Number(s.whatsapp_clicks) || 0).toLocaleString()} {t.admin.analytics.whatsappTapsLabel}
+                  </p>
+                  <p className="text-xs text-muted-foreground font-medium">
+                    {(s.views || 0).toLocaleString()} {t.admin.analytics.viewsLabel}
+                  </p>
+                </div>
+              </div>
+            ))}
         </div>
       </div>
     </div>

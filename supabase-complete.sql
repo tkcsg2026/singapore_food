@@ -176,13 +176,33 @@ CREATE TABLE IF NOT EXISTS public.supplier_view_logs (
 CREATE INDEX IF NOT EXISTS supplier_view_logs_supplier_id_idx  ON public.supplier_view_logs (supplier_id);
 CREATE INDEX IF NOT EXISTS supplier_view_logs_viewed_at_idx    ON public.supplier_view_logs (viewed_at);
 
+-- WhatsApp tap logs (supplier profile / card — monthly analytics)
+ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS whatsapp_clicks integer DEFAULT 0;
+CREATE TABLE IF NOT EXISTS public.whatsapp_click_logs (
+  id           bigserial   PRIMARY KEY,
+  supplier_id  uuid        REFERENCES public.suppliers(id) ON DELETE CASCADE NOT NULL,
+  clicked_at   timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS whatsapp_click_logs_supplier_id_idx ON public.whatsapp_click_logs (supplier_id);
+CREATE INDEX IF NOT EXISTS whatsapp_click_logs_clicked_at_idx   ON public.whatsapp_click_logs (clicked_at);
+
+-- Links a registered user account to a supplier listing (for rep dashboard analytics)
+CREATE TABLE IF NOT EXISTS public.supplier_representatives (
+  user_id      uuid        PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
+  supplier_id  uuid        NOT NULL REFERENCES public.suppliers(id) ON DELETE CASCADE,
+  created_at   timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS supplier_representatives_supplier_id_idx ON public.supplier_representatives (supplier_id);
+
 -- ──────────────────────────────────────────────────────────────
 -- 2. ROW LEVEL SECURITY — enable on every table
 -- ──────────────────────────────────────────────────────────────
 ALTER TABLE public.profiles          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.supplier_representatives ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.suppliers         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.page_views           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.supplier_view_logs   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.whatsapp_click_logs ENABLE ROW LEVEL SECURITY;
 -- Add extra product detail columns (safe to run multiple times)
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS name_en           text DEFAULT '';
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS country_of_origin text DEFAULT '';
@@ -213,6 +233,18 @@ DROP POLICY IF EXISTS "Users update own" ON public.profiles;
 CREATE POLICY "Public read"      ON public.profiles FOR SELECT USING (true);
 CREATE POLICY "Users insert own" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users update own" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+
+-- supplier_representatives (which user may manage which supplier listing)
+DROP POLICY IF EXISTS "Rep read own" ON public.supplier_representatives;
+DROP POLICY IF EXISTS "Admin full rep" ON public.supplier_representatives;
+CREATE POLICY "Rep read own" ON public.supplier_representatives FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Admin full rep" ON public.supplier_representatives FOR ALL
+USING (
+  EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+)
+WITH CHECK (
+  EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+);
 
 -- suppliers
 DROP POLICY IF EXISTS "Public read" ON public.suppliers;
@@ -302,6 +334,14 @@ DROP POLICY IF EXISTS "Anon insert" ON public.supplier_view_logs;
 DROP POLICY IF EXISTS "Admin read"  ON public.supplier_view_logs;
 CREATE POLICY "Anon insert" ON public.supplier_view_logs FOR INSERT WITH CHECK (true);
 CREATE POLICY "Admin read"  ON public.supplier_view_logs FOR SELECT USING (
+  EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+-- whatsapp_click_logs: anyone can insert (count taps), only admin can read
+DROP POLICY IF EXISTS "Anon insert whatsapp clicks" ON public.whatsapp_click_logs;
+DROP POLICY IF EXISTS "Admin read whatsapp clicks" ON public.whatsapp_click_logs;
+CREATE POLICY "Anon insert whatsapp clicks" ON public.whatsapp_click_logs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Admin read whatsapp clicks" ON public.whatsapp_click_logs FOR SELECT USING (
   EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
 );
 
@@ -1274,6 +1314,8 @@ SELECT table_name, rows FROM (
   SELECT 'reports',                             COUNT(*)         FROM public.reports                UNION ALL
   SELECT 'page_views',                          COUNT(*)         FROM public.page_views             UNION ALL
   SELECT 'supplier_view_logs',                  COUNT(*)         FROM public.supplier_view_logs     UNION ALL
+  SELECT 'whatsapp_click_logs',                 COUNT(*)         FROM public.whatsapp_click_logs    UNION ALL
+  SELECT 'supplier_representatives',            COUNT(*)         FROM public.supplier_representatives UNION ALL
   SELECT 'audit_logs',                          COUNT(*)         FROM public.audit_logs             UNION ALL
   SELECT 'job_notices',                         COUNT(*)         FROM public.job_notices            UNION ALL
   SELECT 'video_transcode_jobs',                COUNT(*)         FROM public.video_transcode_jobs   UNION ALL

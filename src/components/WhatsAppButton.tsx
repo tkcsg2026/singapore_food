@@ -6,6 +6,8 @@ interface WhatsAppButtonProps {
   className?: string;
   size?: "sm" | "default" | "lg";
   fullWidth?: boolean;
+  /** When set, records one analytics row + increments counter for this supplier (fire-and-forget). */
+  trackSupplierId?: string;
 }
 
 const sizeClasses = {
@@ -14,15 +16,33 @@ const sizeClasses = {
   lg: "h-11 px-8 text-base",
 };
 
-export function WhatsAppButton({ phone, message = '', className = '', size = 'default', fullWidth = false }: WhatsAppButtonProps) {
+export function WhatsAppButton({
+  phone,
+  message = "",
+  className = "",
+  size = "default",
+  fullWidth = false,
+  trackSupplierId,
+}: WhatsAppButtonProps) {
   const encodedMessage = encodeURIComponent(message);
-  const url = `https://wa.me/${phone}${message ? `?text=${encodedMessage}` : ''}`;
+  const url = `https://wa.me/${phone}${message ? `?text=${encodedMessage}` : ""}`;
+
+  const onClick = () => {
+    if (!trackSupplierId) return;
+    void fetch("/api/analytics/supplier-whatsapp-click", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ supplierId: trackSupplierId }),
+      keepalive: true,
+    }).catch(() => {});
+  };
 
   return (
     <a
       href={url}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={onClick}
       className={`group relative flex items-center justify-center gap-2 overflow-hidden rounded-xl font-semibold text-whatsapp-foreground whatsapp-gradient border-0 hover:opacity-95 hover:translate-y-0 hover:scale-100 transition-all duration-200 min-h-[44px] min-w-[44px] ${sizeClasses[size]} ${fullWidth ? "w-full" : ""} ${className}`}
       style={{ WebkitTapHighlightColor: "transparent" }}
     >

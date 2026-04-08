@@ -107,6 +107,8 @@ export interface SupplierRow {
   description_ja: string;
   whatsapp: string;
   views: number;
+  /** Cumulative WhatsApp button taps (supplier card / profile). */
+  whatsapp_clicks?: number;
   certifications: string[];
   about: string;
   about_ja: string;

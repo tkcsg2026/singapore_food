@@ -6,6 +6,9 @@ import {
 } from "@/lib/supabase-server";
 import { sendAdminActionEmail } from "@/lib/email";
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 /** GET /api/users/[id] — Fetch a single user (admin only). */
 export async function GET(
   req: NextRequest,
@@ -18,14 +21,24 @@ export async function GET(
   const admin = createAdminSupabaseClient();
   if (!admin) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
 
-  const { data, error } = await admin
+  const { data: profile, error } = await admin
     .from("profiles")
-    .select("*")
+    .select("id, email, name, username, avatar_url, role, whatsapp, company, created_at, banned")
     .eq("id", id)
     .single();
 
-  if (error || !data) return NextResponse.json({ error: "User not found" }, { status: 404 });
-  return NextResponse.json(data);
+  if (error || !profile) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+  const { data: rep } = await admin
+    .from("supplier_representatives")
+    .select("supplier_id")
+    .eq("user_id", id)
+    .maybeSingle();
+
+  return NextResponse.json({
+    ...profile,
+    supplier_representatives: rep?.supplier_id ? { supplier_id: rep.supplier_id } : null,
+  });
 }
 
 /** PUT /api/users/[id] — Update a user (admin only). */
@@ -41,6 +54,24 @@ export async function PUT(
   if (!admin) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
 
   const body = await req.json();
+
+  if (body.linkedSupplierId !== undefined) {
+    const v = body.linkedSupplierId;
+    if (v === null || v === "") {
+      await admin.from("supplier_representatives").delete().eq("user_id", id);
+    } else if (typeof v === "string" && UUID_RE.test(v.trim())) {
+      const sid = v.trim();
+      const { data: sup } = await admin.from("suppliers").select("id").eq("id", sid).maybeSingle();
+      if (!sup) return NextResponse.json({ error: "Invalid supplier" }, { status: 400 });
+      const { error: repErr } = await admin
+        .from("supplier_representatives")
+        .upsert({ user_id: id, supplier_id: sid }, { onConflict: "user_id" });
+      if (repErr) return NextResponse.json({ error: repErr.message }, { status: 500 });
+    } else {
+      return NextResponse.json({ error: "Invalid linkedSupplierId" }, { status: 400 });
+    }
+  }
+
   const allowed = ["name", "username", "email", "whatsapp", "company", "role", "banned", "avatar_url"];
   const payload: Record<string, unknown> = {};
   for (const k of allowed) {
@@ -51,21 +82,37 @@ export async function PUT(
     await admin.auth.admin.updateUserById(id, { email: body.email.trim() });
   }
 
-  const { data, error } = await admin
+  if (Object.keys(payload).length > 0) {
+    const { error: upErr } = await admin.from("profiles").update(payload).eq("id", id);
+    if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
+  }
+
+  const { data: profile, error } = await admin
     .from("profiles")
-    .update(payload)
+    .select("id, email, name, username, avatar_url, role, whatsapp, company, created_at, banned")
     .eq("id", id)
-    .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error || !profile) return NextResponse.json({ error: error?.message ?? "User not found" }, { status: 500 });
+
+  const { data: repRow } = await admin
+    .from("supplier_representatives")
+    .select("supplier_id")
+    .eq("user_id", id)
+    .maybeSingle();
+
+  const data = {
+    ...profile,
+    supplier_representatives: repRow?.supplier_id ? { supplier_id: repRow.supplier_id } : null,
+  };
 
   // Determine audit action label
   let action = "update_user";
   if (payload.banned === true)  action = "ban_user";
   if (payload.banned === false) action = "unban_user";
 
-  const changedFields = Object.keys(payload).join(", ");
+  const extra = body.linkedSupplierId !== undefined ? ", linkedSupplierId" : "";
+  const changedFields = Object.keys(payload).join(", ") + extra;
   const nameEmail = (data as any).name
     ? `${(data as any).name}${(data as any).email ? ` (${(data as any).email})` : ""}`
     : id;
@@ -76,7 +123,7 @@ export async function PUT(
     targetId: id,
     detail: action === "ban_user" || action === "unban_user"
       ? nameEmail
-      : `${nameEmail} — fields: ${changedFields}`,
+      : `${nameEmail} — fields: ${changedFields || "(link only)"}`,
   });
 
   if ((action === "ban_user" || action === "unban_user") && (data as any).email) {

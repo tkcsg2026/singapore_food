@@ -175,6 +175,7 @@ export function SupplierCard({ supplier, variant = "grid", rank, tagDisplayMaps,
               message={lang === "ja" ? `${displayName}${t.supplierCard.inquire}` : `I'd like to inquire about ${displayName}.`}
               size="sm"
               className="!h-9 !min-h-9 flex-shrink-0 [&>span]:truncate"
+              trackSupplierId={String(supplier.id)}
             />
           ) : (
             <button
