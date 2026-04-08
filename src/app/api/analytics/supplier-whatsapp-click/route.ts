@@ -6,40 +6,49 @@ const UUID_RE =
 
 /**
  * POST /api/analytics/supplier-whatsapp-click
- * Body: { supplierId: string } — records one WhatsApp tap for that supplier profile.
+ * Body: { supplierId?: string, supplierSlug?: string }
+ * Records one WhatsApp tap for that supplier profile.
  */
 export async function POST(req: NextRequest) {
-  let body: { supplierId?: string };
+  let body: { supplierId?: string; supplierSlug?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  const supplierId = typeof body.supplierId === "string" ? body.supplierId.trim() : "";
-  if (!supplierId || !UUID_RE.test(supplierId)) {
-    return NextResponse.json({ error: "Invalid supplierId" }, { status: 400 });
-  }
+  const supplierIdInput = typeof body.supplierId === "string" ? body.supplierId.trim() : "";
+  const supplierSlug = typeof body.supplierSlug === "string" ? body.supplierSlug.trim() : "";
+  const hasUuid = supplierIdInput && UUID_RE.test(supplierIdInput);
+  if (!hasUuid && !supplierSlug) return NextResponse.json({ error: "Missing supplier identity" }, { status: 400 });
 
   const admin = createAdminSupabaseClient();
   if (!admin) return NextResponse.json({ ok: false }, { status: 503 });
 
-  const { data: row, error: selErr } = await admin
-    .from("suppliers")
-    .select("id, whatsapp_clicks")
-    .eq("id", supplierId)
-    .maybeSingle();
+  let supplierQuery = admin.from("suppliers").select("id").limit(1);
+  supplierQuery = hasUuid ? supplierQuery.eq("id", supplierIdInput) : supplierQuery.eq("slug", supplierSlug);
+  const { data: row, error: selErr } = await supplierQuery.maybeSingle();
 
   if (selErr || !row) {
     return NextResponse.json({ error: "Supplier not found" }, { status: 404 });
   }
+  const supplierId = String(row.id);
 
   const { error: logErr } = await admin.from("whatsapp_click_logs").insert({ supplier_id: supplierId });
   if (logErr) {
     return NextResponse.json({ error: logErr.message }, { status: 500 });
   }
 
-  const next = (Number(row.whatsapp_clicks) || 0) + 1;
-  const { error: upErr } = await admin.from("suppliers").update({ whatsapp_clicks: next }).eq("id", supplierId);
+  // Keep denormalized counter in sync with the log table.
+  const { count, error: cntErr } = await admin
+    .from("whatsapp_click_logs")
+    .select("id", { count: "exact", head: true })
+    .eq("supplier_id", supplierId);
+  if (cntErr) return NextResponse.json({ error: cntErr.message }, { status: 500 });
+
+  const { error: upErr } = await admin
+    .from("suppliers")
+    .update({ whatsapp_clicks: count ?? 0 })
+    .eq("id", supplierId);
   if (upErr) {
     return NextResponse.json({ error: upErr.message }, { status: 500 });
   }

@@ -443,7 +443,7 @@ const SupplierDetail = () => {
             </div>
             <div className="hidden sm:block">
               {isLoggedIn ? (
-                <WhatsAppButton phone={supplier.whatsapp} message={contactMsg} size="lg" trackSupplierId={supplier.id} />
+                <WhatsAppButton phone={supplier.whatsapp} message={contactMsg} size="lg" trackSupplierId={supplier.id} trackSupplierSlug={supplier.slug} />
               ) : (
                 <button onClick={() => requireLogin()} className="group relative flex items-center justify-center gap-2 overflow-hidden rounded-xl font-semibold text-whatsapp-foreground whatsapp-gradient border-0 hover:opacity-95 transition-all duration-200 min-h-[44px] h-10 px-4 py-2">
                   <MessageCircle className="h-4 w-4 shrink-0" /><span>WhatsApp</span>
@@ -549,7 +549,7 @@ const SupplierDetail = () => {
                 </div>
               </div>
               {isLoggedIn ? (
-                <WhatsAppButton phone={supplier.whatsapp} message={contactMsg} fullWidth size="lg" trackSupplierId={supplier.id} />
+                <WhatsAppButton phone={supplier.whatsapp} message={contactMsg} fullWidth size="lg" trackSupplierId={supplier.id} trackSupplierSlug={supplier.slug} />
               ) : (
                 <button onClick={() => requireLogin()} className="group relative flex items-center justify-center gap-2 overflow-hidden rounded-xl font-semibold text-whatsapp-foreground whatsapp-gradient border-0 hover:opacity-95 transition-all duration-200 min-h-[44px] w-full h-11 px-8 text-base">
                   <MessageCircle className="h-4 w-4 shrink-0" /><span>WhatsApp</span>
@@ -598,7 +598,7 @@ const SupplierDetail = () => {
                 </div>
                 <div className="mt-4">
                   {isLoggedIn ? (
-                    <WhatsAppButton phone={supplier.whatsapp} message={lang === "ja" ? `${product.name}について問い合わせです。` : `I'd like to inquire about ${product.name}.`} fullWidth size="lg" trackSupplierId={supplier.id} />
+                    <WhatsAppButton phone={supplier.whatsapp} message={lang === "ja" ? `${product.name}について問い合わせです。` : `I'd like to inquire about ${product.name}.`} fullWidth size="lg" trackSupplierId={supplier.id} trackSupplierSlug={supplier.slug} />
                   ) : (
                     <button onClick={() => requireLogin()} className="group relative flex items-center justify-center gap-2 overflow-hidden rounded-xl font-semibold text-whatsapp-foreground whatsapp-gradient border-0 hover:opacity-95 transition-all duration-200 min-h-[44px] w-full h-11 px-8 text-base">
                       <MessageCircle className="h-4 w-4 shrink-0" /><span>WhatsApp</span>
@@ -615,7 +615,7 @@ const SupplierDetail = () => {
       </div>
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-md border-t sm:hidden z-40">
         {isLoggedIn ? (
-          <WhatsAppButton phone={supplier.whatsapp} message={contactMsg} fullWidth size="lg" trackSupplierId={supplier.id} />
+          <WhatsAppButton phone={supplier.whatsapp} message={contactMsg} fullWidth size="lg" trackSupplierId={supplier.id} trackSupplierSlug={supplier.slug} />
         ) : (
           <button onClick={() => requireLogin()} className="group relative flex items-center justify-center gap-2 overflow-hidden rounded-xl font-semibold text-whatsapp-foreground whatsapp-gradient border-0 hover:opacity-95 transition-all duration-200 min-h-[44px] w-full h-11 px-8 text-base">
             <MessageCircle className="h-4 w-4 shrink-0" /><span>WhatsApp</span>

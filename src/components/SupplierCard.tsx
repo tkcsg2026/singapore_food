@@ -176,6 +176,7 @@ export function SupplierCard({ supplier, variant = "grid", rank, tagDisplayMaps,
               size="sm"
               className="!h-9 !min-h-9 flex-shrink-0 [&>span]:truncate"
               trackSupplierId={String(supplier.id)}
+              trackSupplierSlug={supplier.slug}
             />
           ) : (
             <button

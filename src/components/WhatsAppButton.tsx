@@ -8,6 +8,8 @@ interface WhatsAppButtonProps {
   fullWidth?: boolean;
   /** When set, records one analytics row + increments counter for this supplier (fire-and-forget). */
   trackSupplierId?: string;
+  /** Optional fallback when supplier id is not a UUID (e.g. mock data). */
+  trackSupplierSlug?: string;
 }
 
 const sizeClasses = {
@@ -23,16 +25,29 @@ export function WhatsAppButton({
   size = "default",
   fullWidth = false,
   trackSupplierId,
+  trackSupplierSlug,
 }: WhatsAppButtonProps) {
   const encodedMessage = encodeURIComponent(message);
   const url = `https://wa.me/${phone}${message ? `?text=${encodedMessage}` : ""}`;
 
   const onClick = () => {
-    if (!trackSupplierId) return;
+    if (!trackSupplierId && !trackSupplierSlug) return;
+    const payload = JSON.stringify({
+      supplierId: trackSupplierId,
+      supplierSlug: trackSupplierSlug,
+    });
+
+    // sendBeacon survives tab/app handoff better on mobile.
+    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+      const blob = new Blob([payload], { type: "application/json" });
+      const ok = navigator.sendBeacon("/api/analytics/supplier-whatsapp-click", blob);
+      if (ok) return;
+    }
+
     void fetch("/api/analytics/supplier-whatsapp-click", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ supplierId: trackSupplierId }),
+      body: payload,
       keepalive: true,
     }).catch(() => {});
   };

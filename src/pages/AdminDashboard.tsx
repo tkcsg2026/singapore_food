@@ -2833,7 +2833,7 @@ function AnalyticsPanel() {
   const [monthlyMarketplaceViews, setMonthlyMarketplaceViews] = useState<{ month: string; views: number }[]>([]);
   const [monthlyWhatsappTaps, setMonthlyWhatsappTaps] = useState<{ month: string; clicks: number }[]>([]);
   const [monthlySupplierReportRows, setMonthlySupplierReportRows] = useState<
-    { supplier_id: string; slug: string; name: string; name_ja: string; views: number }[]
+    { supplier_id: string; slug: string; name: string; name_ja: string; views: number; whatsapp: number }[]
   >([]);
   const [topMarketplaceItems, setTopMarketplaceItems] = useState<{ slug: string; views: number }[]>([]);
   const [pvMonths, setPvMonths] = useState(6);
@@ -2907,9 +2907,34 @@ function AnalyticsPanel() {
   }, []);
 
   const monthOptions = [3, 6, 12];
+  const monthlyReportTotals = monthlySupplierReportRows.reduce(
+    (acc, row: any) => ({
+      views: acc.views + (row.views || 0),
+      whatsapp: acc.whatsapp + (Number(row.whatsapp) || 0),
+    }),
+    { views: 0, whatsapp: 0 },
+  );
   const formatMonth = (key: string) => {
     const [y, m] = key.split("-");
     return lang === "ja" ? `${y}年${parseInt(m)}月` : new Date(parseInt(y), parseInt(m) - 1).toLocaleString("en", { month: "short", year: "2-digit" });
+  };
+  const exportMonthlyReportCsv = () => {
+    const header = ["month", "supplier_slug", "supplier_name", "views", "whatsapp_taps"];
+    const lines = monthlySupplierReportRows.map((row: any) => {
+      const displayName = lang === "ja" ? (row.name_ja || row.name) : (row.name || row.name_ja);
+      const safeName = String(displayName ?? "").replaceAll("\"", "\"\"");
+      return [reportMonth, row.slug, `"${safeName}"`, String(row.views ?? 0), String(Number(row.whatsapp) || 0)].join(",");
+    });
+    const csv = [header.join(","), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `supplier-monthly-report-${reportMonth}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -3008,6 +3033,9 @@ function AnalyticsPanel() {
               onChange={(e) => setReportMonth(e.target.value)}
               className="h-9 px-3 rounded-lg border bg-background text-sm"
             />
+            <Button type="button" variant="outline" size="sm" className="rounded-lg" onClick={exportMonthlyReportCsv}>
+              {t.admin.analytics.exportCsv}
+            </Button>
           </div>
         </div>
         <p className="text-xs text-muted-foreground mb-3">{t.admin.analytics.supplierMonthlyReportNote}</p>
@@ -3017,10 +3045,11 @@ function AnalyticsPanel() {
               <tr className="bg-muted/50 border-b">
                 <th className="text-left py-2.5 px-3 font-semibold">{t.admin.analytics.supplierLabel}</th>
                 <th className="text-right py-2.5 px-3 font-semibold">{t.admin.analytics.monthlyViewsLabel}</th>
+                <th className="text-right py-2.5 px-3 font-semibold">{t.admin.analytics.monthlyWhatsappLabel}</th>
               </tr>
             </thead>
             <tbody>
-              {monthlySupplierReportRows.map((row) => (
+              {monthlySupplierReportRows.map((row: any) => (
                 <tr key={row.supplier_id} className="border-b last:border-0">
                   <td className="py-2.5 px-3">
                     <a href={`/suppliers/${row.slug}`} className="hover:underline">
@@ -3030,8 +3059,16 @@ function AnalyticsPanel() {
                   <td className="py-2.5 px-3 text-right font-semibold tabular-nums">
                     {row.views.toLocaleString()}
                   </td>
+                  <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-emerald-700">
+                    {(Number(row.whatsapp) || 0).toLocaleString()}
+                  </td>
                 </tr>
               ))}
+              <tr className="bg-muted/30 border-t">
+                <td className="py-2.5 px-3 font-semibold">TOTAL</td>
+                <td className="py-2.5 px-3 text-right font-bold tabular-nums">{monthlyReportTotals.views.toLocaleString()}</td>
+                <td className="py-2.5 px-3 text-right font-bold tabular-nums text-emerald-700">{monthlyReportTotals.whatsapp.toLocaleString()}</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -3054,8 +3091,8 @@ function AnalyticsPanel() {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={monthlyWhatsappTaps.map((d) => ({ ...d, month: formatMonth(d.month) }))} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+              <XAxis dataKey="month" tick={{ fontSize: 10 }} label={{ value: t.admin.analytics.xAxisMonth, position: "insideBottom", offset: -4 }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 10 }} label={{ value: t.admin.analytics.yAxisCount, angle: -90, position: "insideLeft" }} />
               <Tooltip formatter={(v: number) => [v.toLocaleString(), t.admin.analytics.whatsappTapsLabel]} />
               <Line type="monotone" dataKey="clicks" stroke="#059669" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
             </LineChart>
