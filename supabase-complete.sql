@@ -345,6 +345,33 @@ CREATE POLICY "Admin read whatsapp clicks" ON public.whatsapp_click_logs FOR SEL
   EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
 );
 
+-- Bump suppliers.whatsapp_clicks on each log row (SECURITY DEFINER bypasses RLS).
+-- Without this, anon/service routes that only have the anon key cannot UPDATE suppliers
+-- or SELECT-count whatsapp_click_logs, so the denormalized counter never updates.
+CREATE OR REPLACE FUNCTION public.bump_supplier_whatsapp_clicks()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  UPDATE public.suppliers
+  SET whatsapp_clicks = COALESCE(whatsapp_clicks, 0) + 1
+  WHERE id = NEW.supplier_id;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS whatsapp_click_logs_bump_whatsapp ON public.whatsapp_click_logs;
+CREATE TRIGGER whatsapp_click_logs_bump_whatsapp
+  AFTER INSERT ON public.whatsapp_click_logs
+  FOR EACH ROW
+  EXECUTE FUNCTION public.bump_supplier_whatsapp_clicks();
+
+-- One-time repair (run in SQL editor if counts were stale before the trigger existed):
+-- UPDATE public.suppliers s
+-- SET whatsapp_clicks = (SELECT COUNT(*)::int FROM public.whatsapp_click_logs w WHERE w.supplier_id = s.id);
+
 -- ──────────────────────────────────────────────────────────────
 -- 4. FUNCTION + TRIGGER — auto-create profile on signup
 -- ──────────────────────────────────────────────────────────────

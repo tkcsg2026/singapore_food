@@ -38,20 +38,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: logErr.message }, { status: 500 });
   }
 
-  // Keep denormalized counter in sync with the log table.
-  const { count, error: cntErr } = await admin
-    .from("whatsapp_click_logs")
-    .select("id", { count: "exact", head: true })
-    .eq("supplier_id", supplierId);
-  if (cntErr) return NextResponse.json({ error: cntErr.message }, { status: 500 });
-
-  const { error: upErr } = await admin
-    .from("suppliers")
-    .update({ whatsapp_clicks: count ?? 0 })
-    .eq("id", supplierId);
-  if (upErr) {
-    return NextResponse.json({ error: upErr.message }, { status: 500 });
-  }
+  // suppliers.whatsapp_clicks is incremented by DB trigger `whatsapp_click_logs_bump_whatsapp`
+  // (SECURITY DEFINER). Count + UPDATE here required the service role: RLS only allows admins
+  // to SELECT whatsapp_click_logs and UPDATE suppliers, so anon key could not refresh the counter.
 
   return NextResponse.json({ ok: true });
 }
