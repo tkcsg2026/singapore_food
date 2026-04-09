@@ -18,6 +18,8 @@ const sizeClasses = {
   lg: "h-11 px-8 text-base",
 };
 
+let lastTrackedAt = 0;
+
 export function WhatsAppButton({
   phone,
   message = "",
@@ -29,17 +31,23 @@ export function WhatsAppButton({
 }: WhatsAppButtonProps) {
   const encodedMessage = encodeURIComponent(message);
   const url = `https://wa.me/${phone}${message ? `?text=${encodedMessage}` : ""}`;
-
-  const onClick = () => {
+  const trackTap = () => {
     if (!trackSupplierId && !trackSupplierSlug) return;
+
+    const now = Date.now();
+    if (now - lastTrackedAt < 800) return;
+    lastTrackedAt = now;
+
     const payload = JSON.stringify({
       supplierId: trackSupplierId,
       supplierSlug: trackSupplierSlug,
     });
 
-    // sendBeacon survives tab/app handoff better on mobile.
+    // Use text/plain — a CORS-safelisted type — so sendBeacon never silently drops the request.
+    // application/json is NOT safelisted and can be rejected under sendBeacon's no-cors mode
+    // on certain mobile browsers (especially iOS Safari), causing silent tracking failures.
     if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
-      const blob = new Blob([payload], { type: "application/json" });
+      const blob = new Blob([payload], { type: "text/plain" });
       const ok = navigator.sendBeacon("/api/analytics/supplier-whatsapp-click", blob);
       if (ok) return;
     }
@@ -57,7 +65,8 @@ export function WhatsAppButton({
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={onClick}
+      onPointerDown={trackTap}
+      onClick={trackTap}
       className={`group relative flex items-center justify-center gap-2 overflow-hidden rounded-xl font-semibold text-whatsapp-foreground whatsapp-gradient border-0 hover:opacity-95 hover:translate-y-0 hover:scale-100 transition-all duration-200 min-h-[44px] min-w-[44px] ${sizeClasses[size]} ${fullWidth ? "w-full" : ""} ${className}`}
       style={{ WebkitTapHighlightColor: "transparent" }}
     >

@@ -11,10 +11,37 @@ const UUID_RE =
  */
 export async function POST(req: NextRequest) {
   let body: { supplierId?: string; supplierSlug?: string };
+  const contentType = (req.headers.get("content-type") ?? "").toLowerCase();
   try {
-    body = await req.json();
+    if (contentType.includes("application/json") || contentType.includes("text/plain")) {
+      const text = await req.text();
+      body = JSON.parse(text);
+    } else if (
+      contentType.includes("application/x-www-form-urlencoded") ||
+      contentType.includes("multipart/form-data")
+    ) {
+      const form = await req.formData();
+      body = {
+        supplierId: typeof form.get("supplierId") === "string" ? (form.get("supplierId") as string) : undefined,
+        supplierSlug: typeof form.get("supplierSlug") === "string" ? (form.get("supplierSlug") as string) : undefined,
+      };
+    } else {
+      const text = await req.text();
+      try {
+        body = JSON.parse(text);
+      } catch {
+        const params = new URLSearchParams(text);
+        const supplierId = params.get("supplierId");
+        const supplierSlug = params.get("supplierSlug");
+        if (!supplierId && !supplierSlug) throw new Error("Invalid request body");
+        body = {
+          supplierId: supplierId ?? undefined,
+          supplierSlug: supplierSlug ?? undefined,
+        };
+      }
+    }
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
   const supplierIdInput = typeof body.supplierId === "string" ? body.supplierId.trim() : "";
   const supplierSlug = typeof body.supplierSlug === "string" ? body.supplierSlug.trim() : "";
