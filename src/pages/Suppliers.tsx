@@ -10,7 +10,7 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { sortSuppliersByPlan } from "@/lib/plans";
 import type { PlanCounts } from "@/lib/plans";
 import { buildSupplierTagDisplayMaps, getCategoryDisplayName } from "@/lib/category-display";
-import { SUPPLIER_CATEGORY_GROUPS, LEGACY_CATEGORY_MAP, getGroupLabel } from "@/lib/category-groups";
+import { buildDynamicGroups, LEGACY_CATEGORY_MAP, getGroupLabel } from "@/lib/category-groups";
 import type { SupplierRow, CategoryRow } from "@/types/database";
 
 const Suppliers = () => {
@@ -45,8 +45,13 @@ const Suppliers = () => {
   const { data: planCountsData } = useFetch<PlanCounts>("/api/suppliers/plan-counts");
   const planCounts: PlanCounts = planCountsData ?? { premium: 0, standard: 0, basic: 0 };
   const { data: categories } = useFetch<CategoryRow[]>("/api/categories?type=supplier");
+  const { data: groupRows } = useFetch<CategoryRow[]>("/api/categories?type=supplier-group");
   const { data: tagCategories } = useFetch<(CategoryRow & { type: "tag"; label_ja?: string | null })[]>("/api/categories?type=tag");
 
+  const categoryGroups = useMemo(
+    () => buildDynamicGroups(groupRows || [], categories || []),
+    [groupRows, categories]
+  );
   const tagDisplayMaps = useMemo(() => buildSupplierTagDisplayMaps(tagCategories || []), [tagCategories]);
 
   const areas = [
@@ -126,7 +131,7 @@ const Suppliers = () => {
       <div>
         <h3 className="font-bold text-sm mb-3">{t.suppliers.category}</h3>
         <div className="space-y-4">
-          {SUPPLIER_CATEGORY_GROUPS.map((group) => {
+          {categoryGroups.map((group) => {
             const groupCats = group.children
               .map((val) => (categories || []).find((c) => c.value === val))
               .filter(Boolean) as CategoryRow[];

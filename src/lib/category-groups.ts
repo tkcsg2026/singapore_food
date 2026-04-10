@@ -1,7 +1,14 @@
 /**
  * Supplier category group definitions.
- * Each sub-category belongs to exactly one parent group.
+ * Groups are stored in the DB (type = 'supplier-group') and each supplier
+ * sub-category has a `parent_group` column linking it to a group's value.
+ *
+ * This module provides:
+ *  - A hardcoded fallback for when the DB is unavailable or groups haven't been seeded yet.
+ *  - A `buildDynamicGroups()` helper that constructs groups from fetched CategoryRow data.
  */
+
+import type { CategoryRow } from "@/types/database";
 
 export interface CategoryGroup {
   key: string;
@@ -11,7 +18,8 @@ export interface CategoryGroup {
   children: string[];
 }
 
-export const SUPPLIER_CATEGORY_GROUPS: CategoryGroup[] = [
+/** Hardcoded fallback — used when DB data is unavailable */
+export const FALLBACK_CATEGORY_GROUPS: CategoryGroup[] = [
   {
     key: "food-supplies",
     labelEn: "Food & Supplies",
@@ -38,6 +46,37 @@ export const SUPPLIER_CATEGORY_GROUPS: CategoryGroup[] = [
   },
 ];
 
+/**
+ * Build category groups dynamically from DB rows.
+ * @param groupRows  - rows with type = 'supplier-group'
+ * @param supplierRows - rows with type = 'supplier' (each has parent_group)
+ * @returns ordered CategoryGroup[] — falls back to FALLBACK_CATEGORY_GROUPS when no group rows exist
+ */
+export function buildDynamicGroups(
+  groupRows: CategoryRow[],
+  supplierRows: CategoryRow[]
+): CategoryGroup[] {
+  if (!groupRows || groupRows.length === 0) {
+    return FALLBACK_CATEGORY_GROUPS;
+  }
+
+  const sorted = [...groupRows].sort((a, b) => a.sort_order - b.sort_order);
+
+  return sorted.map((g) => {
+    const children = supplierRows
+      .filter((c) => (c.parent_group || "") === g.value)
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((c) => c.value);
+
+    return {
+      key: g.value,
+      labelEn: g.label,
+      labelJa: g.label_ja || g.label,
+      children,
+    };
+  });
+}
+
 /** Map from old category value → new category value (for backward compatibility) */
 export const LEGACY_CATEGORY_MAP: Record<string, string> = {
   meat: "meat-poultry",
@@ -46,14 +85,16 @@ export const LEGACY_CATEGORY_MAP: Record<string, string> = {
   "dry-goods": "produce-dry-goods",
   equipment: "kitchen-equipment",
   packaging: "kitchen-equipment",
-  // These stay the same
   seafood: "seafood",
   beverages: "beverages",
 };
 
 /** Look up which group a sub-category belongs to */
-export function findGroupForCategory(value: string): CategoryGroup | undefined {
-  return SUPPLIER_CATEGORY_GROUPS.find((g) => g.children.includes(value));
+export function findGroupForCategory(
+  value: string,
+  groups: CategoryGroup[] = FALLBACK_CATEGORY_GROUPS
+): CategoryGroup | undefined {
+  return groups.find((g) => g.children.includes(value));
 }
 
 /** Get group label by language */

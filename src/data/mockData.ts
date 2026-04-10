@@ -58,23 +58,30 @@ export interface MarketplaceItem {
   delivery_en?: string;
 }
 
+export const categoryGroups = [
+  { value: 'food-supplies', label: 'Food & Supplies', label_ja: '食材・供給品' },
+  { value: 'kitchen-hardware', label: 'Kitchen & Hardware', label_ja: '厨房・設備' },
+  { value: 'tech-pos', label: 'Tech & POS', label_ja: 'テクノロジー' },
+  { value: 'professional-services', label: 'Professional Services', label_ja: '専門サービス' },
+];
+
 export const categories = [
   // Food & Supplies
-  { value: 'meat-poultry', label: '肉類・家禽' },
-  { value: 'seafood', label: '海鮮・鮮魚' },
-  { value: 'produce-dry-goods', label: '青果・乾物' },
-  { value: 'beverages', label: '飲料・酒類' },
+  { value: 'meat-poultry', label: '肉類・家禽', parent_group: 'food-supplies' },
+  { value: 'seafood', label: '海鮮・鮮魚', parent_group: 'food-supplies' },
+  { value: 'produce-dry-goods', label: '青果・乾物', parent_group: 'food-supplies' },
+  { value: 'beverages', label: '飲料・酒類', parent_group: 'food-supplies' },
   // Kitchen & Hardware
-  { value: 'kitchen-equipment', label: '厨房機器' },
-  { value: 'furniture-interior', label: '家具・内装' },
+  { value: 'kitchen-equipment', label: '厨房機器', parent_group: 'kitchen-hardware' },
+  { value: 'furniture-interior', label: '家具・内装', parent_group: 'kitchen-hardware' },
   // Tech & POS
-  { value: 'pos-systems', label: 'POSシステム' },
-  { value: 'crm', label: '顧客管理(CRM)' },
-  { value: 'inventory', label: '在庫管理' },
-  { value: 'online-ordering', label: 'オンライン注文' },
+  { value: 'pos-systems', label: 'POSシステム', parent_group: 'tech-pos' },
+  { value: 'crm', label: '顧客管理(CRM)', parent_group: 'tech-pos' },
+  { value: 'inventory', label: '在庫管理', parent_group: 'tech-pos' },
+  { value: 'online-ordering', label: 'オンライン注文', parent_group: 'tech-pos' },
   // Professional Services
-  { value: 'services-maintenance', label: 'サービス・メンテナンス' },
-  { value: 'consultancy-marketing', label: 'コンサルティング・マーケティング' },
+  { value: 'services-maintenance', label: 'サービス・メンテナンス', parent_group: 'professional-services' },
+  { value: 'consultancy-marketing', label: 'コンサルティング・マーケティング', parent_group: 'professional-services' },
 ];
 
 export const areas = [

@@ -18,7 +18,8 @@ import { getSupabase } from "@/lib/supabase";
 import { sanitizeWhatsAppDigits } from "@/lib/jobs-whatsapp";
 import { inferVideoMimeType, VIDEO_EXTENSIONS, getFileExtension } from "@/lib/video";
 import { resolveCategoryDisplayLabels } from "@/lib/category-display";
-import { SUPPLIER_CATEGORY_GROUPS, getGroupLabel } from "@/lib/category-groups";
+import { buildDynamicGroups, getGroupLabel } from "@/lib/category-groups";
+import type { CategoryGroup } from "@/lib/category-groups";
 
 /** Returns true when a URL clearly points to a video file (by extension). */
 function isVideoFileUrl(url: string): boolean {
@@ -257,6 +258,7 @@ function SupplierManager() {
   const [productSlug, setProductSlug] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [availableCategories, setAvailableCategories] = useState<any[]>([]);
+  const [availableGroups, setAvailableGroups] = useState<CategoryGroup[]>([]);
   const [availableTags, setAvailableTags] = useState<any[]>([]);
   const [form, setForm] = useState({
     name: "", name_ja: "", slug: "", category: "", category_ja: "",
@@ -269,7 +271,13 @@ function SupplierManager() {
 
   useEffect(() => { fetchSuppliers(); }, []);
   useEffect(() => {
-    fetch("/api/categories?type=supplier").then((r) => r.json()).then(setAvailableCategories).catch(() => {});
+    Promise.all([
+      fetch("/api/categories?type=supplier").then((r) => r.json()),
+      fetch("/api/categories?type=supplier-group").then((r) => r.json()),
+    ]).then(([cats, groups]) => {
+      setAvailableCategories(cats);
+      setAvailableGroups(buildDynamicGroups(groups, cats));
+    }).catch(() => {});
     fetch("/api/categories?type=tag").then((r) => r.json()).then(setAvailableTags).catch(() => {});
   }, []);
 
@@ -438,7 +446,7 @@ function SupplierManager() {
               <label className="text-sm font-medium block mb-1.5">{t.admin.category1}</label>
               <select value={form.category} onChange={(e) => handleCategorySelect(1, e.target.value)} className="h-11 px-4 rounded-lg border bg-background text-sm w-full">
                 <option value="">—</option>
-                {SUPPLIER_CATEGORY_GROUPS.map((group) => {
+                {availableGroups.map((group) => {
                   const opts = group.children.map((v) => availableCategories.find((c: any) => c.value === v)).filter(Boolean);
                   if (opts.length === 0) return null;
                   return (
@@ -460,7 +468,7 @@ function SupplierManager() {
               <label className="text-sm font-medium block mb-1.5">{t.admin.category2}</label>
               <select value={form.category_2} onChange={(e) => handleCategorySelect(2, e.target.value)} className="h-11 px-4 rounded-lg border bg-background text-sm w-full">
                 <option value="">—</option>
-                {SUPPLIER_CATEGORY_GROUPS.map((group) => {
+                {availableGroups.map((group) => {
                   const opts = group.children.map((v) => availableCategories.find((c: any) => c.value === v)).filter(Boolean);
                   if (opts.length === 0) return null;
                   return (
@@ -482,7 +490,7 @@ function SupplierManager() {
               <label className="text-sm font-medium block mb-1.5">{t.admin.category3}</label>
               <select value={form.category_3} onChange={(e) => handleCategorySelect(3, e.target.value)} className="h-11 px-4 rounded-lg border bg-background text-sm w-full">
                 <option value="">—</option>
-                {SUPPLIER_CATEGORY_GROUPS.map((group) => {
+                {availableGroups.map((group) => {
                   const opts = group.children.map((v) => availableCategories.find((c: any) => c.value === v)).filter(Boolean);
                   if (opts.length === 0) return null;
                   return (
@@ -1963,10 +1971,16 @@ function NewsManager() {
 function CategoryManager() {
   const { t, lang } = useTranslation();
   const [categories, setCategories] = useState<any[]>([]);
-  const [newCat, setNewCat] = useState({ type: "supplier", value: "", label: "", label_ja: "", sort_order: 0 });
+  const [newCat, setNewCat] = useState({ type: "supplier", value: "", label: "", label_ja: "", sort_order: 0, parent_group: "" });
   const [addError, setAddError] = useState<string | null>(null);
-  const [editingCat, setEditingCat] = useState<{ id: string; label: string; label_ja: string } | null>(null);
+  const [editingCat, setEditingCat] = useState<{ id: string; label: string; label_ja: string; parent_group?: string } | null>(null);
   const [editSaving, setEditSaving] = useState(false);
+
+  // Group management state
+  const [newGroup, setNewGroup] = useState({ value: "", label: "", label_ja: "", sort_order: 0 });
+  const [addGroupError, setAddGroupError] = useState<string | null>(null);
+  const [editingGroup, setEditingGroup] = useState<{ id: string; label: string; label_ja: string; sort_order: number } | null>(null);
+  const [editGroupSaving, setEditGroupSaving] = useState(false);
 
   useEffect(() => { fetchCategories(); }, []);
 
@@ -1975,6 +1989,10 @@ function CategoryManager() {
     setCategories(await res.json());
   };
 
+  const groupRows = categories.filter((c: any) => c.type === "supplier-group").sort((a: any, b: any) => a.sort_order - b.sort_order);
+  const supplierRows = categories.filter((c: any) => c.type === "supplier").sort((a: any, b: any) => a.sort_order - b.sort_order);
+
+  // --- Category CRUD ---
   const handleAdd = async () => {
     const valueTrimmed = (newCat.value || "").trim();
     const labelTrimmed = (newCat.label || "").trim();
@@ -1987,6 +2005,10 @@ function CategoryManager() {
       setAddError(lang === "ja" ? "ラベル（EN）は必須です。" : "Label (EN) is required.");
       return;
     }
+    if (newCat.type === "supplier" && !newCat.parent_group) {
+      setAddError(lang === "ja" ? "カテゴリーグループを選択してください。" : "Please select a category group.");
+      return;
+    }
     const res = await authFetch("/api/categories", {
       method: "POST",
       body: JSON.stringify({ ...newCat, value: valueTrimmed, label: labelTrimmed }),
@@ -1996,7 +2018,7 @@ function CategoryManager() {
       setAddError(err?.error ?? (lang === "ja" ? "追加に失敗しました。データベース設定をご確認ください。" : "Failed to add category. Please check your database configuration."));
       return;
     }
-    setNewCat({ type: "supplier", value: "", label: "", label_ja: "", sort_order: 0 });
+    setNewCat({ type: "supplier", value: "", label: "", label_ja: "", sort_order: 0, parent_group: "" });
     fetchCategories();
   };
 
@@ -2019,9 +2041,11 @@ function CategoryManager() {
   const handleEditSave = async () => {
     if (!editingCat) return;
     setEditSaving(true);
+    const body: Record<string, unknown> = { label: editingCat.label, label_ja: editingCat.label_ja };
+    if (typeof editingCat.parent_group === "string") body.parent_group = editingCat.parent_group;
     const res = await authFetch(`/api/categories?id=${editingCat.id}`, {
       method: "PATCH",
-      body: JSON.stringify({ label: editingCat.label, label_ja: editingCat.label_ja }),
+      body: JSON.stringify(body),
     });
     setEditSaving(false);
     if (!res.ok) {
@@ -2033,6 +2057,49 @@ function CategoryManager() {
     fetchCategories();
   };
 
+  // --- Group CRUD ---
+  const handleAddGroup = async () => {
+    const valueTrimmed = (newGroup.value || "").trim();
+    const labelTrimmed = (newGroup.label || "").trim();
+    setAddGroupError(null);
+    if (!valueTrimmed) {
+      setAddGroupError(lang === "ja" ? "値（ENキー）は必須です。" : "Value (EN key) is required.");
+      return;
+    }
+    if (!labelTrimmed) {
+      setAddGroupError(lang === "ja" ? "ラベル（EN）は必須です。" : "Label (EN) is required.");
+      return;
+    }
+    const res = await authFetch("/api/categories", {
+      method: "POST",
+      body: JSON.stringify({ type: "supplier-group", value: valueTrimmed, label: labelTrimmed, label_ja: newGroup.label_ja.trim(), sort_order: newGroup.sort_order }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      setAddGroupError(err?.error ?? (lang === "ja" ? "追加に失敗しました。" : "Failed to add group."));
+      return;
+    }
+    setNewGroup({ value: "", label: "", label_ja: "", sort_order: 0 });
+    fetchCategories();
+  };
+
+  const handleEditGroupSave = async () => {
+    if (!editingGroup) return;
+    setEditGroupSaving(true);
+    const res = await authFetch(`/api/categories?id=${editingGroup.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ label: editingGroup.label, label_ja: editingGroup.label_ja, sort_order: editingGroup.sort_order }),
+    });
+    setEditGroupSaving(false);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err?.error ?? (lang === "ja" ? "更新に失敗しました。" : "Update failed."));
+      return;
+    }
+    setEditingGroup(null);
+    fetchCategories();
+  };
+
   const typeLabels: Record<string, string> = {
     supplier: t.admin.typeSupplier,
     marketplace: t.admin.typeMarketplace,
@@ -2040,23 +2107,152 @@ function CategoryManager() {
     tag: lang === "ja" ? "タグ（サプライヤー用）" : "Tags (for suppliers)",
   };
 
+  const CategoryBadge = ({ c }: { c: any }) => {
+    const { enLabel, jaLabel } = resolveCategoryDisplayLabels(c);
+    return (
+      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-sm border border-border/50">
+        <span className="font-medium">{enLabel} <span className="text-[10px] font-normal text-muted-foreground">EN</span></span>
+        {jaLabel
+          ? <span className="text-muted-foreground text-xs">/ {jaLabel} <span className="text-[10px]">JA</span></span>
+          : <span className="text-[10px] text-amber-500 font-medium">JA未設定</span>
+        }
+        <span className="text-xs text-muted-foreground">({c.value})</span>
+        <button
+          onClick={() => setEditingCat({ id: c.id, label: enLabel, label_ja: jaLabel, parent_group: c.parent_group || "" })}
+          className="text-muted-foreground hover:text-primary ml-0.5"
+          title={lang === "ja" ? "編集" : "Edit"}
+        >
+          <Edit2 className="h-3 w-3" />
+        </button>
+        <button onClick={() => handleDelete(c.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
+      </div>
+    );
+  };
+
   return (
     <div>
       <h2 className="text-xl font-bold mb-6">{t.admin.categoryManagement}</h2>
 
-      {/* Add new category form */}
-      <div className="bg-card border p-5 mb-6">
+      {/* ── Supplier Category Groups ── */}
+      <div className="bg-card border p-5 mb-6 rounded-xl">
+        <h3 className="text-sm font-bold mb-4">{lang === "ja" ? "サプライヤー カテゴリーグループ" : "Supplier Category Groups"}</h3>
+
+        {/* Existing groups with their children */}
+        <div className="space-y-4 mb-5">
+          {groupRows.map((g: any) => {
+            const children = supplierRows.filter((c: any) => (c.parent_group || "") === g.value);
+            return (
+              <div key={g.id} className="border rounded-lg p-3 bg-background">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-bold text-sm">{g.label}</span>
+                  {g.label_ja && <span className="text-xs text-muted-foreground">/ {g.label_ja}</span>}
+                  <span className="text-xs text-muted-foreground">({g.value})</span>
+                  <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                    {lang === "ja" ? `順序: ${g.sort_order}` : `Order: ${g.sort_order}`}
+                  </span>
+                  <button
+                    onClick={() => setEditingGroup({ id: g.id, label: g.label, label_ja: g.label_ja || "", sort_order: g.sort_order })}
+                    className="text-muted-foreground hover:text-primary ml-auto"
+                    title={lang === "ja" ? "編集" : "Edit"}
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (children.length > 0) {
+                        alert(lang === "ja"
+                          ? "このグループには子カテゴリーがあるため削除できません。先に子カテゴリーを移動または削除してください。"
+                          : "Cannot delete this group because it has child categories. Move or delete them first.");
+                        return;
+                      }
+                      handleDelete(g.id);
+                    }}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                {children.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 pl-2">
+                    {children.map((c: any) => <CategoryBadge key={c.id} c={c} />)}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground pl-2 italic">
+                    {lang === "ja" ? "カテゴリーなし" : "No categories"}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+          {/* Ungrouped supplier categories */}
+          {(() => {
+            const ungrouped = supplierRows.filter((c: any) => !c.parent_group || !groupRows.some((g: any) => g.value === c.parent_group));
+            if (ungrouped.length === 0) return null;
+            return (
+              <div className="border rounded-lg p-3 bg-background border-amber-300">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-bold text-sm text-amber-600">{lang === "ja" ? "未分類" : "Ungrouped"}</span>
+                </div>
+                <div className="flex flex-wrap gap-2 pl-2">
+                  {ungrouped.map((c: any) => <CategoryBadge key={c.id} c={c} />)}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Add new group form */}
+        <div className="border-t pt-4">
+          <h4 className="text-xs font-bold mb-2 text-muted-foreground uppercase tracking-wide">
+            {lang === "ja" ? "新しいグループを追加" : "Add New Group"}
+          </h4>
+          <div className="flex flex-wrap gap-3 items-end">
+            <div>
+              <label className="text-xs font-medium block mb-1">{t.admin.valueLabel} (EN key) <span className="text-destructive">*</span></label>
+              <input value={newGroup.value} onChange={(e) => setNewGroup((p) => ({ ...p, value: e.target.value }))} className="h-10 px-3 rounded-lg border bg-background text-sm w-36" placeholder={lang === "ja" ? "例: tech-pos" : "e.g. tech-pos"} />
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1">{t.admin.labelLabel} (EN) <span className="text-destructive">*</span></label>
+              <input value={newGroup.label} onChange={(e) => setNewGroup((p) => ({ ...p, label: e.target.value }))} className="h-10 px-3 rounded-lg border bg-background text-sm w-40" placeholder={lang === "ja" ? "例: Tech & POS" : "e.g. Tech & POS"} />
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1">{lang === "ja" ? "ラベル（JA）" : "Label (JA)"}</label>
+              <input value={newGroup.label_ja} onChange={(e) => setNewGroup((p) => ({ ...p, label_ja: e.target.value }))} className="h-10 px-3 rounded-lg border bg-background text-sm w-36" placeholder="例: テクノロジー" />
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1">{lang === "ja" ? "表示順" : "Order"}</label>
+              <input type="number" value={newGroup.sort_order} onChange={(e) => setNewGroup((p) => ({ ...p, sort_order: Number(e.target.value) || 0 }))} className="h-10 px-3 rounded-lg border bg-background text-sm w-20" />
+            </div>
+            <Button onClick={handleAddGroup} size="sm" className="rounded-xl"><Plus className="h-4 w-4" /></Button>
+          </div>
+          {addGroupError && <p className="text-sm text-destructive mt-2">{addGroupError}</p>}
+        </div>
+      </div>
+
+      {/* ── Add new category form ── */}
+      <div className="bg-card border p-5 mb-6 rounded-xl">
         <h3 className="text-sm font-bold mb-3">{lang === "ja" ? "新規カテゴリー追加" : "Add New Category"}</h3>
         <div className="flex flex-wrap gap-3 items-end">
           <div>
             <label className="text-xs font-medium block mb-1">{t.admin.typeLabel}</label>
-            <select value={newCat.type} onChange={(e) => setNewCat((p) => ({ ...p, type: e.target.value }))} className="h-10 px-3 rounded-lg border bg-background text-sm">
+            <select value={newCat.type} onChange={(e) => setNewCat((p) => ({ ...p, type: e.target.value, parent_group: "" }))} className="h-10 px-3 rounded-lg border bg-background text-sm">
               <option value="supplier">{t.admin.typeSupplier}</option>
               <option value="marketplace">{t.admin.typeMarketplace}</option>
               <option value="news">{t.admin.typeNews}</option>
               <option value="tag">{lang === "ja" ? "タグ" : "Tag"}</option>
             </select>
           </div>
+          {newCat.type === "supplier" && (
+            <div>
+              <label className="text-xs font-medium block mb-1">{lang === "ja" ? "グループ" : "Group"} <span className="text-destructive">*</span></label>
+              <select value={newCat.parent_group} onChange={(e) => setNewCat((p) => ({ ...p, parent_group: e.target.value }))} className="h-10 px-3 rounded-lg border bg-background text-sm">
+                <option value="">— {lang === "ja" ? "選択してください" : "Select"} —</option>
+                {groupRows.map((g: any) => (
+                  <option key={g.value} value={g.value}>{lang === "ja" ? (g.label_ja || g.label) : g.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="text-xs font-medium block mb-1">{t.admin.valueLabel} (EN key) <span className="text-destructive">*</span></label>
             <input value={newCat.value} onChange={(e) => setNewCat((p) => ({ ...p, value: e.target.value }))} className="h-10 px-3 rounded-lg border bg-background text-sm w-32" placeholder={lang === "ja" ? "例: pos_system" : "e.g. pos_system"} />
@@ -2079,7 +2275,7 @@ function CategoryManager() {
         </p>
       </div>
 
-      {/* Edit label modal */}
+      {/* Edit category label modal */}
       {editingCat && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-foreground/40" onClick={() => setEditingCat(null)} />
@@ -2103,6 +2299,21 @@ function CategoryManager() {
                 placeholder="例: POSシステム"
               />
             </div>
+            {typeof editingCat.parent_group === "string" && (
+              <div>
+                <label className="text-xs font-medium block mb-1">{lang === "ja" ? "所属グループ" : "Parent Group"}</label>
+                <select
+                  value={editingCat.parent_group}
+                  onChange={(e) => setEditingCat((p) => p ? { ...p, parent_group: e.target.value } : p)}
+                  className="w-full h-10 px-3 rounded-lg border bg-background text-sm"
+                >
+                  <option value="">— {lang === "ja" ? "未分類" : "Ungrouped"} —</option>
+                  {groupRows.map((g: any) => (
+                    <option key={g.value} value={g.value}>{lang === "ja" ? (g.label_ja || g.label) : g.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="flex gap-2 pt-1">
               <Button onClick={handleEditSave} disabled={editSaving} className="rounded-xl flex-1">
                 <Save className="h-4 w-4 mr-1.5" />{editSaving ? t.common.saving : (lang === "ja" ? "保存" : "Save")}
@@ -2113,31 +2324,57 @@ function CategoryManager() {
         </div>
       )}
 
-      {["supplier", "tag", "marketplace", "news"].map((type) => (
+      {/* Edit group modal */}
+      {editingGroup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-foreground/40" onClick={() => setEditingGroup(null)} />
+          <div className="relative bg-background rounded-2xl p-6 w-full max-w-sm shadow-2xl space-y-4">
+            <h3 className="font-bold text-base">{lang === "ja" ? "グループを編集" : "Edit Group"}</h3>
+            <div>
+              <label className="text-xs font-medium block mb-1">Label (EN) <span className="text-destructive">*</span></label>
+              <input
+                value={editingGroup.label}
+                onChange={(e) => setEditingGroup((p) => p ? { ...p, label: e.target.value } : p)}
+                className="w-full h-10 px-3 rounded-lg border bg-background text-sm"
+                placeholder="e.g. Tech & POS"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1">Label (JA)</label>
+              <input
+                value={editingGroup.label_ja}
+                onChange={(e) => setEditingGroup((p) => p ? { ...p, label_ja: e.target.value } : p)}
+                className="w-full h-10 px-3 rounded-lg border bg-background text-sm"
+                placeholder="例: テクノロジー"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1">{lang === "ja" ? "表示順" : "Display Order"}</label>
+              <input
+                type="number"
+                value={editingGroup.sort_order}
+                onChange={(e) => setEditingGroup((p) => p ? { ...p, sort_order: Number(e.target.value) || 0 } : p)}
+                className="w-full h-10 px-3 rounded-lg border bg-background text-sm"
+              />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button onClick={handleEditGroupSave} disabled={editGroupSaving} className="rounded-xl flex-1">
+                <Save className="h-4 w-4 mr-1.5" />{editGroupSaving ? t.common.saving : (lang === "ja" ? "保存" : "Save")}
+              </Button>
+              <Button variant="outline" onClick={() => setEditingGroup(null)} className="rounded-xl">{lang === "ja" ? "キャンセル" : "Cancel"}</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Other category types (tag, marketplace, news) ── */}
+      {["tag", "marketplace", "news"].map((type) => (
         <div key={type} className="mb-6">
           <h3 className="font-bold text-sm mb-3">{typeLabels[type] ?? type}</h3>
           <div className="flex flex-wrap gap-2">
-            {categories.filter((c: any) => c.type === type).map((c: any) => {
-              const { enLabel, jaLabel } = resolveCategoryDisplayLabels(c);
-              return (
-              <div key={c.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-sm border border-border/50">
-                <span className="font-medium">{enLabel} <span className="text-[10px] font-normal text-muted-foreground">EN</span></span>
-                {jaLabel
-                  ? <span className="text-muted-foreground text-xs">/ {jaLabel} <span className="text-[10px]">JA</span></span>
-                  : <span className="text-[10px] text-amber-500 font-medium">JA未設定</span>
-                }
-                <span className="text-xs text-muted-foreground">({c.value})</span>
-                <button
-                  onClick={() => setEditingCat({ id: c.id, label: enLabel, label_ja: jaLabel })}
-                  className="text-muted-foreground hover:text-primary ml-0.5"
-                  title={lang === "ja" ? "編集" : "Edit"}
-                >
-                  <Edit2 className="h-3 w-3" />
-                </button>
-                <button onClick={() => handleDelete(c.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
-              </div>
-            );
-            })}
+            {categories.filter((c: any) => c.type === type).map((c: any) => (
+              <CategoryBadge key={c.id} c={c} />
+            ))}
           </div>
         </div>
       ))}

@@ -139,6 +139,8 @@ CREATE TABLE IF NOT EXISTS public.categories (
 ALTER TABLE public.categories DROP CONSTRAINT IF EXISTS categories_type_check;
 -- Add label_ja if the table already exists without it
 ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS label_ja text DEFAULT '';
+-- parent_group links a supplier sub-category to its supplier-group row (by value)
+ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS parent_group text DEFAULT '';
 
 -- Site Settings (key-value store)
 CREATE TABLE IF NOT EXISTS public.site_settings (
@@ -512,40 +514,54 @@ INSERT INTO public.site_settings (key, value) VALUES
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
 INSERT INTO public.categories (type, value, label, label_ja, sort_order) VALUES
-  -- Food & Supplies (食材・供給品)
-  ('supplier',     'meat-poultry',      'Meat & Poultry',   '肉類・家禽',      1),
-  ('supplier',     'seafood',           'Seafood',          '海鮮・鮮魚',      2),
-  ('supplier',     'produce-dry-goods', 'Produce & Dry Goods','青果・乾物',    3),
-  ('supplier',     'beverages',         'Beverages',        '飲料・酒類',      4),
-  -- Kitchen & Hardware (厨房・設備)
-  ('supplier',     'kitchen-equipment', 'Kitchen Equipment','厨房機器',        5),
-  ('supplier',     'furniture-interior','Furniture & Interior','家具・内装',    6),
-  -- Tech & POS (テクノロジー)
-  ('supplier',     'pos-systems',       'POS Systems',      'POSシステム',     7),
-  ('supplier',     'crm',               'CRM',              '顧客管理(CRM)',   8),
-  ('supplier',     'inventory',         'Inventory',        '在庫管理',        9),
-  ('supplier',     'online-ordering',   'Online Ordering',  'オンライン注文',  10),
-  -- Professional Services (専門サービス)
-  ('supplier',     'services-maintenance','Services & Maintenance','サービス・メンテナンス', 11),
-  ('supplier',     'consultancy-marketing','Consultancy & Marketing','コンサルティング・マーケティング', 12),
-  ('marketplace',  'kitchen-equipment', '厨房機器',         '',                1),
-  ('marketplace',  'tools',             '調理器具',         '',                2),
-  ('marketplace',  'furniture',         '家具',             '',                3),
-  ('marketplace',  'other',             'その他',           '',                4),
-  ('news',         'industry',          '業界ニュース',     '',                1),
-  ('news',         'regulation',        '規制・法律',       '',                2),
-  ('news',         'trend',             'トレンド',         '',                3),
-  ('news',         'event',             'イベント',         '',                4),
-  ('tag',          'small-lot',         'Small Lot OK',     '少量対応',         1),
-  ('tag',          'japanese-ok',       'Japanese OK',      '日本語対応',       2),
-  ('tag',          'halal',             'Halal',            'ハラール',         3),
-  ('tag',          'organic',           'Organic',          'オーガニック',     4),
-  ('tag',          'bulk-order',        'Bulk Order OK',    '大量注文可',       5),
-  ('tag',          'next-day',          'Next-Day Delivery','翌日配送',         6),
-  ('tag',          'sake-specialist',   'Sake Specialist',  '日本酒専門',       7),
-  ('tag',          'installation',      'Installation Support','設置サポート',   8),
-  ('tag',          'maintenance',       'Maintenance Support','メンテナンス対応', 9)
+  -- Supplier Category Groups (parent groups)
+  ('supplier-group', 'food-supplies',         'Food & Supplies',        '食材・供給品',    1),
+  ('supplier-group', 'kitchen-hardware',      'Kitchen & Hardware',     '厨房・設備',      2),
+  ('supplier-group', 'tech-pos',              'Tech & POS',             'テクノロジー',    3),
+  ('supplier-group', 'professional-services', 'Professional Services',  '専門サービス',    4)
 ON CONFLICT (type, value) DO NOTHING;
+
+INSERT INTO public.categories (type, value, label, label_ja, sort_order, parent_group) VALUES
+  -- Food & Supplies (食材・供給品)
+  ('supplier',     'meat-poultry',      'Meat & Poultry',   '肉類・家禽',      1, 'food-supplies'),
+  ('supplier',     'seafood',           'Seafood',          '海鮮・鮮魚',      2, 'food-supplies'),
+  ('supplier',     'produce-dry-goods', 'Produce & Dry Goods','青果・乾物',    3, 'food-supplies'),
+  ('supplier',     'beverages',         'Beverages',        '飲料・酒類',      4, 'food-supplies'),
+  -- Kitchen & Hardware (厨房・設備)
+  ('supplier',     'kitchen-equipment', 'Kitchen Equipment','厨房機器',        5, 'kitchen-hardware'),
+  ('supplier',     'furniture-interior','Furniture & Interior','家具・内装',    6, 'kitchen-hardware'),
+  -- Tech & POS (テクノロジー)
+  ('supplier',     'pos-systems',       'POS Systems',      'POSシステム',     7, 'tech-pos'),
+  ('supplier',     'crm',               'CRM',              '顧客管理(CRM)',   8, 'tech-pos'),
+  ('supplier',     'inventory',         'Inventory',        '在庫管理',        9, 'tech-pos'),
+  ('supplier',     'online-ordering',   'Online Ordering',  'オンライン注文',  10, 'tech-pos'),
+  -- Professional Services (専門サービス)
+  ('supplier',     'services-maintenance','Services & Maintenance','サービス・メンテナンス', 11, 'professional-services'),
+  ('supplier',     'consultancy-marketing','Consultancy & Marketing','コンサルティング・マーケティング', 12, 'professional-services'),
+  ('marketplace',  'kitchen-equipment', '厨房機器',         '',                1, ''),
+  ('marketplace',  'tools',             '調理器具',         '',                2, ''),
+  ('marketplace',  'furniture',         '家具',             '',                3, ''),
+  ('marketplace',  'other',             'その他',           '',                4, ''),
+  ('news',         'industry',          '業界ニュース',     '',                1, ''),
+  ('news',         'regulation',        '規制・法律',       '',                2, ''),
+  ('news',         'trend',             'トレンド',         '',                3, ''),
+  ('news',         'event',             'イベント',         '',                4, ''),
+  ('tag',          'small-lot',         'Small Lot OK',     '少量対応',         1, ''),
+  ('tag',          'japanese-ok',       'Japanese OK',      '日本語対応',       2, ''),
+  ('tag',          'halal',             'Halal',            'ハラール',         3, ''),
+  ('tag',          'organic',           'Organic',          'オーガニック',     4, ''),
+  ('tag',          'bulk-order',        'Bulk Order OK',    '大量注文可',       5, ''),
+  ('tag',          'next-day',          'Next-Day Delivery','翌日配送',         6, ''),
+  ('tag',          'sake-specialist',   'Sake Specialist',  '日本酒専門',       7, ''),
+  ('tag',          'installation',      'Installation Support','設置サポート',   8, ''),
+  ('tag',          'maintenance',       'Maintenance Support','メンテナンス対応', 9, '')
+ON CONFLICT (type, value) DO NOTHING;
+
+-- Backfill parent_group for existing supplier categories (safe to re-run)
+UPDATE public.categories SET parent_group = 'food-supplies' WHERE type = 'supplier' AND value IN ('meat-poultry','seafood','produce-dry-goods','beverages') AND (parent_group IS NULL OR parent_group = '');
+UPDATE public.categories SET parent_group = 'kitchen-hardware' WHERE type = 'supplier' AND value IN ('kitchen-equipment','furniture-interior') AND (parent_group IS NULL OR parent_group = '');
+UPDATE public.categories SET parent_group = 'tech-pos' WHERE type = 'supplier' AND value IN ('pos-systems','crm','inventory','online-ordering') AND (parent_group IS NULL OR parent_group = '');
+UPDATE public.categories SET parent_group = 'professional-services' WHERE type = 'supplier' AND value IN ('services-maintenance','consultancy-marketing') AND (parent_group IS NULL OR parent_group = '');
 
 -- ──────────────────────────────────────────────────────────────
 -- 7. SEED — suppliers

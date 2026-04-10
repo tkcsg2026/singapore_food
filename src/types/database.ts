@@ -195,11 +195,12 @@ export interface NewsArticleRow {
 
 export interface CategoryRow {
   id: string;
-  type: "supplier" | "marketplace" | "news" | "tag";
+  type: "supplier" | "supplier-group" | "marketplace" | "news" | "tag";
   value: string;
   label: string;
   label_ja?: string | null;
   sort_order: number;
+  parent_group?: string | null;
 }
 
 export interface SiteSettingRow {

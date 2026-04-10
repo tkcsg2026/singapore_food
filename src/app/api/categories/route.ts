@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient, createAdminSupabaseClient, requireAdmin } from "@/lib/supabase-server";
-import { categories as mockSupplierCats, marketplaceCategories as mockMPCats, tagCategories as mockTagCats } from "@/data/mockData";
+import { categories as mockSupplierCats, categoryGroups as mockGroupCats, marketplaceCategories as mockMPCats, tagCategories as mockTagCats } from "@/data/mockData";
 import { resolveCategoryDisplayLabels } from "@/lib/category-display";
 
 const mockCategories = [
-  ...mockSupplierCats.map((c, i) => ({ id: `s${i}`, type: "supplier", value: c.value, label: c.label, sort_order: i })),
+  ...mockGroupCats.map((c, i) => ({ id: `sg${i}`, type: "supplier-group", value: c.value, label: c.label, label_ja: c.label_ja, sort_order: i, parent_group: "" })),
+  ...mockSupplierCats.map((c, i) => ({ id: `s${i}`, type: "supplier", value: c.value, label: c.label, sort_order: i, parent_group: c.parent_group })),
   ...mockMPCats.map((c, i) => ({ id: `m${i}`, type: "marketplace", value: c.value, label: c.label, sort_order: i })),
   { id: "n1", type: "news", value: "industry", label: "業界ニュース", sort_order: 1 },
   { id: "n2", type: "news", value: "regulation", label: "規制・法律", sort_order: 2 },
@@ -63,13 +64,14 @@ export async function POST(req: NextRequest) {
   const label = String(body?.label ?? "").trim();
   if (!value) return NextResponse.json({ error: "value (EN key) is required" }, { status: 400 });
   if (!label) return NextResponse.json({ error: "label (EN) is required" }, { status: 400 });
-  const row = {
+  const row: Record<string, unknown> = {
     type,
     value,
     label,
     label_ja: typeof body?.label_ja === "string" ? body.label_ja.trim() : "",
     sort_order: Number(body?.sort_order) || 0,
   };
+  if (typeof body?.parent_group === "string") row.parent_group = body.parent_group.trim();
   const { data, error } = await supabase
     .from("categories")
     .upsert(row, { onConflict: "type,value" })
@@ -89,9 +91,11 @@ export async function PATCH(req: NextRequest) {
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
   const body = await req.json();
-  const updates: Record<string, string> = {};
+  const updates: Record<string, unknown> = {};
   if (typeof body.label === "string") updates.label = body.label.trim();
   if (typeof body.label_ja === "string") updates.label_ja = body.label_ja.trim();
+  if (typeof body.parent_group === "string") updates.parent_group = body.parent_group.trim();
+  if (typeof body.sort_order === "number") updates.sort_order = body.sort_order;
   if (Object.keys(updates).length === 0) return NextResponse.json({ error: "No fields to update" }, { status: 400 });
 
   // Fallback: authenticate with the caller's JWT when service-role key is absent
