@@ -59,14 +59,22 @@ export interface MarketplaceItem {
 }
 
 export const categories = [
+  // Food & Supplies
+  { value: 'meat-poultry', label: '肉類・家禽' },
   { value: 'seafood', label: '海鮮・鮮魚' },
-  { value: 'meat', label: '肉類' },
-  { value: 'vegetables', label: '野菜・青果' },
-  { value: 'dairy', label: '乳製品' },
-  { value: 'dry-goods', label: '乾物・調味料' },
+  { value: 'produce-dry-goods', label: '青果・乾物' },
   { value: 'beverages', label: '飲料・酒類' },
-  { value: 'equipment', label: '厨房機器' },
-  { value: 'packaging', label: '包装・容器' },
+  // Kitchen & Hardware
+  { value: 'kitchen-equipment', label: '厨房機器' },
+  { value: 'furniture-interior', label: '家具・内装' },
+  // Tech & POS
+  { value: 'pos-systems', label: 'POSシステム' },
+  { value: 'crm', label: '顧客管理(CRM)' },
+  { value: 'inventory', label: '在庫管理' },
+  { value: 'online-ordering', label: 'オンライン注文' },
+  // Professional Services
+  { value: 'services-maintenance', label: 'サービス・メンテナンス' },
+  { value: 'consultancy-marketing', label: 'コンサルティング・マーケティング' },
 ];
 
 export const areas = [

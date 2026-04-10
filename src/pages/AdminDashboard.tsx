@@ -18,6 +18,7 @@ import { getSupabase } from "@/lib/supabase";
 import { sanitizeWhatsAppDigits } from "@/lib/jobs-whatsapp";
 import { inferVideoMimeType, VIDEO_EXTENSIONS, getFileExtension } from "@/lib/video";
 import { resolveCategoryDisplayLabels } from "@/lib/category-display";
+import { SUPPLIER_CATEGORY_GROUPS, getGroupLabel } from "@/lib/category-groups";
 
 /** Returns true when a URL clearly points to a video file (by extension). */
 function isVideoFileUrl(url: string): boolean {
@@ -437,7 +438,15 @@ function SupplierManager() {
               <label className="text-sm font-medium block mb-1.5">{t.admin.category1}</label>
               <select value={form.category} onChange={(e) => handleCategorySelect(1, e.target.value)} className="h-11 px-4 rounded-lg border bg-background text-sm w-full">
                 <option value="">—</option>
-                {availableCategories.map((c: any) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                {SUPPLIER_CATEGORY_GROUPS.map((group) => {
+                  const opts = group.children.map((v) => availableCategories.find((c: any) => c.value === v)).filter(Boolean);
+                  if (opts.length === 0) return null;
+                  return (
+                    <optgroup key={group.key} label={getGroupLabel(group, lang)}>
+                      {opts.map((c: any) => <option key={c.value} value={c.value}>{lang === "ja" ? (c.label_ja || c.label) : c.label}</option>)}
+                    </optgroup>
+                  );
+                })}
               </select>
             </div>
             <div>
@@ -451,7 +460,15 @@ function SupplierManager() {
               <label className="text-sm font-medium block mb-1.5">{t.admin.category2}</label>
               <select value={form.category_2} onChange={(e) => handleCategorySelect(2, e.target.value)} className="h-11 px-4 rounded-lg border bg-background text-sm w-full">
                 <option value="">—</option>
-                {availableCategories.map((c: any) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                {SUPPLIER_CATEGORY_GROUPS.map((group) => {
+                  const opts = group.children.map((v) => availableCategories.find((c: any) => c.value === v)).filter(Boolean);
+                  if (opts.length === 0) return null;
+                  return (
+                    <optgroup key={group.key} label={getGroupLabel(group, lang)}>
+                      {opts.map((c: any) => <option key={c.value} value={c.value}>{lang === "ja" ? (c.label_ja || c.label) : c.label}</option>)}
+                    </optgroup>
+                  );
+                })}
               </select>
             </div>
             <div>
@@ -465,7 +482,15 @@ function SupplierManager() {
               <label className="text-sm font-medium block mb-1.5">{t.admin.category3}</label>
               <select value={form.category_3} onChange={(e) => handleCategorySelect(3, e.target.value)} className="h-11 px-4 rounded-lg border bg-background text-sm w-full">
                 <option value="">—</option>
-                {availableCategories.map((c: any) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                {SUPPLIER_CATEGORY_GROUPS.map((group) => {
+                  const opts = group.children.map((v) => availableCategories.find((c: any) => c.value === v)).filter(Boolean);
+                  if (opts.length === 0) return null;
+                  return (
+                    <optgroup key={group.key} label={getGroupLabel(group, lang)}>
+                      {opts.map((c: any) => <option key={c.value} value={c.value}>{lang === "ja" ? (c.label_ja || c.label) : c.label}</option>)}
+                    </optgroup>
+                  );
+                })}
               </select>
             </div>
             <div>

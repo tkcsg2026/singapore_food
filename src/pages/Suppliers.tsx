@@ -10,6 +10,7 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { sortSuppliersByPlan } from "@/lib/plans";
 import type { PlanCounts } from "@/lib/plans";
 import { buildSupplierTagDisplayMaps, getCategoryDisplayName } from "@/lib/category-display";
+import { SUPPLIER_CATEGORY_GROUPS, LEGACY_CATEGORY_MAP, getGroupLabel } from "@/lib/category-groups";
 import type { SupplierRow, CategoryRow } from "@/types/database";
 
 const Suppliers = () => {
@@ -63,7 +64,10 @@ const Suppliers = () => {
   const toggleTag = (val: string) =>
     setSelectedTags((prev) => prev.includes(val) ? prev.filter((t) => t !== val) : [...prev, val]);
 
-  const supplierCategories = (s: SupplierRow) => [s.category, s.category_2, s.category_3].filter(Boolean);
+  const supplierCategories = (s: SupplierRow) =>
+    [s.category, s.category_2, s.category_3]
+      .filter(Boolean)
+      .map((c) => LEGACY_CATEGORY_MAP[c!] ?? c!);
   const sortedTagCategories = useMemo(
     () => [...(tagCategories || [])].sort((a, b) => a.sort_order - b.sort_order),
     [tagCategories]
@@ -121,13 +125,28 @@ const Suppliers = () => {
       </div>
       <div>
         <h3 className="font-bold text-sm mb-3">{t.suppliers.category}</h3>
-        <div className="space-y-2.5">
-          {(categories || []).map((cat) => (
-            <label key={cat.value} className="flex items-center gap-2.5 text-sm cursor-pointer hover:text-foreground transition-colors">
-              <input type="checkbox" checked={selectedCategories.includes(cat.value)} onChange={() => toggleCategory(cat.value)} className="rounded border-border accent-primary" />
-              {getCategoryDisplayName(cat, lang)}
-            </label>
-          ))}
+        <div className="space-y-4">
+          {SUPPLIER_CATEGORY_GROUPS.map((group) => {
+            const groupCats = group.children
+              .map((val) => (categories || []).find((c) => c.value === val))
+              .filter(Boolean) as CategoryRow[];
+            if (groupCats.length === 0) return null;
+            return (
+              <div key={group.key}>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                  {getGroupLabel(group, lang)}
+                </p>
+                <div className="space-y-2 pl-1">
+                  {groupCats.map((cat) => (
+                    <label key={cat.value} className="flex items-center gap-2.5 text-sm cursor-pointer hover:text-foreground transition-colors">
+                      <input type="checkbox" checked={selectedCategories.includes(cat.value)} onChange={() => toggleCategory(cat.value)} className="rounded border-border accent-primary" />
+                      {getCategoryDisplayName(cat, lang)}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
       <div>
