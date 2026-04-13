@@ -23,15 +23,61 @@ function getTransporter() {
 }
 
 export async function sendContactEmail(data: {
-  name: string;
+  companyName: string;
+  contactName: string;
   email: string;
-  subject: string;
-  message: string;
+  phone: string;
+  productsServices?: string;
+  companyAddress?: string;
+  websiteUrl?: string;
+  inquiryMessage?: string;
 }): Promise<boolean> {
   const transporter = getTransporter();
   if (!transporter) return false;
 
-  const { name, email, subject, message } = data;
+  const {
+    companyName,
+    contactName,
+    email,
+    phone,
+    productsServices,
+    companyAddress,
+    websiteUrl,
+    inquiryMessage,
+  } = data;
+
+  const optionalLines: string[] = [];
+  if (productsServices?.trim()) optionalLines.push(`Products / services: ${productsServices.trim()}`);
+  if (companyAddress?.trim()) optionalLines.push(`Company address: ${companyAddress.trim()}`);
+  if (websiteUrl?.trim()) optionalLines.push(`Website: ${websiteUrl.trim()}`);
+  if (inquiryMessage?.trim()) optionalLines.push(`Inquiry / message:\n${inquiryMessage.trim()}`);
+
+  const textBody = [
+    `Company: ${companyName}`,
+    `Contact person: ${contactName}`,
+    `Email: ${email}`,
+    `Phone: ${phone}`,
+    ...(optionalLines.length ? ["", ...optionalLines] : []),
+  ].join("\n");
+
+  const htmlOptional: string[] = [];
+  if (productsServices?.trim()) {
+    htmlOptional.push(`<p><strong>Products / services:</strong> ${escapeHtml(productsServices.trim())}</p>`);
+  }
+  if (companyAddress?.trim()) {
+    htmlOptional.push(`<p><strong>Company address:</strong> ${escapeHtml(companyAddress.trim())}</p>`);
+  }
+  if (websiteUrl?.trim()) {
+    const u = escapeHtml(websiteUrl.trim());
+    htmlOptional.push(`<p><strong>Website:</strong> <a href="${u}">${u}</a></p>`);
+  }
+  if (inquiryMessage?.trim()) {
+    htmlOptional.push(
+      `<p><strong>Inquiry / message:</strong><br/>${escapeHtml(inquiryMessage.trim()).replace(/\n/g, "<br/>")}</p>`
+    );
+  }
+
+  const subjectLine = `[Contact Form] Listing inquiry — ${companyName}`;
 
   // Send to primary recipient and always forward a copy to tkcsg2026@gmail.com
   const toAddresses = [...new Set([CONTACT_TO, CONTACT_FORWARD_TO])];
@@ -40,21 +86,14 @@ export async function sendContactEmail(data: {
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to: toAddresses,
     replyTo: email,
-    subject: `[Contact Form] ${subject}`,
-    text: [
-      `Name: ${name}`,
-      `Email: ${email}`,
-      `Subject: ${subject}`,
-      ``,
-      `Message:`,
-      message,
-    ].join("\n"),
+    subject: subjectLine,
+    text: textBody,
     html: [
-      `<p><strong>Name:</strong> ${escapeHtml(name)}</p>`,
+      `<p><strong>Company:</strong> ${escapeHtml(companyName)}</p>`,
+      `<p><strong>Contact person:</strong> ${escapeHtml(contactName)}</p>`,
       `<p><strong>Email:</strong> <a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></p>`,
-      `<p><strong>Subject:</strong> ${escapeHtml(subject)}</p>`,
-      `<hr/>`,
-      `<p>${escapeHtml(message).replace(/\n/g, "<br/>")}</p>`,
+      `<p><strong>Phone:</strong> ${escapeHtml(phone)}</p>`,
+      ...(htmlOptional.length ? [`<hr/>`, ...htmlOptional] : []),
     ].join("\n"),
   });
 

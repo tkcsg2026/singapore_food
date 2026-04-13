@@ -4,14 +4,38 @@ import { sendContactEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { name, email, subject, message } = body;
+  const {
+    companyName,
+    contactName,
+    email,
+    phone,
+    productsServices,
+    companyAddress,
+    websiteUrl,
+    inquiryMessage,
+  } = body;
 
-  if (!name || !email || !subject || !message) {
-    return NextResponse.json({ error: "All fields are required" }, { status: 400 });
+  if (
+    !companyName?.trim() ||
+    !contactName?.trim() ||
+    !email?.trim() ||
+    !phone?.trim()
+  ) {
+    return NextResponse.json({ error: "Required fields are missing" }, { status: 400 });
   }
 
-  // Send email via SMTP to japan.dev07@gmail.com (or CONTACT_EMAIL_TO)
-  const emailSent = await sendContactEmail({ name, email, subject, message });
+  const payload = {
+    companyName: String(companyName).trim(),
+    contactName: String(contactName).trim(),
+    email: String(email).trim(),
+    phone: String(phone).trim(),
+    productsServices: typeof productsServices === "string" ? productsServices : "",
+    companyAddress: typeof companyAddress === "string" ? companyAddress : "",
+    websiteUrl: typeof websiteUrl === "string" ? websiteUrl : "",
+    inquiryMessage: typeof inquiryMessage === "string" ? inquiryMessage : "",
+  };
+
+  const emailSent = await sendContactEmail(payload);
   if (!emailSent) {
     return NextResponse.json(
       { error: "Email service is not configured. Please set SMTP_HOST, SMTP_USER, and SMTP_PASS." },
@@ -22,7 +46,26 @@ export async function POST(req: NextRequest) {
   const supabase = createAdminSupabaseClient();
   if (supabase) {
     try {
-      await supabase.from("contact_messages").insert({ name, email, subject, message });
+      const subject = `Listing inquiry — ${payload.companyName}`;
+      const message = [
+        `Company: ${payload.companyName}`,
+        `Contact: ${payload.contactName}`,
+        `Email: ${payload.email}`,
+        `Phone: ${payload.phone}`,
+        payload.productsServices ? `Products/services: ${payload.productsServices}` : "",
+        payload.companyAddress ? `Address: ${payload.companyAddress}` : "",
+        payload.websiteUrl ? `Website: ${payload.websiteUrl}` : "",
+        payload.inquiryMessage ? `Message:\n${payload.inquiryMessage}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      await supabase.from("contact_messages").insert({
+        name: `${payload.contactName} (${payload.companyName})`,
+        email: payload.email,
+        subject,
+        message,
+      });
     } catch {
       // Table might not exist; email was sent, so we still return success
     }

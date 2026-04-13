@@ -223,9 +223,9 @@ export const CHATBOT_KNOWLEDGE: KnowledgeEntry[] = [
       "サポート",
     ],
     answerEn:
-      "Use **Contact** / **Contact form** in the footer or navigation. Fill in name, email, subject, and message, then submit. It’s the right channel for **site feedback**, partnership questions, or technical issues—not for negotiating a specific marketplace deal (use seller contact on the listing instead).",
+      "Use **Contact** / **Contact form** in the footer or navigation. Companies interested in being listed should enter **company name**, **contact person**, **email**, and **phone** (required), plus optional details such as products/services, address, website, and a message. For marketplace deals with a seller, use the contact options on that listing instead.",
     answerJa:
-      "フッターやナビの**お問い合わせ**／**お問い合わせフォーム**を開き、名前・メール・件名・本文を入力して送信します。**サイト全般のご意見**、提携・技術的な問題に適しています。個別の売買交渉は出品ページの売り手連絡手段をご利用ください。",
+      "フッターやナビの**お問い合わせ**／**お問い合わせフォーム**を開き、掲載希望の場合は**会社名・ご担当者名・メール・電話**（必須）と、任意で取扱商品・所在地・URL・ご質問などを入力して送信します。個別の売買交渉は出品ページの連絡手段をご利用ください。",
   },
   {
     id: "language_switch",
