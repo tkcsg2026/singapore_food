@@ -79,7 +79,7 @@ const Index = () => {
           const db = (b as { published_at?: string }).published_at || b.created_at;
           return new Date(db).getTime() - new Date(da).getTime();
         })
-        .slice(0, 10),
+        .slice(0, 5),
     [newsArticles]
   );
   const latestJobNotices = useMemo(
@@ -411,7 +411,7 @@ const Index = () => {
             </Link>
           </div>
           <div className="bg-card overflow-hidden shadow-sm min-w-0">
-            <div className="max-h-64 overflow-y-auto overflow-x-hidden">
+            <div className="overflow-x-hidden">
               {latestNews.map((article, index) => {
                 const isCurrent = index === 0;
                 const displayDate = (article as { published_at?: string }).published_at || article.created_at;
@@ -423,17 +423,28 @@ const Index = () => {
                   <Link
                     key={article.id}
                     href={`/news/${article.slug}`}
-                    className={`flex items-center gap-4 px-4 sm:px-6 py-4 hover:bg-muted/50 transition-colors duration-300 group min-w-0 ${index % 2 === 1 ? "bg-muted/20" : "bg-transparent"}`}
+                    className={`flex items-center gap-3 px-4 sm:px-6 py-3 hover:bg-muted/50 transition-colors duration-300 group min-w-0 ${index % 2 === 1 ? "bg-muted/20" : "bg-transparent"}`}
                   >
-                    <span className={`text-sm tabular-nums flex-shrink-0 w-20 sm:w-24 ${isCurrent ? "font-bold text-primary" : "font-medium text-muted-foreground"}`}>
-                      {dateStr}
-                    </span>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary text-white flex-shrink-0 min-w-0 truncate max-w-[80px] sm:max-w-none">
-                      {categoryLabel}
-                    </span>
-                    <span className="text-sm text-foreground group-hover:text-primary transition-colors truncate min-w-0 flex-1">
-                      {title}
-                    </span>
+                    <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-muted">
+                      <img
+                        src={article.image || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=112&h=112&fit=crop"}
+                        alt={title || ""}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`text-xs tabular-nums flex-shrink-0 ${isCurrent ? "font-bold text-primary" : "font-medium text-muted-foreground"}`}>
+                          {dateStr}
+                        </span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary text-white flex-shrink-0 truncate max-w-[80px] sm:max-w-none">
+                          {categoryLabel}
+                        </span>
+                      </div>
+                      <span className="text-sm text-foreground group-hover:text-primary transition-colors truncate min-w-0">
+                        {title}
+                      </span>
+                    </div>
                   </Link>
                 );
               })}

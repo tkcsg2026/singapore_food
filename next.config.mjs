@@ -1,14 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  webpack: (config) => {
-    return {
-      ...config,
-      watchOptions: {
-        ...(config.watchOptions || {}),
-        ignored: "**/{System Volume Information,$RECYCLE.BIN}/**",
-      },
+  typescript: { ignoreBuildErrors: false },
+  webpack: (config, { dev }) => {
+    config.watchOptions = {
+      ...config.watchOptions,
+      ignored: ["**/node_modules/**", "**/.git/**", "**/System Volume Information/**", "**/$RECYCLE.BIN/**"],
     };
+    // Limit parallel processing to reduce V8 zone memory pressure
+    if (dev) {
+      config.parallelism = 1;
+    }
+    return config;
   },
   images: {
     remotePatterns: [
