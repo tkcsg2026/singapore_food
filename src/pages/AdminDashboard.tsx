@@ -137,6 +137,7 @@ const AdminDashboard = () => {
     { id: "jobs",       label: t.admin.tabJobs,      icon: MessageCircle },
     { id: "terms",      label: t.admin.tabTerms,      icon: Shield },
     { id: "privacy",    label: t.admin.tabPrivacy,    icon: Shield },
+    { id: "home-video", label: t.admin.tabHomeVideo,   icon: Video },
     { id: "qr",         label: t.admin.tabQR,         icon: Link2 },
     { id: "reports",    label: t.admin.tabReports,    icon: AlertTriangle },
     { id: "analytics",  label: t.admin.tabAnalytics,  icon: BarChart3 },
@@ -222,6 +223,7 @@ const AdminDashboard = () => {
             {activeTab === "jobs" && <JobsManager />}
             {activeTab === "terms" && <TermsManager />}
             {activeTab === "privacy" && <PrivacyManager />}
+            {activeTab === "home-video" && <HomeVideoManager />}
             {activeTab === "qr" && <QRManager />}
             {activeTab === "reports" && <ReportManager onReportChanged={refreshReportBadge} />}
             {activeTab === "analytics" && <AnalyticsPanel />}
@@ -2860,6 +2862,182 @@ function PrivacyManager() {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function HomeVideoManager() {
+  const { t, lang } = useTranslation();
+  const tv = (t.admin as any).homeVideo;
+  const [videoUrl, setVideoUrl] = useState("");
+  const [inputUrl, setInputUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/settings?key=promo_video_url")
+      .then((r) => r.json())
+      .then((d) => {
+        const v = d?.value || "";
+        setVideoUrl(v);
+        setInputUrl(v);
+      });
+  }, []);
+
+  const handleSave = async (url: string) => {
+    setSaving(true);
+    await authFetch("/api/settings", {
+      method: "PUT",
+      body: JSON.stringify({ key: "promo_video_url", value: url }),
+    });
+    setVideoUrl(url);
+    setInputUrl(url);
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    setUploadProgress(0);
+    try {
+      const signRes = await authFetch("/api/upload/signed", {
+        method: "POST",
+        body: JSON.stringify({ fileName: file.name, fileType: file.type, fileSize: file.size, folder: "videos" }),
+      });
+      if (!signRes.ok) throw new Error("Upload setup failed");
+      const signed = await signRes.json();
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.addEventListener("progress", (ev) => {
+          if (ev.lengthComputable) setUploadProgress(Math.round((ev.loaded / ev.total) * 100));
+        });
+        xhr.addEventListener("load", () => {
+          xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`HTTP ${xhr.status}`));
+        });
+        xhr.addEventListener("error", () => reject(new Error("Upload failed")));
+        xhr.open("PUT", signed.signedUrl);
+        xhr.setRequestHeader("Content-Type", signed.contentType);
+        xhr.setRequestHeader("x-upsert", "true");
+        xhr.send(file);
+      });
+      await handleSave(signed.publicUrl);
+    } catch (e: any) {
+      alert(e?.message || "Upload failed");
+    } finally {
+      setUploading(false);
+      setUploadProgress(null);
+    }
+  };
+
+  const getYouTubeId = (url: string) => {
+    const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+    return m ? m[1] : null;
+  };
+  const ytId = videoUrl ? getYouTubeId(videoUrl) : null;
+  const isVideoFile = videoUrl && !ytId;
+
+  return (
+    <div>
+      <h2 className="text-xl font-bold mb-1">{tv.title}</h2>
+      <p className="text-sm text-muted-foreground mb-6">{tv.description}</p>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Preview */}
+        <div className="bg-card border rounded-xl p-5">
+          <h3 className="text-sm font-semibold mb-3">{tv.currentLabel}</h3>
+          {videoUrl ? (
+            ytId ? (
+              <div className="aspect-video rounded-xl overflow-hidden bg-black">
+                <iframe
+                  src={`https://www.youtube.com/embed/${ytId}`}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            ) : (
+              <div className="aspect-video rounded-xl overflow-hidden bg-black">
+                <video src={videoUrl} controls className="w-full h-full object-contain" />
+              </div>
+            )
+          ) : (
+            <div className="aspect-video rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-3 bg-muted/40">
+              <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center">
+                <Play className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground text-center px-4">{tv.noVideo}</p>
+            </div>
+          )}
+          {videoUrl && (
+            <button
+              type="button"
+              onClick={() => handleSave("")}
+              className="mt-3 text-xs text-destructive hover:underline"
+            >
+              {tv.remove}
+            </button>
+          )}
+        </div>
+
+        {/* Settings */}
+        <div className="bg-card border rounded-xl p-5 space-y-5">
+          {/* YouTube URL */}
+          <div>
+            <label className="text-sm font-medium block mb-1.5">{tv.youtubeLabel}</label>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={inputUrl}
+                onChange={(e) => setInputUrl(e.target.value)}
+                placeholder={tv.youtubePlaceholder}
+                className="flex-1 h-10 px-3 rounded-lg border bg-background text-sm"
+              />
+              <button
+                type="button"
+                disabled={saving || inputUrl === videoUrl}
+                onClick={() => handleSave(inputUrl.trim())}
+                className="h-10 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                {saved ? tv.saved : saving ? "…" : tv.save}
+              </button>
+            </div>
+          </div>
+
+          {/* Upload */}
+          <div>
+            <label className="text-sm font-medium block mb-1.5">{tv.uploadLabel}</label>
+            {uploading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {uploadProgress !== null && uploadProgress > 0
+                  ? `${uploadProgress}%`
+                  : lang === "ja" ? "準備中…" : "Preparing…"}
+              </div>
+            ) : (
+              <label className="inline-flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg border bg-muted hover:bg-muted/80 transition-colors text-sm font-medium">
+                <Video className="h-4 w-4 text-muted-foreground" />
+                {lang === "ja" ? "ファイルを選択" : "Choose video file"}
+                <input
+                  type="file"
+                  accept="video/*,.mp4,.mov,.webm,.avi"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleUpload(f);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">
+              {lang === "ja" ? "最大200MB。MP4推奨。" : "Max 200 MB. MP4 recommended."}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

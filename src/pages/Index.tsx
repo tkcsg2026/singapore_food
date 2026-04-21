@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, ArrowRight, ShoppingBag, TrendingUp, Sparkles, Newspaper, Globe, ExternalLink, ChevronLeft, ChevronRight, Briefcase } from "lucide-react";
+import { Search, ArrowRight, ShoppingBag, TrendingUp, Sparkles, Newspaper, Globe, ExternalLink, ChevronLeft, ChevronRight, Briefcase, Play } from "lucide-react";
 import s1 from "@/assets/s1.jpg";
 import s2 from "@/assets/s2.jpg";
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
@@ -67,6 +67,8 @@ const Index = () => {
   const { data: tagCategories } = useFetch<CategoryRow[]>("/api/categories?type=tag");
   const { data: newsArticles } = useFetch<NewsArticleRow[]>("/api/news");
   const { data: jobNotices } = useFetch<JobNoticeRow[]>("/api/job-notices?limit=50");
+  const { data: promoVideoSetting } = useFetch<{ value?: string }>("/api/settings?key=promo_video_url");
+  const promoVideoUrl: string = (promoVideoSetting as any)?.value?.trim() || "";
 
   const tagDisplayMaps = useMemo(() => buildSupplierTagDisplayMaps(tagCategories || []), [tagCategories]);
   const popularSuppliers = useMemo(() => takeHomeSuppliers(suppliers || []), [suppliers]);
@@ -273,6 +275,46 @@ const Index = () => {
               </div>
             </Link>
           </div>
+
+          {/* Promo video — shown when set in admin, placeholder otherwise */}
+          {(() => {
+            const ytId = promoVideoUrl
+              ? (promoVideoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/) || [])[1]
+              : null;
+            const isFile = promoVideoUrl && !ytId;
+            return (
+              <div className="mt-8 md:mt-10 opacity-0-init animate-fade-in-up reveal-stagger-3">
+                {promoVideoUrl ? (
+                  <div className="rounded-2xl overflow-hidden shadow-lg bg-black aspect-video">
+                    {ytId ? (
+                      <iframe
+                        src={`https://www.youtube.com/embed/${ytId}`}
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        title="Promo video"
+                      />
+                    ) : (
+                      <video
+                        src={promoVideoUrl}
+                        controls
+                        className="w-full h-full object-contain"
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border-2 border-dashed border-border bg-white aspect-video flex flex-col items-center justify-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Play className="h-7 w-7 text-primary ml-1" />
+                    </div>
+                    <p className="text-sm text-muted-foreground font-medium">
+                      {lang === "ja" ? "紹介動画（準備中）" : "Introduction video coming soon"}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </section>
 

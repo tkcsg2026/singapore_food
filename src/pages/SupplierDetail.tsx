@@ -1,7 +1,7 @@
 "use client";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { MapPin, ArrowLeft, Award, Phone, ChevronLeft, ChevronRight, MessageCircle, Video, Play } from "lucide-react";
+import { MapPin, ArrowLeft, Award, Phone, ChevronLeft, ChevronRight, MessageCircle, Video, Play, ExternalLink } from "lucide-react";
 import { useState, useMemo } from "react";
 import Layout from "@/components/Layout";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
@@ -424,13 +424,18 @@ const SupplierDetail = () => {
                 )}
               </div>
             )}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <h1 className="text-2xl font-black tracking-tight">{displayName}</h1>
               <p className="text-sm text-muted-foreground mt-1">{lang === "ja" ? supplier.name : supplier.name_ja}</p>
               <div className="flex flex-wrap gap-2 mt-3 items-center">
                 <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                   <MapPin className="h-3 w-3" /> {displayArea}
                 </span>
+                {[supplier.category, supplier.category_2, supplier.category_3].filter(Boolean).map((cat: string) => (
+                  <span key={cat} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                    {(t.suppliers as { categories?: Record<string, string> }).categories?.[cat] ?? cat}
+                  </span>
+                ))}
               </div>
               <div className="flex flex-wrap gap-1.5 mt-3">
                 {(supplier.tags || []).map((tag: string) => (
@@ -439,7 +444,28 @@ const SupplierDetail = () => {
                   </span>
                 ))}
               </div>
-              {contactName && <p className="text-xs text-muted-foreground mt-1">{t.supplierDetail.contactLabel}{contactName}</p>}
+              {contactName && <p className="text-xs text-muted-foreground mt-2">{t.supplierDetail.contactLabel}{contactName}</p>}
+              {/* About text preview — fills blank space on desktop */}
+              {(() => {
+                const about = lang === "ja" ? (supplier.about_ja || supplier.about) : (supplier.about || supplier.about_ja);
+                return about ? (
+                  <p className="hidden lg:block text-sm text-muted-foreground mt-4 line-clamp-4 leading-relaxed border-t pt-4">
+                    {about}
+                  </p>
+                ) : null;
+              })()}
+              {/* Catalog link shortcut in header (desktop only) */}
+              {catalogUrl && (
+                <a
+                  href={catalogUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hidden lg:inline-flex items-center gap-2 mt-4 text-xs font-semibold text-primary border border-primary/40 bg-primary/5 hover:bg-primary/10 rounded-lg px-3 py-1.5 transition-colors"
+                >
+                  <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" />
+                  {lang === "ja" ? "カタログを見る" : "View Catalog"}
+                </a>
+              )}
             </div>
             <div className="hidden sm:block">
               {isLoggedIn ? (
@@ -474,11 +500,29 @@ const SupplierDetail = () => {
           {activeTab === "products" && (
             <div className="space-y-4">
               {catalogUrl && (
-                <div className="p-3 bg-muted/50 rounded-xl border">
-                  <a href={catalogUrl} target="_blank" rel="noopener noreferrer" className="text-primary font-semibold hover:underline inline-flex items-center gap-2 text-sm">
-                    {t.supplierDetail.catalogLink} ↗
-                  </a>
-                </div>
+                <a
+                  href={catalogUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between gap-3 px-5 py-4 rounded-xl border-2 border-primary bg-primary/5 hover:bg-primary/10 transition-colors group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
+                      <ExternalLink className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-primary leading-tight">
+                        {lang === "ja" ? "カタログ" : "Product Catalog"}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate max-w-[200px] sm:max-w-xs">
+                        {catalogUrl}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="flex-shrink-0 text-xs font-semibold text-primary border border-primary rounded-lg px-3 py-1.5 group-hover:bg-primary group-hover:text-white transition-colors">
+                    {lang === "ja" ? "開く ↗" : "Open ↗"}
+                  </span>
+                </a>
               )}
               {products.length === 0 && (
                 <p className="text-sm text-muted-foreground py-4">{lang === "ja" ? "商品が登録されていません。" : "No products registered."}</p>
