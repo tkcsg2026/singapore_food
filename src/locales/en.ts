@@ -594,6 +594,7 @@ const en = {
     reportNotifyMsg: "Your listing has been removed due to a violation report.",
     tabLinks: "Links",
     tabHomeVideo: "Home Video",
+    tabBanner: "Scrolling Banner",
     tabAuditLog: "Audit Log",
     homeVideo: {
       title: "Home Promotional Video",

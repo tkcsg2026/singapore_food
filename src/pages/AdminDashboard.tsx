@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Store, ShoppingBag, CheckCircle, XCircle, Plus, Trash2, Edit2, Link2,
   BarChart3, Tag, Image, AlertTriangle, Shield, Save, Eye, Newspaper, Globe, ExternalLink, FileText, Palette, Users,
-  Search, Ban, UserCheck, ClipboardList, Video, MessageCircle, Loader2, Play,
+  Search, Ban, UserCheck, ClipboardList, Video, MessageCircle, Loader2, Play, Megaphone,
 } from "lucide-react";
 import { FONT_OPTIONS, COLOR_OPTIONS, applyTheme } from "@/components/ThemeProvider";
 import {
@@ -138,6 +138,7 @@ const AdminDashboard = () => {
     { id: "terms",      label: t.admin.tabTerms,      icon: Shield },
     { id: "privacy",    label: t.admin.tabPrivacy,    icon: Shield },
     { id: "home-video", label: t.admin.tabHomeVideo,   icon: Video },
+    { id: "banner",     label: t.admin.tabBanner,      icon: Megaphone },
     { id: "qr",         label: t.admin.tabQR,         icon: Link2 },
     { id: "reports",    label: t.admin.tabReports,    icon: AlertTriangle },
     { id: "analytics",  label: t.admin.tabAnalytics,  icon: BarChart3 },
@@ -224,6 +225,7 @@ const AdminDashboard = () => {
             {activeTab === "terms" && <TermsManager />}
             {activeTab === "privacy" && <PrivacyManager />}
             {activeTab === "home-video" && <HomeVideoManager />}
+            {activeTab === "banner" && <BannerManager />}
             {activeTab === "qr" && <QRManager />}
             {activeTab === "reports" && <ReportManager onReportChanged={refreshReportBadge} />}
             {activeTab === "analytics" && <AnalyticsPanel />}
@@ -4295,6 +4297,184 @@ function InputField({ label, value, onChange, placeholder, type = "text", requir
         className={`w-full h-11 px-4 rounded-lg border bg-background text-sm ${error ? "border-destructive ring-1 ring-destructive" : ""}`}
       />
       {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+    </div>
+  );
+}
+
+// ── Scrolling Banner Manager ──────────────────────────────────────────────────
+function BannerManager() {
+  const { lang } = useTranslation();
+  const [textEn, setTextEn] = useState("");
+  const [textJa, setTextJa] = useState("");
+  const [isActive, setIsActive] = useState(false);
+  const [speed, setSpeed] = useState(35);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/scrolling-banner")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => {
+        if (d) {
+          setTextEn(d.text_en ?? "");
+          setTextJa(d.text_ja ?? "");
+          setIsActive(Boolean(d.is_active));
+          setSpeed(d.speed ?? 35);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaved(false);
+    try {
+      const res = await authFetch("/api/scrolling-banner", {
+        method: "PUT",
+        body: JSON.stringify({ text_en: textEn, text_ja: textJa, is_active: isActive, speed }),
+      });
+      if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 3000); }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isJa = lang === "ja";
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <Megaphone className="h-5 w-5 text-primary" />
+          {isJa ? "スクロールバナー管理" : "Scrolling Banner"}
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          {isJa
+            ? "ナビゲーションバー直下に表示される横スクロールテキストバナーを管理します。"
+            : "Manage the horizontal scrolling text ticker shown directly below the navigation bar."}
+        </p>
+      </div>
+
+      {loading ? (
+        <p className="text-sm text-muted-foreground animate-pulse py-6 text-center">
+          {isJa ? "読み込み中…" : "Loading…"}
+        </p>
+      ) : (
+        <div className="space-y-5">
+          {/* Active toggle */}
+          <div className="flex items-center justify-between p-4 rounded-xl border bg-muted/30">
+            <div>
+              <p className="font-medium text-sm">{isJa ? "バナーを表示する" : "Show Banner"}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {isJa ? "オフにするとバナーは非表示になります。" : "Toggle off to hide the banner sitewide."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsActive((v) => !v)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                isActive ? "bg-primary" : "bg-muted-foreground/30"
+              }`}
+              aria-pressed={isActive}
+            >
+              <span
+                className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                  isActive ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* English text */}
+          <div>
+            <label className="text-sm font-medium block mb-1.5">
+              {isJa ? "英語テキスト" : "English Text"}
+            </label>
+            <textarea
+              value={textEn}
+              onChange={(e) => setTextEn(e.target.value)}
+              rows={3}
+              placeholder="Your Singapore F&B network — Sign up free to discover suppliers, jobs, marketplace & news"
+              className="w-full px-4 py-3 rounded-lg border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+
+          {/* Japanese text */}
+          <div>
+            <label className="text-sm font-medium block mb-1.5">
+              {isJa ? "日本語テキスト" : "Japanese Text"}
+            </label>
+            <textarea
+              value={textJa}
+              onChange={(e) => setTextJa(e.target.value)}
+              rows={3}
+              placeholder="シンガポール飲食ネットワーク — 無料登録でサプライヤー・求人・取引・ニュースを発見"
+              className="w-full px-4 py-3 rounded-lg border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+
+          {/* Speed */}
+          <div>
+            <label className="text-sm font-medium block mb-1.5">
+              {isJa ? `スクロール速度: ${speed}秒` : `Scroll Speed: ${speed}s`}
+            </label>
+            <input
+              type="range"
+              min={10}
+              max={90}
+              step={5}
+              value={speed}
+              onChange={(e) => setSpeed(Number(e.target.value))}
+              className="w-full accent-primary"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+              <span>{isJa ? "速い (10秒)" : "Fast (10s)"}</span>
+              <span>{isJa ? "遅い (90秒)" : "Slow (90s)"}</span>
+            </div>
+          </div>
+
+          {/* Preview */}
+          {(textEn || textJa) && (
+            <div>
+              <p className="text-sm font-medium mb-2">{isJa ? "プレビュー" : "Preview"}</p>
+              <div
+                className="w-full bg-primary overflow-hidden rounded-lg flex items-center"
+                style={{ height: "36px" }}
+              >
+                <div
+                  className="inline-flex shrink-0"
+                  style={{ animation: `marquee-scroll ${speed}s linear infinite`, willChange: "transform" }}
+                >
+                  {[0, 1].map((i) => (
+                    <span
+                      key={i}
+                      className="text-white text-[13px] font-medium tracking-wide whitespace-nowrap px-8"
+                    >
+                      {(isJa ? textJa : textEn) || (isJa ? textEn : textJa)}
+                      &nbsp;&nbsp;&nbsp;●&nbsp;&nbsp;&nbsp;
+                      {(isJa ? textJa : textEn) || (isJa ? textEn : textJa)}
+                      &nbsp;&nbsp;&nbsp;●&nbsp;&nbsp;&nbsp;
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Save button */}
+          <Button onClick={handleSave} disabled={saving} className="gap-2">
+            {saving ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /> {isJa ? "保存中…" : "Saving…"}</>
+            ) : saved ? (
+              <><CheckCircle className="h-4 w-4" /> {isJa ? "保存しました！" : "Saved!"}</>
+            ) : (
+              <><Save className="h-4 w-4" /> {isJa ? "保存" : "Save"}</>
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

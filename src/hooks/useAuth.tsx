@@ -269,11 +269,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (existing)
       return { error: "This username is already taken. Please try another." };
 
-    const { data: authData, error: authError } = await sb.auth.signUp({
-      email,
-      password,
-      options: { data: { name, username } },
-    });
+    let authData: Awaited<ReturnType<typeof sb.auth.signUp>>["data"];
+    let authError: Awaited<ReturnType<typeof sb.auth.signUp>>["error"];
+    try {
+      ({ data: authData, error: authError } = await sb.auth.signUp({
+        email,
+        password,
+        options: { data: { name, username } },
+      }));
+    } catch {
+      return {
+        error:
+          "Unable to reach the server. Please check your connection and try again.",
+      };
+    }
     if (authError) {
       const m = authError.message.toLowerCase();
       if (m.includes("invalid api key") || m.includes("invalid_api_key")) {
@@ -342,7 +351,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const sb = getSupabase();
     if (!sb)
       return { error: "Supabase is not configured. Please check .env.local." };
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    let data: Awaited<ReturnType<typeof sb.auth.signInWithPassword>>["data"];
+    let error: Awaited<ReturnType<typeof sb.auth.signInWithPassword>>["error"];
+    try {
+      ({ data, error } = await sb.auth.signInWithPassword({ email, password }));
+    } catch (networkErr) {
+      return {
+        error:
+          "Unable to reach the server. Please check your connection and try again.",
+      };
+    }
     if (error) {
       // Translate common Supabase error messages to Japanese
       if (
@@ -386,8 +404,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const resendConfirmationEmail = async (email: string) => {
     const sb = getSupabase();
     if (!sb) return { error: "Supabase is not configured." };
-    const { error } = await sb.auth.resend({ type: "signup", email });
-    return { error: error?.message ?? null };
+    try {
+      const { error } = await sb.auth.resend({ type: "signup", email });
+      return { error: error?.message ?? null };
+    } catch {
+      return {
+        error:
+          "Unable to reach the server. Please check your connection and try again.",
+      };
+    }
   };
 
   return (

@@ -1351,8 +1351,38 @@ CREATE POLICY "Admin full portal_links" ON public.portal_links FOR ALL USING (
   EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
 );
 
+-- ── 16. Scrolling Banner (ticker bar below nav) ──────────────────────────────
+CREATE TABLE IF NOT EXISTS public.scrolling_banner (
+  id integer PRIMARY KEY DEFAULT 1,
+  text_en text NOT NULL DEFAULT '',
+  text_ja text NOT NULL DEFAULT '',
+  is_active boolean NOT NULL DEFAULT false,
+  speed integer NOT NULL DEFAULT 35,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  CONSTRAINT scrolling_banner_single_row CHECK (id = 1)
+);
+-- Seed the single config row
+INSERT INTO public.scrolling_banner (id, text_en, text_ja, is_active, speed)
+VALUES (
+  1,
+  'Your Singapore F&B network — Sign up free to discover suppliers, jobs, marketplace & news',
+  'シンガポール飲食ネットワーク — 無料登録でサプライヤー・求人・取引・ニュースを発見',
+  false,
+  35
+) ON CONFLICT (id) DO NOTHING;
+ALTER TABLE public.scrolling_banner ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public read scrolling_banner" ON public.scrolling_banner;
+DROP POLICY IF EXISTS "Admin full scrolling_banner" ON public.scrolling_banner;
+CREATE POLICY "Public read scrolling_banner"
+  ON public.scrolling_banner FOR SELECT USING (true);
+CREATE POLICY "Admin full scrolling_banner"
+  ON public.scrolling_banner FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
 -- ──────────────────────────────────────────────────────────────
--- 16. VERIFY — row counts after full setup
+-- 17. VERIFY — row counts after full setup
 -- ──────────────────────────────────────────────────────────────
 SELECT table_name, rows FROM (
   SELECT 'profiles'              AS table_name, COUNT(*) AS rows FROM public.profiles              UNION ALL
@@ -1371,7 +1401,8 @@ SELECT table_name, rows FROM (
   SELECT 'job_notices',                         COUNT(*)         FROM public.job_notices            UNION ALL
   SELECT 'video_transcode_jobs',                COUNT(*)         FROM public.video_transcode_jobs   UNION ALL
   SELECT 'portal_links',                        COUNT(*)         FROM public.portal_links           UNION ALL
-  SELECT 'chatbot_logs',                        COUNT(*)         FROM public.chatbot_logs
+  SELECT 'chatbot_logs',                        COUNT(*)         FROM public.chatbot_logs UNION ALL
+  SELECT 'scrolling_banner',                    COUNT(*)         FROM public.scrolling_banner
 ) t ORDER BY table_name;
 
 -- Refresh PostgREST schema cache immediately (helps avoid "column not found in schema cache" errors).

@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes marquee-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
 @layer base {
   :root {
     /* Design system: #FFFFFF, #212121, #FF2636, #686968, #F8F9FA, #E5E5E5 — サイト全体で primary を統一 */

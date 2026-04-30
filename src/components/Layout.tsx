@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { FooterSocialLinks } from "@/components/FooterSocialLinks";
 import { ChatbotWidget } from "@/components/chatbot/ChatbotWidget";
+import { ScrollingBanner } from "@/components/ScrollingBanner";
 
 /** Circular avatar or default icon */
 function AvatarBadge({ src, alt, size = 32 }: { src?: string | null; alt: string; size?: number }) {
@@ -431,7 +432,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen w-full min-w-0 flex flex-col overflow-x-hidden">
       <PageViewTracker />
       <Header />
-      <main className="flex-1 w-full min-w-0 pt-20 md:pt-[4.55rem] overflow-x-hidden">{children}</main>
+      <main className="flex-1 w-full min-w-0 pt-20 md:pt-[4.55rem] overflow-x-hidden">
+        <ScrollingBanner />
+        {children}
+      </main>
       <Footer />
       <BackToTop />
       <ChatbotWidget />

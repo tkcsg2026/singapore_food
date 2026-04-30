@@ -595,6 +595,7 @@ const ja: Translations = {
     reportNotifyMsg: "違反報告により、あなたの出品が削除されました。",
     tabLinks: "リンク管理",
     tabHomeVideo: "ホーム動画",
+    tabBanner: "スクロールバナー",
     tabAuditLog: "監査ログ",
     homeVideo: {
       title: "ホーム紹介動画",
