@@ -7,6 +7,7 @@ interface BannerConfig {
   text_ja: string;
   is_active: boolean;
   speed: number;
+  text_color?: string;
 }
 
 export function ScrollingBanner() {
@@ -26,13 +27,16 @@ export function ScrollingBanner() {
   const text = lang === "ja" ? config.text_ja : config.text_en;
   if (!text.trim()) return null;
 
-  const separator = "\u00a0\u00a0\u00a0\u25cf\u00a0\u00a0\u00a0"; // · · ● · ·
-  // Two identical copies so the -50% translate snaps back seamlessly
+  const isBlack = config.text_color === "black";
+  const textColorStyle = isBlack ? "#111111" : "var(--color-primary, #e53e3e)";
+
+  const separator = "\u00a0\u00a0\u00a0\u00a0\u2014\u00a0\u00a0\u00a0\u00a0";
   const content = `${text}${separator}${text}${separator}`;
 
   return (
     <div
-      className="w-full bg-transparent overflow-hidden flex items-center py-1"
+      className="w-full overflow-hidden flex items-center leading-none"
+      style={{ background: "transparent", marginBottom: "-2px", paddingTop: "2px", paddingBottom: "2px" }}
       aria-live="polite"
       aria-label="Site announcement"
       onMouseEnter={() => setPaused(true)}
@@ -47,10 +51,17 @@ export function ScrollingBanner() {
         }}
       >
         {/* Two identical copies for seamless looping: animation moves -50% */}
-        <span className="text-primary text-[24px] sm:text-[30px] md:text-[36px] font-semibold leading-none whitespace-nowrap px-8 select-none">
+        <span
+          className="text-[20px] sm:text-[26px] md:text-[30px] font-semibold leading-none whitespace-nowrap px-8 select-none"
+          style={{ color: textColorStyle }}
+        >
           {content}
         </span>
-        <span className="text-primary text-[24px] sm:text-[30px] md:text-[36px] font-semibold leading-none whitespace-nowrap px-8 select-none" aria-hidden>
+        <span
+          className="text-[20px] sm:text-[26px] md:text-[30px] font-semibold leading-none whitespace-nowrap px-8 select-none"
+          style={{ color: textColorStyle }}
+          aria-hidden
+        >
           {content}
         </span>
       </div>

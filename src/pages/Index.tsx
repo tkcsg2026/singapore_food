@@ -137,12 +137,12 @@ const Index = () => {
   return (
     <Layout>
       {/* Hero */}
-      <section className="relative min-h-[480px] md:min-h-[520px] flex items-center overflow-hidden bg-white w-full">
+      <section className="relative min-h-[480px] md:min-h-[520px] flex items-center overflow-hidden w-full">
         <div className="absolute inset-0">
           <img src="/hero-bg.jpg" alt="" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/55 to-black/25" />
         </div>
-        <div className="container relative z-10 py-10 sm:py-14 md:py-20 w-full min-w-0">
+        <div className="container relative z-10 pt-6 sm:pt-8 md:pt-10 pb-10 sm:pb-14 md:pb-20 w-full min-w-0">
           <div className="max-w-2xl min-w-0">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-sm text-white text-xs font-medium mb-6 animate-hero-soft">
               <Sparkles className="h-3.5 w-3.5 animate-float-subtle shrink-0" style={{ animationDuration: "5s" }} />

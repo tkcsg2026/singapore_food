@@ -31,7 +31,7 @@ export async function PUT(req: NextRequest) {
   if (!supabase) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
 
   const body = await req.json();
-  const { text_en, text_ja, is_active, speed } = body;
+  const { text_en, text_ja, is_active, speed, text_color } = body;
 
   const { data, error } = await supabase
     .from("scrolling_banner")
@@ -41,6 +41,7 @@ export async function PUT(req: NextRequest) {
       text_ja: typeof text_ja === "string" ? text_ja : "",
       is_active: Boolean(is_active),
       speed: typeof speed === "number" && speed > 0 ? Math.min(speed, 120) : 35,
+      text_color: text_color === "black" ? "black" : "red",
       updated_at: new Date().toISOString(),
     })
     .select()

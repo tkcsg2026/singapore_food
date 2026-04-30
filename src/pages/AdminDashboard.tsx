@@ -999,6 +999,7 @@ function ProductManager({ slug }: { slug: string }) {
     country_of_origin: "", country_of_origin_en: "", weight: "", quantity: "",
     size_w: "", size_d: "", size_h: "", size_unit: "cm",
     storage_condition: "", temperature: "", video_url: "",
+    price: "", description: "",
   });
 
   useEffect(() => { fetchProducts(); }, [slug]);
@@ -1014,7 +1015,7 @@ function ProductManager({ slug }: { slug: string }) {
   };
 
   const clearForm = () => {
-    setForm({ name: "", name_en: "", image: "", moq: "", country_of_origin: "", country_of_origin_en: "", weight: "", quantity: "", size_w: "", size_d: "", size_h: "", size_unit: "cm", storage_condition: "", temperature: "", video_url: "" });
+    setForm({ name: "", name_en: "", image: "", moq: "", country_of_origin: "", country_of_origin_en: "", weight: "", quantity: "", size_w: "", size_d: "", size_h: "", size_unit: "cm", storage_condition: "", temperature: "", video_url: "", price: "", description: "" });
     setEditingId(null);
     setNameError("");
   };
@@ -1036,6 +1037,8 @@ function ProductManager({ slug }: { slug: string }) {
       storage_condition: p.storage_condition ?? "",
       temperature: p.temperature ?? "",
       video_url: p.video_url ?? "",
+      price: p.price ?? "",
+      description: p.description ?? "",
     });
     setEditingId(p.id);
   };
@@ -1272,13 +1275,14 @@ function ProductManager({ slug }: { slug: string }) {
         )}
       </div>
 
-      {/* Row 3: Origin (JA/EN) + Weight + Quantity + MOQ */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      {/* Row 3: Origin (JA/EN) + Weight + Quantity + MOQ + Price */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <InputField label={t.admin.productCountryOfOrigin} value={form.country_of_origin} onChange={(v) => setForm((p) => ({ ...p, country_of_origin: v }))} />
         <InputField label={t.admin.productCountryOfOriginEn} value={form.country_of_origin_en} onChange={(v) => setForm((p) => ({ ...p, country_of_origin_en: v }))} />
         <InputField label={t.admin.productWeight} value={form.weight} onChange={(v) => setForm((p) => ({ ...p, weight: v }))} />
         <InputField label={t.admin.productQuantity} value={form.quantity} onChange={(v) => setForm((p) => ({ ...p, quantity: v }))} />
         <InputField label={lang === "ja" ? "MOQ" : "MOQ"} value={form.moq} onChange={(v) => setForm((p) => ({ ...p, moq: v }))} placeholder={lang === "ja" ? "例: 1kg〜" : "e.g. 1kg"} />
+        <InputField label={lang === "ja" ? "価格" : "Price"} value={form.price} onChange={(v) => setForm((p) => ({ ...p, price: v }))} placeholder={lang === "ja" ? "例: S$10.00 / kg" : "e.g. S$10.00 / kg"} />
       </div>
 
       {/* Row 3b: Dimensions W × D × H */}
@@ -1327,6 +1331,20 @@ function ProductManager({ slug }: { slug: string }) {
             <option value="Fresh">{t.admin.productTemperatureFresh}</option>
           </select>
         </div>
+      </div>
+
+      {/* Row 5: Description */}
+      <div>
+        <label className="text-sm font-medium block mb-1.5">
+          {lang === "ja" ? "商品説明" : "Description"}
+        </label>
+        <textarea
+          value={form.description}
+          onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+          rows={3}
+          placeholder={lang === "ja" ? "商品の簡単な説明を入力してください。" : "Enter a brief description of the product."}
+          className="w-full px-3 py-2 rounded-lg border bg-background text-sm resize-y min-h-[80px] focus:outline-none focus:ring-2 focus:ring-primary/40"
+        />
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -4308,6 +4326,7 @@ function BannerManager() {
   const [textJa, setTextJa] = useState("");
   const [isActive, setIsActive] = useState(false);
   const [speed, setSpeed] = useState(35);
+  const [textColor, setTextColor] = useState<"red" | "black">("red");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -4321,6 +4340,7 @@ function BannerManager() {
           setTextJa(d.text_ja ?? "");
           setIsActive(Boolean(d.is_active));
           setSpeed(d.speed ?? 35);
+          setTextColor(d.text_color === "black" ? "black" : "red");
         }
       })
       .catch(() => {})
@@ -4333,7 +4353,7 @@ function BannerManager() {
     try {
       const res = await authFetch("/api/scrolling-banner", {
         method: "PUT",
-        body: JSON.stringify({ text_en: textEn, text_ja: textJa, is_active: isActive, speed }),
+        body: JSON.stringify({ text_en: textEn, text_ja: textJa, is_active: isActive, speed, text_color: textColor }),
       });
       if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 3000); }
     } finally {
@@ -4415,6 +4435,39 @@ function BannerManager() {
             />
           </div>
 
+          {/* Text color */}
+          <div>
+            <label className="text-sm font-medium block mb-1.5">
+              {isJa ? "文字色" : "Text Color"}
+            </label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setTextColor("red")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                  textColor === "red"
+                    ? "border-red-500 bg-red-50 text-red-600 shadow-sm"
+                    : "border-border bg-background text-muted-foreground hover:border-red-300"
+                }`}
+              >
+                <span className="w-4 h-4 rounded-full bg-red-500 inline-block flex-shrink-0" />
+                {isJa ? "赤" : "Red"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setTextColor("black")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                  textColor === "black"
+                    ? "border-gray-800 bg-gray-50 text-gray-900 shadow-sm"
+                    : "border-border bg-background text-muted-foreground hover:border-gray-400"
+                }`}
+              >
+                <span className="w-4 h-4 rounded-full bg-gray-900 inline-block flex-shrink-0" />
+                {isJa ? "黒" : "Black"}
+              </button>
+            </div>
+          </div>
+
           {/* Speed */}
           <div>
             <label className="text-sm font-medium block mb-1.5">
@@ -4440,7 +4493,7 @@ function BannerManager() {
             <div>
               <p className="text-sm font-medium mb-2">{isJa ? "プレビュー" : "Preview"}</p>
               <div
-                className="w-full bg-primary overflow-hidden rounded-lg flex items-center"
+                className="w-full overflow-hidden rounded-lg flex items-center border bg-white"
                 style={{ height: "36px" }}
               >
                 <div
@@ -4450,12 +4503,13 @@ function BannerManager() {
                   {[0, 1].map((i) => (
                     <span
                       key={i}
-                      className="text-white text-[13px] font-medium tracking-wide whitespace-nowrap px-8"
+                      className="text-[13px] font-medium tracking-wide whitespace-nowrap px-8"
+                      style={{ color: textColor === "black" ? "#111111" : "#e53e3e" }}
                     >
                       {(isJa ? textJa : textEn) || (isJa ? textEn : textJa)}
-                      &nbsp;&nbsp;&nbsp;●&nbsp;&nbsp;&nbsp;
+                      &nbsp;&nbsp;&nbsp;—&nbsp;&nbsp;&nbsp;
                       {(isJa ? textJa : textEn) || (isJa ? textEn : textJa)}
-                      &nbsp;&nbsp;&nbsp;●&nbsp;&nbsp;&nbsp;
+                      &nbsp;&nbsp;&nbsp;—&nbsp;&nbsp;&nbsp;
                     </span>
                   ))}
                 </div>

@@ -150,6 +150,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     storage_condition: str(body.storage_condition),
     temperature:       str(body.temperature),
     video_url:         videoUrl,
+    price:             str(body.price),
+    description:       str(body.description),
   };
   const videoTranscode = getVideoTranscodeStateForUrl(videoUrl);
   payload.video_playback_url = videoTranscode.video_playback_url;
@@ -206,6 +208,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ slug
     storage_condition: str(body.storage_condition),
     temperature:       str(body.temperature),
     video_url:         videoUrl,
+    price:             str(body.price),
+    description:       str(body.description),
   };
   const videoTranscode = getVideoTranscodeStateForUrl(videoUrl);
   payload.video_playback_url = videoTranscode.video_playback_url;

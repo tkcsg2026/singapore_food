@@ -57,6 +57,7 @@ interface JobNotice {
   experience?: string;
   eligibility?: string;
   description?: string;
+  image?: string;
   created_at: string;
   status: string;
 }
@@ -137,6 +138,16 @@ function JobListingCard({
 
   return (
     <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col gap-3 transition-shadow hover:shadow-md">
+      {notice.image && !isSeeker && (
+        <div className="w-full rounded-xl overflow-hidden">
+          <img
+            src={notice.image}
+            alt={notice.company || notice.title}
+            className="w-full h-40 object-cover"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
         <div className="min-w-0">
           {isSeeker && (
@@ -247,6 +258,8 @@ function PostForm({
   const [experience, setExperience] = useState<ExperienceKey>("entry");
   const [eligibility, setEligibility] = useState<EligibilityKey>("open");
   const [description, setDescription] = useState("");
+  const [image, setImage] = useState("");
+  const [imageUploading, setImageUploading] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
@@ -298,6 +311,7 @@ function PostForm({
           experience,
           eligibility,
           description,
+          image: isSeeker ? "" : image,
           agreed: true,
         }),
       });
@@ -381,6 +395,70 @@ function PostForm({
                 placeholder={j.companyPh}
                 className="min-h-[44px] rounded-xl bg-background"
               />
+            </div>
+          )}
+          {!isSeeker && (
+            <div className="space-y-2 sm:col-span-2">
+              <Label>{lang === "ja" ? "企業ロゴ / 画像（任意）" : "Company Logo / Image (optional)"}</Label>
+              <div className="flex flex-wrap gap-2 items-center">
+                {imageUploading ? (
+                  <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" strokeOpacity=".25"/><path d="M12 2a10 10 0 0 1 10 10" /></svg>
+                    {lang === "ja" ? "アップロード中…" : "Uploading…"}
+                  </span>
+                ) : (
+                  <label className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border cursor-pointer transition-colors hover:bg-muted">
+                    {lang === "ja" ? "画像を選択" : "Choose Image"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+                      className="sr-only"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setImageUploading(true);
+                        try {
+                          const signRes = await fetch("/api/upload/signed", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              fileName: file.name,
+                              fileType: file.type,
+                              fileSize: file.size,
+                              folder: "jobs",
+                            }),
+                          });
+                          if (!signRes.ok) throw new Error("Upload failed");
+                          const signed = await signRes.json();
+                          await fetch(signed.signedUrl, {
+                            method: "PUT",
+                            headers: { "Content-Type": signed.contentType },
+                            body: file,
+                          });
+                          setImage(signed.publicUrl);
+                        } catch {
+                          alert(lang === "ja" ? "画像のアップロードに失敗しました。" : "Image upload failed.");
+                        } finally {
+                          setImageUploading(false);
+                          e.target.value = "";
+                        }
+                      }}
+                    />
+                  </label>
+                )}
+                {image && (
+                  <div className="flex items-center gap-2">
+                    <img src={image} alt="" className="h-14 w-14 rounded-lg object-cover border" referrerPolicy="no-referrer" />
+                    <button
+                      type="button"
+                      onClick={() => setImage("")}
+                      className="text-xs text-destructive hover:underline"
+                    >
+                      {lang === "ja" ? "削除" : "Remove"}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

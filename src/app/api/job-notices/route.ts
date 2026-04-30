@@ -105,6 +105,7 @@ export async function POST(req: NextRequest) {
     experience: clampText(body?.experience, 24),
     eligibility: clampText(body?.eligibility, 24),
     description: clampText(body?.description, 4000),
+    image: clampText(body?.image, 1000),
     agreed: true,
     agreed_at: new Date().toISOString(),
     status: "active" as const,

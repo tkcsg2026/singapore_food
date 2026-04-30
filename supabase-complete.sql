@@ -216,6 +216,8 @@ ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS storage_condition 
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS temperature       text DEFAULT '';
 -- Video URL: direct MP4/WebM upload URL or YouTube / Vimeo embed URL
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS video_url         text DEFAULT '';
+ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS price             text DEFAULT '';
+ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS description       text DEFAULT '';
 
 ALTER TABLE public.supplier_products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.marketplace_items ENABLE ROW LEVEL SECURITY;
@@ -1198,6 +1200,7 @@ CREATE INDEX IF NOT EXISTS job_notices_status_idx ON public.job_notices (status)
 -- post_type: "job" (求人) or "seeker" (求職者). Defaults to "job" for legacy rows.
 ALTER TABLE public.job_notices ADD COLUMN IF NOT EXISTS post_type text NOT NULL DEFAULT 'job' CHECK (post_type IN ('job','seeker'));
 ALTER TABLE public.job_notices ADD COLUMN IF NOT EXISTS created_by uuid REFERENCES public.profiles(id) ON DELETE SET NULL;
+ALTER TABLE public.job_notices ADD COLUMN IF NOT EXISTS image text DEFAULT '';
 CREATE INDEX IF NOT EXISTS job_notices_post_type_idx ON public.job_notices (post_type);
 
 ALTER TABLE public.job_notices ENABLE ROW LEVEL SECURITY;
@@ -1358,10 +1361,12 @@ CREATE TABLE IF NOT EXISTS public.scrolling_banner (
   text_ja text NOT NULL DEFAULT '',
   is_active boolean NOT NULL DEFAULT false,
   speed integer NOT NULL DEFAULT 35,
+  text_color text NOT NULL DEFAULT 'red',
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
   CONSTRAINT scrolling_banner_single_row CHECK (id = 1)
 );
+ALTER TABLE public.scrolling_banner ADD COLUMN IF NOT EXISTS text_color text NOT NULL DEFAULT 'red';
 -- Seed the single config row
 INSERT INTO public.scrolling_banner (id, text_en, text_ja, is_active, speed)
 VALUES (
