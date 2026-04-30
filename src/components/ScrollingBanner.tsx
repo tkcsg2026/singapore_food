@@ -32,8 +32,7 @@ export function ScrollingBanner() {
 
   return (
     <div
-      className="w-full bg-primary overflow-hidden flex items-center sticky top-20 md:top-[4.55rem] z-40"
-      style={{ height: "36px" }}
+      className="w-full bg-transparent overflow-hidden flex items-center py-1"
       aria-live="polite"
       aria-label="Site announcement"
       onMouseEnter={() => setPaused(true)}
@@ -48,10 +47,10 @@ export function ScrollingBanner() {
         }}
       >
         {/* Two identical copies for seamless looping: animation moves -50% */}
-        <span className="text-primary-foreground text-[13px] font-medium tracking-wide whitespace-nowrap px-8 select-none">
+        <span className="text-primary text-[24px] sm:text-[30px] md:text-[36px] font-semibold leading-none whitespace-nowrap px-8 select-none">
           {content}
         </span>
-        <span className="text-primary-foreground text-[13px] font-medium tracking-wide whitespace-nowrap px-8 select-none" aria-hidden>
+        <span className="text-primary text-[24px] sm:text-[30px] md:text-[36px] font-semibold leading-none whitespace-nowrap px-8 select-none" aria-hidden>
           {content}
         </span>
       </div>
