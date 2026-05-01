@@ -40,19 +40,3 @@
 .read-the-docs {
   color: #888;
 }
-/* --- ヘッダーの文字を強制的に太く大きくする --- */
-header nav a, 
-header nav span,
-header nav div {
-    font-weight: 900 !important;   /* 最大の太さ */
-    font-size: 20px !important;    /* 確実に大きくなるサイズ */
-}
-
-/* --- ロゴを強制的に巨大にする --- */
-header a img,
-header img,
-.logo {
-    height: 120px !important;      /* 120pxなら確実に巨大化します */
-    width: auto !important;
-    max-height: none !important;   /* 制限を解除 */
-}
