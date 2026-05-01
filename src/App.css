@@ -45,5 +45,5 @@ header nav span {
     font-weight: 700 !important;
 }
 header img {
-    height: 80px !important;       /* ロゴの高さを80ピクセルに拡大 */
+    height: 120px !important;       /* ロゴの高さを120ピクセルに拡大 */
     width: auto !important;        /* 横幅は自動調整して形を保つ */
