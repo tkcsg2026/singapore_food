@@ -550,7 +550,7 @@ const ja: Translations = {
     productDimensionsD: "奥行 (D)",
     productDimensionsH: "高さ (H)",
     productDimensionsUnit: "単位 (cm / mm)",
-    productStorageCondition: "保存方法（日本語）",
+    productStorageCondition: "保存方法",
     productTemperature: "温度帯",
     productTemperatureFrozen: "冷凍",
     productTemperatureChilled: "冷蔵",

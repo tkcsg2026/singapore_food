@@ -71,6 +71,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     size_unit: p.size_unit ?? "cm",
     storage_condition: p.storage_condition ?? "",
     temperature: p.temperature ?? "",
+    price: p.price ?? "",
+    description: p.description ?? "",
     video_url: p.video_url ?? "",
     video_playback_url: p.video_playback_url ?? p.video_transcoded_url ?? p.video_url ?? "",
     video_transcoded_url: p.video_transcoded_url ?? "",

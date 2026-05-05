@@ -131,6 +131,8 @@ export interface SupplierProductRow {
   quantity?: string;
   storage_condition?: string;
   temperature?: string;
+  price?: string;
+  description?: string;
   /** Dimensions: width, depth, height */
   size_w?: string;
   size_d?: string;

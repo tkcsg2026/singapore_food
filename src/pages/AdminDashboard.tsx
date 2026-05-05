@@ -1002,6 +1002,12 @@ function ProductManager({ slug }: { slug: string }) {
     price: "", description: "",
   });
 
+  const normalizeTemperatureValue = (value?: string) => {
+    const v = (value || "").trim();
+    if (!v) return "";
+    return v === "Fresh" ? "Room temperature" : v;
+  };
+
   useEffect(() => { fetchProducts(); }, [slug]);
 
   const fetchProducts = async () => {
@@ -1035,7 +1041,7 @@ function ProductManager({ slug }: { slug: string }) {
       size_h: p.size_h ?? "",
       size_unit: p.size_unit ?? "cm",
       storage_condition: p.storage_condition ?? "",
-      temperature: p.temperature ?? "",
+      temperature: normalizeTemperatureValue(p.temperature),
       video_url: p.video_url ?? "",
       price: p.price ?? "",
       description: p.description ?? "",
@@ -1317,7 +1323,19 @@ function ProductManager({ slug }: { slug: string }) {
 
       {/* Row 4: Storage + Temperature */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <InputField label={t.admin.productStorageCondition} value={form.storage_condition} onChange={(v) => setForm((p) => ({ ...p, storage_condition: v }))} />
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium">{t.admin.productStorageCondition}</label>
+          <select
+            value={form.storage_condition}
+            onChange={(e) => setForm((p) => ({ ...p, storage_condition: e.target.value }))}
+            className="h-12 px-3 rounded-lg border bg-background text-sm"
+          >
+            <option value="">—</option>
+            <option value="Room temperature">Room temperature</option>
+            <option value="Chilled">Chilled</option>
+            <option value="Frozen">Frozen</option>
+          </select>
+        </div>
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium">{t.admin.productTemperature}</label>
           <select
@@ -1328,7 +1346,7 @@ function ProductManager({ slug }: { slug: string }) {
             <option value="">—</option>
             <option value="Frozen">{t.admin.productTemperatureFrozen}</option>
             <option value="Chilled">{t.admin.productTemperatureChilled}</option>
-            <option value="Fresh">{t.admin.productTemperatureFresh}</option>
+            <option value="Room temperature">{t.admin.productTemperatureFresh}</option>
           </select>
         </div>
       </div>
@@ -1415,7 +1433,9 @@ function ProductManager({ slug }: { slug: string }) {
                 <p className="text-sm font-semibold truncate">{p.name}</p>
                 {p.name_en && <p className="text-xs text-muted-foreground truncate">{p.name_en}</p>}
                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                  {p.temperature && <span className="text-xs font-medium text-primary">{p.temperature}</span>}
+                  {normalizeTemperatureValue(p.temperature) && (
+                    <span className="text-xs font-medium text-primary">{normalizeTemperatureValue(p.temperature)}</span>
+                  )}
                   {(lang === "ja" ? p.country_of_origin : (p.country_of_origin_en || p.country_of_origin)) && (
                     <span className="text-xs text-muted-foreground">{lang === "ja" ? p.country_of_origin : (p.country_of_origin_en || p.country_of_origin)}</span>
                   )}

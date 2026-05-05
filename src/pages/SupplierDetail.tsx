@@ -198,6 +198,12 @@ function productDisplayNames(p: { name?: string; name_en?: string }) {
   return { primary: en || ja, secondary: "" };
 }
 
+function normalizeTemperatureLabel(value?: string): string {
+  const v = (value || "").trim();
+  if (!v) return "";
+  return v === "Fresh" ? "Room temperature" : v;
+}
+
 /**
  * Thumbnail card for direct video URLs.
  * Always shows a dark card with play-icon overlay immediately so the card
@@ -551,7 +557,10 @@ const SupplierDetail = () => {
                           </>
                         );
                       })()}
-                      {p.temperature && <div className="text-xs text-primary font-medium mt-0.5">{p.temperature}</div>}
+                      {normalizeTemperatureLabel(p.temperature) && (
+                        <div className="text-xs text-primary font-medium mt-0.5">{normalizeTemperatureLabel(p.temperature)}</div>
+                      )}
+                      {p.price && <div className="text-xs sm:text-sm font-semibold mt-0.5">{p.price}</div>}
                       {(lang === "ja" ? p.country_of_origin : (p.country_of_origin_en || p.country_of_origin)) && (
                         <div className="text-xs text-muted-foreground">
                           {labels.origin}: {lang === "ja" ? p.country_of_origin : (p.country_of_origin_en || p.country_of_origin)}
@@ -621,7 +630,9 @@ const SupplierDetail = () => {
                 })()}
                 <div className="mt-3 space-y-2">
                   {product.temperature && (
-                    <span className="inline-block bg-primary/10 text-primary text-xs font-semibold px-2 py-1 rounded-md">{product.temperature}</span>
+                    <span className="inline-block bg-primary/10 text-primary text-xs font-semibold px-2 py-1 rounded-md">
+                      {normalizeTemperatureLabel(product.temperature)}
+                    </span>
                   )}
                   <dl className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2">
                     <div><dt className="text-xs text-muted-foreground">{labels.origin}</dt><dd className="text-sm font-medium">{lang === "ja" ? (product.country_of_origin || "—") : (product.country_of_origin_en || product.country_of_origin || "—")}</dd></div>
@@ -629,7 +640,8 @@ const SupplierDetail = () => {
                     <div><dt className="text-xs text-muted-foreground">{labels.quantity}</dt><dd className="text-sm font-medium">{product.quantity || "—"}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">{labels.moq}</dt><dd className="text-sm font-medium">{product.moq || "—"}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">{labels.storage}</dt><dd className="text-sm font-medium">{product.storage_condition || "—"}</dd></div>
-                    <div><dt className="text-xs text-muted-foreground">{labels.temp}</dt><dd className="text-sm font-medium">{product.temperature || "—"}</dd></div>
+                    <div><dt className="text-xs text-muted-foreground">{labels.temp}</dt><dd className="text-sm font-medium">{normalizeTemperatureLabel(product.temperature) || "—"}</dd></div>
+                    <div><dt className="text-xs text-muted-foreground">{lang === "ja" ? "価格" : "Price"}</dt><dd className="text-sm font-medium">{product.price || "—"}</dd></div>
                     {(product.size_w || product.size_d || product.size_h) && (
                       <div className="col-span-2">
                         <dt className="text-xs text-muted-foreground">{labels.size}</dt>
@@ -639,6 +651,12 @@ const SupplierDetail = () => {
                       </div>
                     )}
                   </dl>
+                  {product.description && (
+                    <div className="mt-3">
+                      <p className="text-xs text-muted-foreground">{lang === "ja" ? "商品説明" : "Description"}</p>
+                      <p className="text-sm leading-relaxed mt-1 whitespace-pre-wrap">{product.description}</p>
+                    </div>
+                  )}
                 </div>
                 <div className="mt-4">
                   {isLoggedIn ? (
