@@ -11,6 +11,7 @@ import { useLoginPrompt } from "@/components/LoginPromptModal";
 import type { CategoryRow } from "@/types/database";
 import { buildSupplierTagDisplayMaps } from "@/lib/category-display";
 import { getPreferredPlaybackUrl, VIDEO_EXTENSIONS, getFileExtension } from "@/lib/video";
+import { resolveCountryLabel } from "@/lib/country-map";
 
 function isYouTube(url: string) {
   return url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/) ||
@@ -316,15 +317,15 @@ const SupplierDetail = () => {
   const slug = typeof params?.slug === "string" ? params.slug : "";
   const { data: supplier, loading } = useFetch<any>(`/api/suppliers/${slug}`, [slug]);
   const { data: tagCategories } = useFetch<(CategoryRow & { type: "tag"; label_ja?: string | null })[]>("/api/categories?type=tag");
-  const [activeTab, setActiveTab] = useState("about");
+  const [activeTab, setActiveTab] = useState("products");
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const { t, lang } = useTranslation();
   const { requireLogin, loginPromptModal, isLoggedIn } = useLoginPrompt();
 
   const tabs = [
-    { id: "about",          label: t.supplierDetail.tabAbout },
     { id: "products",       label: t.supplierDetail.tabProducts },
+    { id: "about",          label: t.supplierDetail.tabAbout },
     { id: "certifications", label: t.supplierDetail.tabCertifications },
     { id: "contact",        label: t.supplierDetail.tabContact },
   ];
@@ -561,11 +562,12 @@ const SupplierDetail = () => {
                         <div className="text-xs text-primary font-medium mt-0.5">{normalizeTemperatureLabel(p.temperature)}</div>
                       )}
                       {p.price && <div className="text-xs sm:text-sm font-semibold mt-0.5">{p.price}</div>}
-                      {(lang === "ja" ? p.country_of_origin : (p.country_of_origin_en || p.country_of_origin)) && (
-                        <div className="text-xs text-muted-foreground">
-                          {labels.origin}: {lang === "ja" ? p.country_of_origin : (p.country_of_origin_en || p.country_of_origin)}
-                        </div>
-                      )}
+                      {(() => {
+                        const label = resolveCountryLabel({ ja: p.country_of_origin, en: p.country_of_origin_en, lang });
+                        return label ? (
+                          <div className="text-xs text-muted-foreground">{labels.origin}: {label}</div>
+                        ) : null;
+                      })()}
                       {p.weight && <div className="text-xs text-muted-foreground">{labels.weight}: {p.weight}</div>}
                       {p.quantity && <div className="text-xs text-muted-foreground">{labels.quantity}: {p.quantity}</div>}
                       {p.moq && <div className="text-xs text-muted-foreground">{labels.moq}: {p.moq}</div>}
@@ -635,7 +637,7 @@ const SupplierDetail = () => {
                     </span>
                   )}
                   <dl className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2">
-                    <div><dt className="text-xs text-muted-foreground">{labels.origin}</dt><dd className="text-sm font-medium">{lang === "ja" ? (product.country_of_origin || "—") : (product.country_of_origin_en || product.country_of_origin || "—")}</dd></div>
+                    <div><dt className="text-xs text-muted-foreground">{labels.origin}</dt><dd className="text-sm font-medium">{resolveCountryLabel({ ja: product.country_of_origin, en: product.country_of_origin_en, lang }) || "—"}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">{labels.weight}</dt><dd className="text-sm font-medium">{product.weight || "—"}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">{labels.quantity}</dt><dd className="text-sm font-medium">{product.quantity || "—"}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">{labels.moq}</dt><dd className="text-sm font-medium">{product.moq || "—"}</dd></div>
