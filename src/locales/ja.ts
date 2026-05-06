@@ -134,6 +134,7 @@ const ja: Translations = {
       seafood: "海鮮・鮮魚",
       "produce-dry-goods": "青果・乾物",
       beverages: "飲料・酒類",
+      packaging: "包材・パッケージ",
       "kitchen-equipment": "厨房機器",
       "furniture-interior": "家具・内装",
       "pos-systems": "POSシステム",

@@ -18,6 +18,7 @@ export interface Supplier {
   about: string;
   plan?: string;
   featured?: boolean;
+  hidden?: boolean;
 }
 
 export interface Product {
@@ -71,6 +72,7 @@ export const categories = [
   { value: 'seafood', label: '海鮮・鮮魚', parent_group: 'food-supplies' },
   { value: 'produce-dry-goods', label: '青果・乾物', parent_group: 'food-supplies' },
   { value: 'beverages', label: '飲料・酒類', parent_group: 'food-supplies' },
+  { value: 'packaging', label: '包材・パッケージ', parent_group: 'food-supplies' },
   // Kitchen & Hardware
   { value: 'kitchen-equipment', label: '厨房機器', parent_group: 'kitchen-hardware' },
   { value: 'furniture-interior', label: '家具・内装', parent_group: 'kitchen-hardware' },

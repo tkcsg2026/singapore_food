@@ -452,15 +452,6 @@ const SupplierDetail = () => {
                 ))}
               </div>
               {contactName && <p className="text-xs text-muted-foreground mt-2">{t.supplierDetail.contactLabel}{contactName}</p>}
-              {/* About text preview — fills blank space on desktop */}
-              {(() => {
-                const about = lang === "ja" ? (supplier.about_ja || supplier.about) : (supplier.about || supplier.about_ja);
-                return about ? (
-                  <p className="hidden lg:block text-sm text-muted-foreground mt-4 line-clamp-4 leading-relaxed border-t pt-4">
-                    {about}
-                  </p>
-                ) : null;
-              })()}
               {/* Catalog link shortcut in header (desktop only) */}
               {catalogUrl && (
                 <a
@@ -497,13 +488,6 @@ const SupplierDetail = () => {
         </div>
 
         <div className="py-8">
-          {activeTab === "about" && (
-            <div className="max-w-2xl">
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                {lang === "ja" ? (supplier.about_ja || supplier.about) : (supplier.about || supplier.about_ja)}
-              </p>
-            </div>
-          )}
           {activeTab === "products" && (
             <div className="space-y-4">
               {catalogUrl && (
@@ -581,6 +565,13 @@ const SupplierDetail = () => {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+          {activeTab === "about" && (
+            <div className="max-w-2xl">
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {lang === "ja" ? (supplier.about_ja || supplier.about) : (supplier.about || supplier.about_ja)}
+              </p>
             </div>
           )}
           {activeTab === "certifications" && (

@@ -55,32 +55,36 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     .select("*")
     .eq("supplier_id", supplier.id);
 
-  const normalisedProducts = (products || []).map((p: Record<string, unknown>) => ({
-    id: p.id,
-    supplier_id: p.supplier_id,
-    name: p.name ?? "",
-    name_en: p.name_en ?? "",
-    image: p.image ?? "",
-    moq: p.moq ?? "",
-    country_of_origin: p.country_of_origin ?? "",
-    weight: p.weight ?? "",
-    quantity: p.quantity ?? "",
-    size_w: p.size_w ?? "",
-    size_d: p.size_d ?? "",
-    size_h: p.size_h ?? "",
-    size_unit: p.size_unit ?? "cm",
-    storage_condition: p.storage_condition ?? "",
-    temperature: p.temperature ?? "",
-    price: p.price ?? "",
-    description: p.description ?? "",
-    video_url: p.video_url ?? "",
-    video_playback_url: p.video_playback_url ?? p.video_transcoded_url ?? p.video_url ?? "",
-    video_transcoded_url: p.video_transcoded_url ?? "",
-    video_transcode_status: p.video_transcode_status ?? (p.video_url ? "not_needed" : "none"),
-    video_transcode_error: p.video_transcode_error ?? "",
-    video_transcode_requested_at: p.video_transcode_requested_at ?? null,
-    video_transcoded_at: p.video_transcoded_at ?? null,
-  }));
+  const normalisedProducts = (products || [])
+    .map((p: Record<string, unknown>, idx: number) => ({
+      id: p.id,
+      supplier_id: p.supplier_id,
+      name: p.name ?? "",
+      name_en: p.name_en ?? "",
+      image: p.image ?? "",
+      moq: p.moq ?? "",
+      country_of_origin: p.country_of_origin ?? "",
+      country_of_origin_en: p.country_of_origin_en ?? "",
+      weight: p.weight ?? "",
+      quantity: p.quantity ?? "",
+      size_w: p.size_w ?? "",
+      size_d: p.size_d ?? "",
+      size_h: p.size_h ?? "",
+      size_unit: p.size_unit ?? "cm",
+      storage_condition: p.storage_condition ?? "",
+      temperature: p.temperature ?? "",
+      price: p.price ?? "",
+      description: p.description ?? "",
+      sort_order: typeof p.sort_order === "number" ? (p.sort_order as number) : idx,
+      video_url: p.video_url ?? "",
+      video_playback_url: p.video_playback_url ?? p.video_transcoded_url ?? p.video_url ?? "",
+      video_transcoded_url: p.video_transcoded_url ?? "",
+      video_transcode_status: p.video_transcode_status ?? (p.video_url ? "not_needed" : "none"),
+      video_transcode_error: p.video_transcode_error ?? "",
+      video_transcode_requested_at: p.video_transcode_requested_at ?? null,
+      video_transcoded_at: p.video_transcoded_at ?? null,
+    }))
+    .sort((a, b) => (a.sort_order as number) - (b.sort_order as number));
 
   return NextResponse.json({ ...supplier, products: normalisedProducts });
 }

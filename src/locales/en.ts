@@ -132,6 +132,7 @@ const en = {
       seafood: "Seafood",
       "produce-dry-goods": "Produce & Dry Goods",
       beverages: "Beverages",
+      packaging: "Packaging",
       "kitchen-equipment": "Kitchen Equipment",
       "furniture-interior": "Furniture & Interior",
       "pos-systems": "POS Systems",

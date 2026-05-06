@@ -46,6 +46,7 @@ type EligibilityKey = "scPr" | "open" | "inDesc";
 
 interface JobNotice {
   id: string;
+  /** Present when the row was created with auth; required for poster edit/delete. */
   created_by?: string | null;
   post_type?: PostType;
   title: string;
@@ -324,6 +325,9 @@ function PostForm({
     setPostError(null);
     try {
       const sb = getSupabase();
+      if (sb) {
+        await sb.auth.refreshSession().catch(() => {});
+      }
       const session = sb ? (await sb.auth.getSession()).data.session : null;
       const headers: HeadersInit = { "Content-Type": "application/json" };
       if (session?.access_token) {

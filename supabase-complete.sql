@@ -69,6 +69,7 @@ ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS image_2         text DEFAU
 ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS image_3         text DEFAULT '';
 ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS whatsapp_contact_name text DEFAULT '';
 ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS about_ja             text DEFAULT '';
+ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS hidden             boolean NOT NULL DEFAULT false;
 
 -- Supplier Products
 CREATE TABLE IF NOT EXISTS public.supplier_products (
@@ -567,96 +568,135 @@ UPDATE public.categories SET parent_group = 'professional-services' WHERE type =
 
 -- ──────────────────────────────────────────────────────────────
 -- 7. SEED — suppliers
--- ──────────────────────────────────────────────────────────────
-INSERT INTO public.suppliers
-  (id, slug, name, name_ja, logo, category, category_ja,
-   tags, area, area_ja, description, description_ja,
-   whatsapp, views, certifications, about, featured, plan)
-VALUES
-  (
-    'a1000000-0000-0000-0000-000000000001',
-    'tokyo-seafood', 'Tokyo Seafood Co.', '東京シーフード株式会社',
-    'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=200&h=200&fit=crop',
-    'seafood', '海鮮・鮮魚',
-    ARRAY['少量対応','日本語対応','ハラール'],
-    'central', '中央エリア',
-    'Premium seafood supplier with daily fresh catches',
-    '毎日新鮮な魚介類を提供する高品質シーフードサプライヤー。築地から直送。',
-    '6512345678', 1250, ARRAY['HACCP','ISO 22000','ハラール認証'],
-    '2005年創業。シンガポールの日本料理店を中心に、最高品質の鮮魚を毎日お届けしています。築地市場との直接取引により、常に新鮮な商品をご提供いたします。',
-    true, 'premium'
-  ),
-  (
-    'a1000000-0000-0000-0000-000000000002',
-    'green-harvest', 'Green Harvest Pte Ltd', 'グリーンハーベスト',
-    'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=200&h=200&fit=crop',
-    'produce-dry-goods', '青果・乾物',
-    ARRAY['少量対応','オーガニック'],
-    'north', '北部エリア',
-    'Organic vegetables and herbs supplier',
-    'オーガニック野菜とハーブの専門サプライヤー。地元農園から新鮮直送。',
-    '6523456789', 980, ARRAY['有機JAS','GlobalGAP'],
-    'シンガポール北部の自社農園で栽培したオーガニック野菜を、レストランやカフェに直接お届けしています。',
-    false, 'standard'
-  ),
-  (
-    'a1000000-0000-0000-0000-000000000003',
-    'asia-meat-supply', 'Asia Meat Supply', 'アジアミートサプライ',
-    'https://images.unsplash.com/photo-1588347818036-558601350947?w=200&h=200&fit=crop',
-    'meat-poultry', '肉類・家禽',
-    ARRAY['ハラール','大量注文可','翌日配送'],
-    'west', '西部エリア',
-    'Halal certified meat supplier',
-    'ハラール認証済み。和牛からチキンまで幅広い肉類を取り扱い。',
-    '6534567890', 1500, ARRAY['ハラール認証','HACCP'],
-    'アジア各国から厳選した肉類を、シンガポール全土のレストランにお届けしています。ハラール認証取得済み。',
-    true, 'premium'
-  ),
-  (
-    'a1000000-0000-0000-0000-000000000004',
-    'sakura-beverages', 'Sakura Beverages', 'さくらビバレッジ',
-    'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?w=200&h=200&fit=crop',
-    'beverages', '飲料・酒類',
-    ARRAY['日本語対応','少量対応','日本酒専門'],
-    'central', '中央エリア',
-    'Japanese sake and beverages specialist',
-    '日本酒・焼酎を中心とした飲料の専門卸。蔵元直送の希少銘柄も取扱。',
-    '6545678901', 870, ARRAY['酒類販売免許'],
-    '日本全国の蔵元と直接取引し、シンガポールの日本料理店に最高品質の日本酒をお届けしています。',
-    false, 'standard'
-  ),
-  (
-    'a1000000-0000-0000-0000-000000000005',
-    'pacific-dry-goods', 'Pacific Dry Goods', 'パシフィック乾物',
-    'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=200&h=200&fit=crop',
-    'produce-dry-goods', '青果・乾物',
-    ARRAY['少量対応','日本語対応'],
-    'east', '東部エリア',
-    'Japanese condiments and dry goods',
-    '味噌、醤油、だし等の和食調味料と乾物を幅広く取り扱い。',
-    '6556789012', 720, ARRAY['食品衛生管理者'],
-    '日本の伝統的な調味料と乾物を専門に取り扱う卸売業者です。シンガポール在住の日本人シェフに愛用されています。',
-    false, 'basic'
-  ),
-  (
-    'a1000000-0000-0000-0000-000000000006',
-    'kitchen-pro-equipment', 'Kitchen Pro Equipment', 'キッチンプロ機器',
-    'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop',
-    'kitchen-equipment', '厨房機器',
-    ARRAY['設置サポート','メンテナンス対応'],
-    'south', '南部エリア',
-    'Commercial kitchen equipment supplier',
-    '業務用厨房機器の販売・設置・メンテナンスまでワンストップで対応。',
-    '6567890123', 650, ARRAY['ISO 9001'],
-    'シンガポール全土のレストラン・ホテルに業務用厨房機器を提供しています。設置からアフターメンテナンスまで一貫サポート。',
-    false, 'basic'
+-- Idempotent: UPDATE rows that already have seed UUIDs, then INSERT only when
+-- that id (and slug) are still free. Avoids suppliers_pkey duplicate on re-run.
+WITH seed AS (
+  SELECT * FROM (VALUES
+    (
+      'a1000000-0000-0000-0000-000000000001'::uuid,
+      'tokyo-seafood', 'Tokyo Seafood Co.', '東京シーフード株式会社',
+      'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=200&h=200&fit=crop',
+      'seafood', '海鮮・鮮魚',
+      ARRAY['少量対応','日本語対応','ハラール']::text[],
+      'central', '中央エリア',
+      'Premium seafood supplier with daily fresh catches',
+      '毎日新鮮な魚介類を提供する高品質シーフードサプライヤー。築地から直送。',
+      '6512345678', 1250::integer,
+      ARRAY['HACCP','ISO 22000','ハラール認証']::text[],
+      '2005年創業。シンガポールの日本料理店を中心に、最高品質の鮮魚を毎日お届けしています。築地市場との直接取引により、常に新鮮な商品をご提供いたします。',
+      true, 'premium'::text
+    ),
+    (
+      'a1000000-0000-0000-0000-000000000002'::uuid,
+      'green-harvest', 'Green Harvest Pte Ltd', 'グリーンハーベスト',
+      'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=200&h=200&fit=crop',
+      'produce-dry-goods', '青果・乾物',
+      ARRAY['少量対応','オーガニック']::text[],
+      'north', '北部エリア',
+      'Organic vegetables and herbs supplier',
+      'オーガニック野菜とハーブの専門サプライヤー。地元農園から新鮮直送。',
+      '6523456789', 980::integer,
+      ARRAY['有機JAS','GlobalGAP']::text[],
+      'シンガポール北部の自社農園で栽培したオーガニック野菜を、レストランやカフェに直接お届けしています。',
+      false, 'standard'::text
+    ),
+    (
+      'a1000000-0000-0000-0000-000000000003'::uuid,
+      'asia-meat-supply', 'Asia Meat Supply', 'アジアミートサプライ',
+      'https://images.unsplash.com/photo-1588347818036-558601350947?w=200&h=200&fit=crop',
+      'meat-poultry', '肉類・家禽',
+      ARRAY['ハラール','大量注文可','翌日配送']::text[],
+      'west', '西部エリア',
+      'Halal certified meat supplier',
+      'ハラール認証済み。和牛からチキンまで幅広い肉類を取り扱い。',
+      '6534567890', 1500::integer,
+      ARRAY['ハラール認証','HACCP']::text[],
+      'アジア各国から厳選した肉類を、シンガポール全土のレストランにお届けしています。ハラール認証取得済み。',
+      true, 'premium'::text
+    ),
+    (
+      'a1000000-0000-0000-0000-000000000004'::uuid,
+      'sakura-beverages', 'Sakura Beverages', 'さくらビバレッジ',
+      'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?w=200&h=200&fit=crop',
+      'beverages', '飲料・酒類',
+      ARRAY['日本語対応','少量対応','日本酒専門']::text[],
+      'central', '中央エリア',
+      'Japanese sake and beverages specialist',
+      '日本酒・焼酎を中心とした飲料の専門卸。蔵元直送の希少銘柄も取扱。',
+      '6545678901', 870::integer,
+      ARRAY['酒類販売免許']::text[],
+      '日本全国の蔵元と直接取引し、シンガポールの日本料理店に最高品質の日本酒をお届けしています。',
+      false, 'standard'::text
+    ),
+    (
+      'a1000000-0000-0000-0000-000000000005'::uuid,
+      'pacific-dry-goods', 'Pacific Dry Goods', 'パシフィック乾物',
+      'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=200&h=200&fit=crop',
+      'produce-dry-goods', '青果・乾物',
+      ARRAY['少量対応','日本語対応']::text[],
+      'east', '東部エリア',
+      'Japanese condiments and dry goods',
+      '味噌、醤油、だし等の和食調味料と乾物を幅広く取り扱い。',
+      '6556789012', 720::integer,
+      ARRAY['食品衛生管理者']::text[],
+      '日本の伝統的な調味料と乾物を専門に取り扱う卸売業者です。シンガポール在住の日本人シェフに愛用されています。',
+      false, 'basic'::text
+    ),
+    (
+      'a1000000-0000-0000-0000-000000000006'::uuid,
+      'kitchen-pro-equipment', 'Kitchen Pro Equipment', 'キッチンプロ機器',
+      'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop',
+      'kitchen-equipment', '厨房機器',
+      ARRAY['設置サポート','メンテナンス対応']::text[],
+      'south', '南部エリア',
+      'Commercial kitchen equipment supplier',
+      '業務用厨房機器の販売・設置・メンテナンスまでワンストップで対応。',
+      '6567890123', 650::integer,
+      ARRAY['ISO 9001']::text[],
+      'シンガポール全土のレストラン・ホテルに業務用厨房機器を提供しています。設置からアフターメンテナンスまで一貫サポート。',
+      false, 'basic'::text
+    )
+  ) AS t(
+    id, slug, name, name_ja, logo, category, category_ja,
+    tags, area, area_ja, description, description_ja,
+    whatsapp, views, certifications, about, featured, plan
   )
-ON CONFLICT (slug) DO UPDATE SET
-  views    = EXCLUDED.views,
-  featured = EXCLUDED.featured,
-  plan     = EXCLUDED.plan;
+),
+_seed_update AS (
+  UPDATE public.suppliers s SET
+    slug = seed.slug,
+    name = seed.name,
+    name_ja = seed.name_ja,
+    logo = seed.logo,
+    category = seed.category,
+    category_ja = seed.category_ja,
+    tags = seed.tags,
+    area = seed.area,
+    area_ja = seed.area_ja,
+    description = seed.description,
+    description_ja = seed.description_ja,
+    whatsapp = seed.whatsapp,
+    views = seed.views,
+    certifications = seed.certifications,
+    about = seed.about,
+    featured = seed.featured,
+    plan = seed.plan
+  FROM seed
+  WHERE s.id = seed.id
+)
+INSERT INTO public.suppliers (
+  id, slug, name, name_ja, logo, category, category_ja,
+  tags, area, area_ja, description, description_ja,
+  whatsapp, views, certifications, about, featured, plan
+)
+SELECT
+  seed.id, seed.slug, seed.name, seed.name_ja, seed.logo, seed.category, seed.category_ja,
+  seed.tags, seed.area, seed.area_ja, seed.description, seed.description_ja,
+  seed.whatsapp, seed.views, seed.certifications, seed.about, seed.featured, seed.plan
+FROM seed
+WHERE NOT EXISTS (SELECT 1 FROM public.suppliers s WHERE s.id = seed.id)
+  AND NOT EXISTS (SELECT 1 FROM public.suppliers s WHERE s.slug = seed.slug);
 
--- ──────────────────────────────────────────────────────────────
 -- 8. SEED — supplier products (with Country of Origin, Weight, Quantity, Storage Condition, Temperature)
 -- ──────────────────────────────────────────────────────────────
 INSERT INTO public.supplier_products (supplier_id, name, name_en, image, moq, country_of_origin, weight, quantity, storage_condition, temperature)

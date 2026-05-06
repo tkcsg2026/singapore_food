@@ -2,8 +2,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Store, ShoppingBag, CheckCircle, XCircle, Plus, Trash2, Edit2, Link2,
-  BarChart3, Tag, Image, AlertTriangle, Shield, Save, Eye, Newspaper, Globe, ExternalLink, FileText, Palette, Users,
+  BarChart3, Tag, Image, AlertTriangle, Shield, Save, Eye, EyeOff, Newspaper, Globe, ExternalLink, FileText, Palette, Users,
   Search, Ban, UserCheck, ClipboardList, Video, MessageCircle, Loader2, Play, Megaphone,
+  ArrowUp, ArrowDown,
 } from "lucide-react";
 import { FONT_OPTIONS, COLOR_OPTIONS, applyTheme } from "@/components/ThemeProvider";
 import {
@@ -20,6 +21,7 @@ import { inferVideoMimeType, VIDEO_EXTENSIONS, getFileExtension } from "@/lib/vi
 import { resolveCategoryDisplayLabels } from "@/lib/category-display";
 import { buildDynamicGroups, getGroupLabel } from "@/lib/category-groups";
 import type { CategoryGroup } from "@/lib/category-groups";
+import { resolveCountryLabel } from "@/lib/country-map";
 
 /** Returns true when a URL clearly points to a video file (by extension). */
 function isVideoFileUrl(url: string): boolean {
@@ -286,8 +288,34 @@ function SupplierManager() {
   }, []);
 
   const fetchSuppliers = async () => {
-    const res = await fetch("/api/suppliers");
+    // includeHidden=1 makes the API return hidden suppliers when called as admin
+    const res = await authFetch("/api/suppliers?includeHidden=1");
     setSuppliers(await res.json());
+  };
+
+  /** Toggle the hidden flag (Post / non-Post) for a supplier. */
+  const handleToggleHidden = async (s: any) => {
+    const next = !s.hidden;
+    const confirmMsg = next
+      ? (lang === "ja"
+          ? `「${s.name_ja || s.name}」を非表示（Post）にしますか？\n一般公開の一覧から消えます。`
+          : `Hide "${s.name || s.name_ja}" from public listings?`)
+      : (lang === "ja"
+          ? `「${s.name_ja || s.name}」を再公開しますか？`
+          : `Re-publish "${s.name || s.name_ja}" to public listings?`);
+    if (!confirm(confirmMsg)) return;
+    const res = await authFetch(`/api/suppliers/${encodeURIComponent(s.slug)}`, {
+      method: "PUT",
+      body: JSON.stringify({ hidden: next }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(lang === "ja"
+        ? `更新に失敗しました。\n${err?.error ?? res.statusText}`
+        : `Update failed.\n${err?.error ?? res.statusText}`);
+      return;
+    }
+    fetchSuppliers();
   };
 
   /** Select a category from the dropdown and auto-fill the matching label_ja */
@@ -595,7 +623,7 @@ function SupplierManager() {
       <div className="space-y-3">
         {filteredSuppliers.map((s: any) => (
           <div key={s.id}>
-            <div className="bg-card border p-4 space-y-3">
+            <div className={`bg-card border p-4 space-y-3 ${s.hidden ? "opacity-70 ring-1 ring-amber-300/60" : ""}`}>
               {/* Row 1: image + text */}
               <div className="flex items-start gap-3 min-w-0">
                 <img src={s.logo} alt="" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
@@ -605,6 +633,11 @@ function SupplierManager() {
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${PLAN_BADGE[s.plan || "basic"]}`}>
                       {PLAN_LABEL[s.plan || "basic"]}
                     </span>
+                    {s.hidden && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                        <EyeOff className="h-3 w-3" /> {lang === "ja" ? "非表示 (Post)" : "Hidden (Post)"}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground break-words">{
                     (lang === "ja"
@@ -622,6 +655,18 @@ function SupplierManager() {
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setProductSlug(productSlug === s.slug ? null : s.slug)}>
                   <ShoppingBag className="h-3 w-3 mr-1" /> {t.admin.manageProducts}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={`rounded-xl ${s.hidden ? "text-amber-700" : ""}`}
+                  onClick={() => handleToggleHidden(s)}
+                  title={s.hidden ? (lang === "ja" ? "再公開する" : "Show on public site") : (lang === "ja" ? "非表示にする (Post)" : "Hide from public site (Post)")}
+                >
+                  {s.hidden ? <Eye className="h-3 w-3 mr-1" /> : <EyeOff className="h-3 w-3 mr-1" />}
+                  {s.hidden
+                    ? (lang === "ja" ? "公開" : "Show")
+                    : (lang === "ja" ? "Post" : "Post")}
                 </Button>
                 <Button variant="outline" size="sm" className="rounded-xl" onClick={() => handleEdit(s)}><Edit2 className="h-3 w-3" /></Button>
                 <Button variant="outline" size="sm" className="rounded-xl text-destructive" onClick={() => handleDelete(s.slug)}><Trash2 className="h-3 w-3" /></Button>
@@ -661,7 +706,7 @@ function UsersManager() {
   useEffect(() => { fetchUsers(); }, []);
 
   useEffect(() => {
-    authFetch("/api/suppliers")
+    authFetch("/api/suppliers?includeHidden=1")
       .then((r) => (r.ok ? r.json() : []))
       .then((d: unknown) => {
         if (!Array.isArray(d)) return;
@@ -1094,6 +1139,33 @@ function ProductManager({ slug }: { slug: string }) {
     fetchProducts();
   };
 
+  /** Move a product up or down in the display order. Persists via PATCH. */
+  const handleMove = async (id: string, direction: "up" | "down") => {
+    const list = [...products];
+    const idx = list.findIndex((p) => p.id === id);
+    if (idx < 0) return;
+    const swapWith = direction === "up" ? idx - 1 : idx + 1;
+    if (swapWith < 0 || swapWith >= list.length) return;
+    [list[idx], list[swapWith]] = [list[swapWith], list[idx]];
+    setProducts(list);
+    try {
+      const res = await authFetch(`/api/suppliers/${encodeURIComponent(slug)}/products`, {
+        method: "PATCH",
+        body: JSON.stringify({ order: list.map((p) => p.id) }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(lang === "ja"
+          ? `並び替えに失敗しました。\n${err?.error ?? res.statusText}`
+          : `Reorder failed.\n${err?.error ?? res.statusText}`);
+        fetchProducts();
+      }
+    } catch {
+      alert(lang === "ja" ? "ネットワークエラーが発生しました。" : "Network error. Please try again.");
+      fetchProducts();
+    }
+  };
+
   return (
     <div className="mt-2 bg-muted/50 border p-3 sm:p-4 space-y-4 overflow-x-hidden">
       <h3 className="text-sm font-bold">{t.admin.productManagement}</h3>
@@ -1380,7 +1452,7 @@ function ProductManager({ slug }: { slug: string }) {
         <p className="text-xs text-muted-foreground">{t.admin.noProducts}</p>
       ) : (
         <div className="space-y-2">
-          {products.map((p: any) => (
+          {products.map((p: any, idx: number) => (
             <div key={p.id} className="flex items-center gap-3 bg-card border p-3">
               <div className="relative flex-shrink-0">
                 {(() => {
@@ -1436,9 +1508,12 @@ function ProductManager({ slug }: { slug: string }) {
                   {normalizeTemperatureValue(p.temperature) && (
                     <span className="text-xs font-medium text-primary">{normalizeTemperatureValue(p.temperature)}</span>
                   )}
-                  {(lang === "ja" ? p.country_of_origin : (p.country_of_origin_en || p.country_of_origin)) && (
-                    <span className="text-xs text-muted-foreground">{lang === "ja" ? p.country_of_origin : (p.country_of_origin_en || p.country_of_origin)}</span>
-                  )}
+                  {(() => {
+                    const label = resolveCountryLabel({ ja: p.country_of_origin, en: p.country_of_origin_en, lang });
+                    return label ? (
+                      <span className="text-xs text-muted-foreground">{label}</span>
+                    ) : null;
+                  })()}
                   {p.weight && <span className="text-xs text-muted-foreground">{p.weight}</span>}
                   {p.quantity && <span className="text-xs text-muted-foreground">{p.quantity}</span>}
                   {(p.size_w || p.size_d || p.size_h) && (
@@ -1450,6 +1525,26 @@ function ProductManager({ slug }: { slug: string }) {
                 </div>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg h-10 w-10 p-0"
+                  onClick={() => handleMove(p.id, "up")}
+                  disabled={idx === 0}
+                  title={lang === "ja" ? "上へ移動" : "Move up"}
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg h-10 w-10 p-0"
+                  onClick={() => handleMove(p.id, "down")}
+                  disabled={idx === products.length - 1}
+                  title={lang === "ja" ? "下へ移動" : "Move down"}
+                >
+                  <ArrowDown className="h-4 w-4" />
+                </Button>
                 <Button variant="outline" size="sm" className="rounded-lg h-10 w-10 p-0" onClick={() => handleEdit(p)} title={lang === "ja" ? "編集" : "Edit"}>
                   <Edit2 className="h-4 w-4" />
                 </Button>
