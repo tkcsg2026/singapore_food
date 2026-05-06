@@ -789,6 +789,7 @@ const en = {
     applyViaWA: "Enquire via WhatsApp",
     seekerLabel: "Job Seeker",
     contactSeekerWA: "Contact via WhatsApp",
+    myPostEdit: "Edit my post",
     myPostDelete: "Delete my post",
     postingAdminOnly:
       "Please log in to post a job listing or job seeker profile.",

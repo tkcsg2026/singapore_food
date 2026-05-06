@@ -790,6 +790,7 @@ const ja: Translations = {
     applyViaWA: "WhatsApp で応募・問い合わせ",
     seekerLabel: "求職者",
     contactSeekerWA: "WhatsApp で連絡する",
+    myPostEdit: "自分の投稿を編集",
     myPostDelete: "自分の投稿を削除",
     postingAdminOnly:
       "求人情報や求職者プロフィールを投稿するにはログインしてください。",

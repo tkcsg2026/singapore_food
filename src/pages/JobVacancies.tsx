@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Briefcase, CheckCircle2, ChevronDown, ChevronUp, ClipboardList,
-  ListOrdered, MapPin, MessageCircle, RefreshCw, Plus, Trash2, User, X,
+  ListOrdered, MapPin, MessageCircle, RefreshCw, Plus, Trash2, User, X, Edit2,
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -95,16 +95,20 @@ function JobListingCard({
   j,
   phoneDigits,
   canDelete,
+  canEdit,
   showAdminDelete,
   onDelete,
+  onEdit,
   onAdminDelete,
 }: {
   notice: JobNotice;
   j: ReturnType<typeof useTranslation>["t"]["jobs"];
   phoneDigits: string;
   canDelete: boolean;
+  canEdit: boolean;
   showAdminDelete: boolean;
   onDelete: (id: string) => void;
+  onEdit: (notice: JobNotice) => void;
   onAdminDelete: (id: string) => void;
 }) {
   const deletePostBtnClass =
@@ -214,8 +218,18 @@ function JobListingCard({
           </a>
         </div>
       )}
-      {(canDelete || showAdminDelete) && (
+      {(canDelete || canEdit || showAdminDelete) && (
         <div className="mt-1 flex flex-wrap gap-2">
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => onEdit(notice)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-border bg-card hover:bg-muted transition-colors"
+            >
+              <Edit2 className="h-3.5 w-3.5 shrink-0" />
+              {j.myPostEdit ?? "Edit my post"}
+            </button>
+          )}
           {canDelete && (
             <button type="button" onClick={() => onDelete(notice.id)} className={deletePostBtnClass}>
               <Trash2 className="h-3.5 w-3.5 shrink-0 text-black" />
@@ -240,29 +254,47 @@ function PostForm({
   j,
   onSuccess,
   onClose,
+  initialNotice,
 }: {
   postType: PostType;
   j: ReturnType<typeof useTranslation>["t"]["jobs"];
   onSuccess: () => void;
   onClose: () => void;
+  initialNotice?: JobNotice | null;
 }) {
   const { lang } = useTranslation();
-  const isSeeker = postType === "seeker";
+  const isEditing = Boolean(initialNotice?.id);
+  const isSeeker = (initialNotice?.post_type ?? postType) === "seeker";
 
-  const [jobTitle, setJobTitle] = useState("");
-  const [company, setCompany] = useState("");
-  const [employment, setEmployment] = useState<EmploymentKey>("fullTime");
-  const [roleCategory, setRoleCategory] = useState<RoleKey>("kitchen");
-  const [region, setRegion] = useState<RegionKey>("islandwide");
-  const [compensation, setCompensation] = useState<CompensationKey>("negotiate");
-  const [experience, setExperience] = useState<ExperienceKey>("entry");
-  const [eligibility, setEligibility] = useState<EligibilityKey>("open");
-  const [description, setDescription] = useState("");
-  const [image, setImage] = useState("");
+  const [jobTitle, setJobTitle] = useState(initialNotice?.title ?? "");
+  const [company, setCompany] = useState(initialNotice?.company ?? "");
+  const [employment, setEmployment] = useState<EmploymentKey>((initialNotice?.employment as EmploymentKey) || "fullTime");
+  const [roleCategory, setRoleCategory] = useState<RoleKey>((initialNotice?.role_category as RoleKey) || "kitchen");
+  const [region, setRegion] = useState<RegionKey>((initialNotice?.region as RegionKey) || "islandwide");
+  const [compensation, setCompensation] = useState<CompensationKey>((initialNotice?.compensation as CompensationKey) || "negotiate");
+  const [experience, setExperience] = useState<ExperienceKey>((initialNotice?.experience as ExperienceKey) || "entry");
+  const [eligibility, setEligibility] = useState<EligibilityKey>((initialNotice?.eligibility as EligibilityKey) || "open");
+  const [description, setDescription] = useState(initialNotice?.description ?? "");
+  const [image, setImage] = useState(initialNotice?.image ?? "");
   const [imageUploading, setImageUploading] = useState(false);
-  const [agreed, setAgreed] = useState(false);
+  const [agreed, setAgreed] = useState(isEditing);
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!initialNotice) return;
+    setJobTitle(initialNotice.title ?? "");
+    setCompany(initialNotice.company ?? "");
+    setEmployment((initialNotice.employment as EmploymentKey) || "fullTime");
+    setRoleCategory((initialNotice.role_category as RoleKey) || "kitchen");
+    setRegion((initialNotice.region as RegionKey) || "islandwide");
+    setCompensation((initialNotice.compensation as CompensationKey) || "negotiate");
+    setExperience((initialNotice.experience as ExperienceKey) || "entry");
+    setEligibility((initialNotice.eligibility as EligibilityKey) || "open");
+    setDescription(initialNotice.description ?? "");
+    setImage(initialNotice.image ?? "");
+    setAgreed(true);
+  }, [initialNotice?.id]);
 
   const lines = [
     isSeeker ? "[F&B Portal — 求職者]" : j.msgHeader,
@@ -284,10 +316,10 @@ function PostForm({
     rawMessage.length <= WA_MAX ? rawMessage : `${rawMessage.slice(0, WA_MAX - 20)}\n\n[…]`;
 
   const canSendBase = jobTitle.trim().length > 0 && description.trim().length > 0;
-  const canSend = canSendBase && agreed && !posting;
+  const canSend = canSendBase && (isEditing || agreed) && !posting;
 
   const handlePost = async () => {
-    if (!canSendBase || !agreed) return;
+    if (!canSendBase || (!isEditing && !agreed)) return;
     setPosting(true);
     setPostError(null);
     try {
@@ -297,8 +329,8 @@ function PostForm({
       if (session?.access_token) {
         (headers as Record<string, string>).Authorization = `Bearer ${session.access_token}`;
       }
-      const res = await fetch("/api/job-notices", {
-        method: "POST",
+      const res = await fetch(isEditing ? `/api/job-notices?id=${encodeURIComponent(initialNotice!.id)}` : "/api/job-notices", {
+        method: isEditing ? "PATCH" : "POST",
         headers,
         body: JSON.stringify({
           post_type: postType,
@@ -571,7 +603,8 @@ function PostForm({
         </div>
 
         <div className="flex flex-col gap-3 pt-1">
-          <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+          {!isEditing && (
+            <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
             <label className="flex items-start gap-3 cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -584,7 +617,8 @@ function PostForm({
               </span>
             </label>
             <p className="text-[11px] text-muted-foreground font-medium">{j.consentHint}</p>
-          </div>
+            </div>
+          )}
 
           {canSendBase ? (
             <Button
@@ -592,7 +626,9 @@ function PostForm({
               disabled={!canSend}
               className="w-full rounded-xl min-h-[44px] font-bold"
             >
-              {posting ? j.posting : j.postAndSend}
+              {posting
+                ? (isEditing ? (lang === "ja" ? "更新中..." : "Updating...") : j.posting)
+                : (isEditing ? (j.myPostEdit ?? "Edit my post") : j.postAndSend)}
             </Button>
           ) : (
             <div className="flex min-h-[44px] w-full items-center justify-center rounded-xl border border-dashed border-muted-foreground/35 bg-muted/30 px-4 text-sm text-muted-foreground text-center">
@@ -620,6 +656,7 @@ export default function JobVacancies() {
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState<PostType>("job");
   const [postSuccess, setPostSuccess] = useState(false);
+  const [editingNotice, setEditingNotice] = useState<JobNotice | null>(null);
   const toastTimerRef = useRef<number | null>(null);
 
   const [phoneDigits, setPhoneDigits] = useState(() =>
@@ -753,7 +790,14 @@ export default function JobVacancies() {
   }, [postSuccess]);
 
   const openForm = (type: PostType) => {
+    setEditingNotice(null);
     setFormType(type);
+    setShowForm(true);
+  };
+
+  const openEditForm = (notice: JobNotice) => {
+    setEditingNotice(notice);
+    setFormType((notice.post_type ?? "job") as PostType);
     setShowForm(true);
   };
 
@@ -869,7 +913,7 @@ export default function JobVacancies() {
       </div>
 
       {/* Form modal */}
-      <Dialog open={showForm} onOpenChange={(open) => { if (!open) setShowForm(false); }}>
+      <Dialog open={showForm} onOpenChange={(open) => { if (!open) { setShowForm(false); setEditingNotice(null); } }}>
         <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto p-0 rounded-2xl [&>button:last-child]:hidden">
           <DialogTitle className="sr-only">
             {formType === "seeker"
@@ -882,8 +926,9 @@ export default function JobVacancies() {
           <PostForm
             postType={formType}
             j={j}
+            initialNotice={editingNotice}
             onSuccess={() => { setPostSuccess(true); fetchListings(); }}
-            onClose={() => setShowForm(false)}
+            onClose={() => { setShowForm(false); setEditingNotice(null); }}
           />
         </DialogContent>
       </Dialog>
@@ -961,6 +1006,7 @@ export default function JobVacancies() {
                 );
                 // Admins see admin-delete on every post; regular users see owner-delete only on their own
                 const canOwnerDelete = !isAdmin && isOwner;
+                const canEdit = isOwner || isAdmin;
                 const showAdminDelete = Boolean(isAdmin);
                 return (
                   <JobListingCard
@@ -969,8 +1015,10 @@ export default function JobVacancies() {
                     j={j}
                     phoneDigits={phoneDigits}
                     canDelete={canOwnerDelete}
+                    canEdit={canEdit}
                     showAdminDelete={showAdminDelete}
                     onDelete={(id) => handleDeleteListing(id, "owner")}
+                    onEdit={openEditForm}
                     onAdminDelete={(id) => handleDeleteListing(id, "admin")}
                   />
                 );
