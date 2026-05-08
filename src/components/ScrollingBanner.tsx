@@ -35,8 +35,8 @@ export function ScrollingBanner() {
 
   return (
     <div
-      className="w-full overflow-hidden flex items-center leading-none bg-transparent"
-      style={{ paddingTop: "2px", paddingBottom: "2px" }}
+      className="w-full overflow-hidden flex items-center leading-none"
+      style={{ background: "transparent", marginBottom: "-2px", paddingTop: "2px", paddingBottom: "2px" }}
       aria-live="polite"
       aria-label="Site announcement"
       onMouseEnter={() => setPaused(true)}

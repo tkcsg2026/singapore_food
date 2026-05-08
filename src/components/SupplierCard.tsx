@@ -152,29 +152,16 @@ export function SupplierCard({ supplier, variant = "grid", rank, tagDisplayMaps,
       {!isList && (
         <p className="text-xs text-muted-foreground line-clamp-2 mb-2 leading-relaxed flex-shrink-0" title={description}>{description}</p>
       )}
-      {(() => {
-        const seen = new Set<string>();
-        const uniqueTags: { raw: string; label: string }[] = [];
-        for (const raw of supplier.tags ?? []) {
-          const label = translateTag(raw);
-          const key = label.trim().toLowerCase();
-          if (!key || seen.has(key)) continue;
-          seen.add(key);
-          uniqueTags.push({ raw, label });
-        }
-        return (
-          <div
-            className={`flex flex-wrap gap-1.5 flex-shrink-0 min-w-0`}
-            title={uniqueTags.map((u) => u.label).join(", ")}
-          >
-            {uniqueTags.map(({ raw, label }) => (
-              <span key={raw} className="tag-badge tag-badge-fixed" title={label}>
-                {label}
-              </span>
-            ))}
-          </div>
-        );
-      })()}
+      <div
+        className={`flex flex-wrap gap-1.5 flex-shrink-0 min-w-0`}
+        title={(supplier.tags ?? []).map(translateTag).join(", ")}
+      >
+        {(supplier.tags ?? []).map((tag) => (
+          <span key={tag} className="tag-badge tag-badge-fixed" title={translateTag(tag)}>
+            {translateTag(tag)}
+          </span>
+        ))}
+      </div>
       <div className={`flex gap-2 flex-shrink-0 flex-nowrap items-center ${isList ? "" : "mt-auto"}`}>
         <Link href={`/suppliers/${supplier.slug}`} className={isList ? "" : "flex-1 min-w-0"}>
           <button className={`btn-3d rounded-xl border transition-all duration-200 h-9 min-h-9 flex items-center justify-center ${isList ? "h-8 px-3" : "w-full min-w-[100px]"} ${cfg.ctaClass}`}>
