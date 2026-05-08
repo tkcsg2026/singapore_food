@@ -16,6 +16,7 @@ import { AnimatedGridItem } from "@/components/AnimatedGridItem";
 import { takeHomeSuppliers, HOME_SUPPLIERS_PER_TIER } from "@/lib/plans";
 import { buildSupplierTagDisplayMaps, getCategoryDisplayName } from "@/lib/category-display";
 import type { SupplierRow, MarketplaceItemRow, CategoryRow, NewsArticleRow, JobNoticeRow } from "@/types/database";
+import { augmentSupplierCategoriesFromRows } from "@/lib/category-groups";
 
 function SupplierSkeleton() {
   return (
@@ -71,6 +72,10 @@ const Index = () => {
   const promoVideoUrl: string = (promoVideoSetting as any)?.value?.trim() || "";
 
   const tagDisplayMaps = useMemo(() => buildSupplierTagDisplayMaps(tagCategories || []), [tagCategories]);
+  const categoriesForSearch = useMemo(
+    () => augmentSupplierCategoriesFromRows(categories || [], suppliers || []),
+    [categories, suppliers],
+  );
   const popularSuppliers = useMemo(() => takeHomeSuppliers(suppliers || []), [suppliers]);
   const recentItems = (marketplaceItems || []).slice(0, 6);
   const latestNews = useMemo(
@@ -197,7 +202,7 @@ const Index = () => {
                   className="h-12 px-4 rounded-xl border border-border bg-white text-sm font-medium text-foreground sm:w-48 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary ui-filter-control"
                 >
                   <option value="">{t.home.categoryPlaceholder}</option>
-                  {(categories || []).map((cat) => (
+                  {categoriesForSearch.map((cat) => (
                     <option key={cat.value} value={cat.value}>
                       {getCategoryDisplayName(cat, lang) ||
                         (t.suppliers as { categories?: Record<string, string> }).categories?.[cat.value] ||

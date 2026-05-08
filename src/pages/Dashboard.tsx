@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Plus, Trash2, Package, User, Settings,
   Eye, Clock, Camera, CalendarDays, BadgeCheck, ChevronRight, Heart, MessageCircle, ExternalLink,
+  ArrowUp, ArrowDown,
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,8 @@ const Dashboard = () => {
   const [listings, setListings] = useState<MarketplaceItemRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [supplierAnalytics, setSupplierAnalytics] = useState<SupplierAnalyticsResponse | null>(null);
+  const [repProducts, setRepProducts] = useState<{ id: string; name: string }[]>([]);
+  const [repProductsLoading, setRepProductsLoading] = useState(false);
 
   // Profile edit state
   const [name, setName] = useState("");
@@ -96,6 +99,67 @@ const Dashboard = () => {
       .then(setSupplierAnalytics)
       .catch(() => setSupplierAnalytics({ linked: false }));
   }, [user]);
+
+  useEffect(() => {
+    if (!supplierAnalytics || !("linked" in supplierAnalytics) || !supplierAnalytics.linked) {
+      setRepProducts([]);
+      return;
+    }
+    const slug = supplierAnalytics.supplier.slug;
+    setRepProductsLoading(true);
+    fetch(`/api/suppliers/${encodeURIComponent(slug)}/products`)
+      .then((r) => r.json())
+      .then((d: unknown) => {
+        if (!Array.isArray(d)) {
+          setRepProducts([]);
+          return;
+        }
+        const sorted = [...d].sort(
+          (a: { sort_order?: number }, b: { sort_order?: number }) =>
+            (a.sort_order ?? 0) - (b.sort_order ?? 0),
+        );
+        setRepProducts(
+          sorted.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name })),
+        );
+      })
+      .catch(() => setRepProducts([]))
+      .finally(() => setRepProductsLoading(false));
+  }, [supplierAnalytics]);
+
+  const handleRepProductMove = async (id: string, direction: "up" | "down") => {
+    if (!supplierAnalytics || !("linked" in supplierAnalytics) || !supplierAnalytics.linked) return;
+    const slug = supplierAnalytics.supplier.slug;
+    const list = [...repProducts];
+    const idx = list.findIndex((p) => p.id === id);
+    if (idx < 0) return;
+    const swap = direction === "up" ? idx - 1 : idx + 1;
+    if (swap < 0 || swap >= list.length) return;
+    [list[idx], list[swap]] = [list[swap], list[idx]];
+    setRepProducts(list);
+    const res = await authFetch(`/api/suppliers/${encodeURIComponent(slug)}/products`, {
+      method: "PATCH",
+      body: JSON.stringify({ order: list.map((p) => p.id) }),
+    });
+    if (!res.ok) {
+      alert(lang === "ja" ? "並び替えの保存に失敗しました。ログイン状態をご確認ください。" : "Could not save order. Check that you are logged in.");
+      setRepProductsLoading(true);
+      fetch(`/api/suppliers/${encodeURIComponent(slug)}/products`)
+        .then((r) => r.json())
+        .then((d: unknown) => {
+          if (!Array.isArray(d)) {
+            setRepProducts([]);
+            return;
+          }
+          const sorted = [...d].sort(
+            (a: { sort_order?: number }, b: { sort_order?: number }) =>
+              (a.sort_order ?? 0) - (b.sort_order ?? 0),
+          );
+          setRepProducts(sorted.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name })));
+        })
+        .catch(() => setRepProducts([]))
+        .finally(() => setRepProductsLoading(false));
+    }
+  };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -344,6 +408,53 @@ const Dashboard = () => {
                           })}
                         </tbody>
                       </table>
+                    </div>
+
+                    <div className="mt-8 border-t border-border pt-6">
+                      <p className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wide">
+                        {lang === "ja" ? "掲載商品の表示順" : "Product display order"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mb-3">
+                        {lang === "ja"
+                          ? "矢印で並べ替えます（公開ページの商品グリッドに反映されます）。"
+                          : "Use the arrows to reorder items on your public supplier page."}
+                      </p>
+                      {repProductsLoading && repProducts.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">{t.common.loading}</p>
+                      ) : repProducts.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          {lang === "ja" ? "商品がまだありません。管理者が追加するとここに表示されます。" : "No products yet. They appear here once added by your administrator."}
+                        </p>
+                      ) : (
+                        <ul className="space-y-2">
+                          {repProducts.map((p, idx) => (
+                            <li
+                              key={p.id}
+                              className="flex items-center gap-2 border border-border bg-muted/20 px-3 py-2 text-sm"
+                            >
+                              <span className="flex-1 min-w-0 truncate font-medium">{p.name}</span>
+                              <button
+                                type="button"
+                                className="p-2 rounded-lg border border-border bg-background disabled:opacity-40"
+                                disabled={idx === 0 || repProductsLoading}
+                                onClick={() => handleRepProductMove(p.id, "up")}
+                                aria-label={lang === "ja" ? "上へ" : "Move up"}
+                              >
+                                <ArrowUp className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                className="p-2 rounded-lg border border-border bg-background disabled:opacity-40"
+                                disabled={idx === repProducts.length - 1 || repProductsLoading}
+                                onClick={() => handleRepProductMove(p.id, "down")}
+                                aria-label={lang === "ja" ? "下へ" : "Move down"}
+                              >
+                                <ArrowDown className="h-4 w-4" />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   </div>
                 </div>
