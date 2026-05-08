@@ -432,8 +432,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen w-full min-w-0 flex flex-col overflow-x-hidden">
       <PageViewTracker />
       <Header />
-      <main className="flex-1 w-full min-w-0 pt-20 md:pt-[4.55rem] overflow-x-hidden">
-        <ScrollingBanner />
+      <main className="relative flex-1 w-full min-w-0 pt-20 md:pt-[4.55rem] overflow-x-hidden">
+        <div className="absolute left-0 right-0 top-1 md:top-1.5 z-20 pointer-events-none">
+          <div className="pointer-events-auto">
+            <ScrollingBanner />
+          </div>
+        </div>
         {children}
       </main>
       <Footer />

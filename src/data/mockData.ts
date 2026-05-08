@@ -18,7 +18,6 @@ export interface Supplier {
   about: string;
   plan?: string;
   featured?: boolean;
-  hidden?: boolean;
 }
 
 export interface Product {
@@ -72,7 +71,6 @@ export const categories = [
   { value: 'seafood', label: '海鮮・鮮魚', parent_group: 'food-supplies' },
   { value: 'produce-dry-goods', label: '青果・乾物', parent_group: 'food-supplies' },
   { value: 'beverages', label: '飲料・酒類', parent_group: 'food-supplies' },
-  { value: 'packaging', label: '包材・パッケージ', parent_group: 'food-supplies' },
   // Kitchen & Hardware
   { value: 'kitchen-equipment', label: '厨房機器', parent_group: 'kitchen-hardware' },
   { value: 'furniture-interior', label: '家具・内装', parent_group: 'kitchen-hardware' },
@@ -136,8 +134,8 @@ export const suppliers: Supplier[] = [
     whatsapp: '6523456789',
     views: 980,
     products: [
-      { id: 'p4', name: '有機レタスミックス', name_en: 'Organic Lettuce Mix', image: 'https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?w=400&h=300&fit=crop', moq: '500g〜', country_of_origin: 'Singapore', weight: '500g〜', quantity: '500g per bag', storage_condition: 'Refrigerated 2-5°C', temperature: 'Fresh' },
-      { id: 'p5', name: 'フレッシュハーブセット', name_en: 'Fresh Herb Set', image: 'https://images.unsplash.com/photo-1515586000433-45406d8e6662?w=400&h=300&fit=crop', moq: '100g〜', country_of_origin: 'Singapore', weight: '100g〜', quantity: '100g per bunch', storage_condition: 'Refrigerated 2-5°C', temperature: 'Fresh' },
+      { id: 'p4', name: '有機レタスミックス', name_en: 'Organic Lettuce Mix', image: 'https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?w=400&h=300&fit=crop', moq: '500g〜', country_of_origin: 'Singapore', weight: '500g〜', quantity: '500g per bag', storage_condition: 'Refrigerated 2-5°C', temperature: 'Room temperature' },
+      { id: 'p5', name: 'フレッシュハーブセット', name_en: 'Fresh Herb Set', image: 'https://images.unsplash.com/photo-1515586000433-45406d8e6662?w=400&h=300&fit=crop', moq: '100g〜', country_of_origin: 'Singapore', weight: '100g〜', quantity: '100g per bunch', storage_condition: 'Refrigerated 2-5°C', temperature: 'Room temperature' },
     ],
     certifications: ['有機JAS', 'GlobalGAP'],
     about: 'シンガポール北部の自社農園で栽培したオーガニック野菜を、レストランやカフェに直接お届けしています。',
@@ -184,7 +182,7 @@ export const suppliers: Supplier[] = [
     whatsapp: '6545678901',
     views: 870,
     products: [
-      { id: 'p8', name: '純米大吟醸セット', name_en: 'Junmai Daiginjo Set', image: 'https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=400&h=300&fit=crop', moq: '6本〜', country_of_origin: 'Japan', weight: '720ml×6', quantity: '6 bottles', storage_condition: 'Room temperature', temperature: 'Fresh' },
+      { id: 'p8', name: '純米大吟醸セット', name_en: 'Junmai Daiginjo Set', image: 'https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=400&h=300&fit=crop', moq: '6本〜', country_of_origin: 'Japan', weight: '720ml×6', quantity: '6 bottles', storage_condition: 'Room temperature', temperature: 'Room temperature' },
     ],
     certifications: ['酒類販売免許'],
     about: '日本全国の蔵元と直接取引し、シンガポールの日本料理店に最高品質の日本酒をお届けしています。',
@@ -207,8 +205,8 @@ export const suppliers: Supplier[] = [
     whatsapp: '6556789012',
     views: 720,
     products: [
-      { id: 'p9', name: '有機醤油（1L）', name_en: 'Organic Soy Sauce (1L)', image: 'https://images.unsplash.com/photo-1585672840563-f2af2ced55c9?w=400&h=300&fit=crop', moq: '6本〜', country_of_origin: 'Japan', weight: '1L', quantity: '6 bottles', storage_condition: 'Room temperature', temperature: 'Fresh' },
-      { id: 'p10', name: '信州味噌', name_en: 'Shinshu Miso', image: 'https://images.unsplash.com/photo-1614563637806-1d0e645e0940?w=400&h=300&fit=crop', moq: '1kg〜', country_of_origin: 'Japan', weight: '1kg', quantity: '1kg per tub', storage_condition: 'Refrigerated after opening', temperature: 'Fresh' },
+      { id: 'p9', name: '有機醤油（1L）', name_en: 'Organic Soy Sauce (1L)', image: 'https://images.unsplash.com/photo-1585672840563-f2af2ced55c9?w=400&h=300&fit=crop', moq: '6本〜', country_of_origin: 'Japan', weight: '1L', quantity: '6 bottles', storage_condition: 'Room temperature', temperature: 'Room temperature' },
+      { id: 'p10', name: '信州味噌', name_en: 'Shinshu Miso', image: 'https://images.unsplash.com/photo-1614563637806-1d0e645e0940?w=400&h=300&fit=crop', moq: '1kg〜', country_of_origin: 'Japan', weight: '1kg', quantity: '1kg per tub', storage_condition: 'Refrigerated after opening', temperature: 'Room temperature' },
     ],
     certifications: ['食品衛生管理者'],
     about: '日本の伝統的な調味料と乾物を専門に取り扱う卸売業者です。シンガポール在住の日本人シェフに愛用されています。',

@@ -10,7 +10,7 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { sortSuppliersByPlan } from "@/lib/plans";
 import type { PlanCounts } from "@/lib/plans";
 import { buildSupplierTagDisplayMaps, getCategoryDisplayName } from "@/lib/category-display";
-import { buildDynamicGroups, LEGACY_CATEGORY_MAP, getGroupLabel, augmentSupplierCategoriesFromRows } from "@/lib/category-groups";
+import { buildDynamicGroups, LEGACY_CATEGORY_MAP, getGroupLabel } from "@/lib/category-groups";
 import type { SupplierRow, CategoryRow } from "@/types/database";
 
 const Suppliers = () => {
@@ -48,14 +48,9 @@ const Suppliers = () => {
   const { data: groupRows } = useFetch<CategoryRow[]>("/api/categories?type=supplier-group");
   const { data: tagCategories } = useFetch<(CategoryRow & { type: "tag"; label_ja?: string | null })[]>("/api/categories?type=tag");
 
-  const categoriesForUi = useMemo(
-    () => augmentSupplierCategoriesFromRows(categories || [], suppliers || []),
-    [categories, suppliers],
-  );
-
   const categoryGroups = useMemo(
-    () => buildDynamicGroups(groupRows || [], categoriesForUi),
-    [groupRows, categoriesForUi],
+    () => buildDynamicGroups(groupRows || [], categories || []),
+    [groupRows, categories]
   );
   const tagDisplayMaps = useMemo(() => buildSupplierTagDisplayMaps(tagCategories || []), [tagCategories]);
 
@@ -138,7 +133,7 @@ const Suppliers = () => {
         <div className="space-y-4">
           {categoryGroups.map((group) => {
             const groupCats = group.children
-              .map((val) => categoriesForUi.find((c) => c.value === val))
+              .map((val) => (categories || []).find((c) => c.value === val))
               .filter(Boolean) as CategoryRow[];
             if (groupCats.length === 0) return null;
             return (

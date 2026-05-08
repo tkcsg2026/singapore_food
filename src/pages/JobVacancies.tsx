@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Briefcase, CheckCircle2, ChevronDown, ChevronUp, ClipboardList,
-  ListOrdered, MapPin, MessageCircle, RefreshCw, Plus, Trash2, User, X, Edit2,
+  ListOrdered, MapPin, MessageCircle, RefreshCw, Plus, Trash2, User, X,
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -46,7 +46,6 @@ type EligibilityKey = "scPr" | "open" | "inDesc";
 
 interface JobNotice {
   id: string;
-  /** Present when the row was created with auth; required for poster edit/delete. */
   created_by?: string | null;
   post_type?: PostType;
   title: string;
@@ -96,20 +95,16 @@ function JobListingCard({
   j,
   phoneDigits,
   canDelete,
-  canEdit,
   showAdminDelete,
   onDelete,
-  onEdit,
   onAdminDelete,
 }: {
   notice: JobNotice;
   j: ReturnType<typeof useTranslation>["t"]["jobs"];
   phoneDigits: string;
   canDelete: boolean;
-  canEdit: boolean;
   showAdminDelete: boolean;
   onDelete: (id: string) => void;
-  onEdit: (notice: JobNotice) => void;
   onAdminDelete: (id: string) => void;
 }) {
   const deletePostBtnClass =
@@ -143,16 +138,6 @@ function JobListingCard({
 
   return (
     <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col gap-3 transition-shadow hover:shadow-md">
-      {notice.image && !isSeeker && (
-        <div className="w-full rounded-xl overflow-hidden">
-          <img
-            src={notice.image}
-            alt={notice.company || notice.title}
-            className="w-full h-40 object-cover"
-            referrerPolicy="no-referrer"
-          />
-        </div>
-      )}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
         <div className="min-w-0">
           {isSeeker && (
@@ -206,30 +191,26 @@ function JobListingCard({
         </div>
       )}
 
-      {phoneDigits.length >= 8 && (
-        <div className="mt-1">
-          <a
-            href={`https://wa.me/${phoneDigits}?text=${encodeURIComponent(waText)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-xl bg-[#25D366]/10 border border-[#25D366]/30 text-[#1a9e4d] hover:bg-[#25D366]/20 transition-colors"
-          >
-            <MessageCircle className="h-3.5 w-3.5" />
-            {isSeeker ? (j.contactSeekerWA ?? "WhatsApp で連絡") : j.applyViaWA}
-          </a>
-        </div>
-      )}
-      {(canDelete || canEdit || showAdminDelete) && (
-        <div className="mt-1 flex flex-wrap gap-2">
-          {canEdit && (
-            <button
-              type="button"
-              onClick={() => onEdit(notice)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-border bg-card hover:bg-muted transition-colors"
+      {(notice.image || phoneDigits.length >= 8 || canDelete || showAdminDelete) && (
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          {notice.image && !isSeeker && (
+            <img
+              src={notice.image}
+              alt={notice.company || notice.title}
+              className="w-9 h-9 rounded-md border object-cover flex-shrink-0"
+              referrerPolicy="no-referrer"
+            />
+          )}
+          {phoneDigits.length >= 8 && (
+            <a
+              href={`https://wa.me/${phoneDigits}?text=${encodeURIComponent(waText)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-xl bg-[#25D366]/10 border border-[#25D366]/30 text-[#1a9e4d] hover:bg-[#25D366]/20 transition-colors"
             >
-              <Edit2 className="h-3.5 w-3.5 shrink-0" />
-              {j.myPostEdit ?? "Edit my post"}
-            </button>
+              <MessageCircle className="h-3.5 w-3.5" />
+              {isSeeker ? (j.contactSeekerWA ?? "WhatsApp で連絡") : j.applyViaWA}
+            </a>
           )}
           {canDelete && (
             <button type="button" onClick={() => onDelete(notice.id)} className={deletePostBtnClass}>
@@ -255,47 +236,29 @@ function PostForm({
   j,
   onSuccess,
   onClose,
-  initialNotice,
 }: {
   postType: PostType;
   j: ReturnType<typeof useTranslation>["t"]["jobs"];
   onSuccess: () => void;
   onClose: () => void;
-  initialNotice?: JobNotice | null;
 }) {
   const { lang } = useTranslation();
-  const isEditing = Boolean(initialNotice?.id);
-  const isSeeker = (initialNotice?.post_type ?? postType) === "seeker";
+  const isSeeker = postType === "seeker";
 
-  const [jobTitle, setJobTitle] = useState(initialNotice?.title ?? "");
-  const [company, setCompany] = useState(initialNotice?.company ?? "");
-  const [employment, setEmployment] = useState<EmploymentKey>((initialNotice?.employment as EmploymentKey) || "fullTime");
-  const [roleCategory, setRoleCategory] = useState<RoleKey>((initialNotice?.role_category as RoleKey) || "kitchen");
-  const [region, setRegion] = useState<RegionKey>((initialNotice?.region as RegionKey) || "islandwide");
-  const [compensation, setCompensation] = useState<CompensationKey>((initialNotice?.compensation as CompensationKey) || "negotiate");
-  const [experience, setExperience] = useState<ExperienceKey>((initialNotice?.experience as ExperienceKey) || "entry");
-  const [eligibility, setEligibility] = useState<EligibilityKey>((initialNotice?.eligibility as EligibilityKey) || "open");
-  const [description, setDescription] = useState(initialNotice?.description ?? "");
-  const [image, setImage] = useState(initialNotice?.image ?? "");
+  const [jobTitle, setJobTitle] = useState("");
+  const [company, setCompany] = useState("");
+  const [employment, setEmployment] = useState<EmploymentKey>("fullTime");
+  const [roleCategory, setRoleCategory] = useState<RoleKey>("kitchen");
+  const [region, setRegion] = useState<RegionKey>("islandwide");
+  const [compensation, setCompensation] = useState<CompensationKey>("negotiate");
+  const [experience, setExperience] = useState<ExperienceKey>("entry");
+  const [eligibility, setEligibility] = useState<EligibilityKey>("open");
+  const [description, setDescription] = useState("");
+  const [image, setImage] = useState("");
   const [imageUploading, setImageUploading] = useState(false);
-  const [agreed, setAgreed] = useState(isEditing);
+  const [agreed, setAgreed] = useState(false);
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!initialNotice) return;
-    setJobTitle(initialNotice.title ?? "");
-    setCompany(initialNotice.company ?? "");
-    setEmployment((initialNotice.employment as EmploymentKey) || "fullTime");
-    setRoleCategory((initialNotice.role_category as RoleKey) || "kitchen");
-    setRegion((initialNotice.region as RegionKey) || "islandwide");
-    setCompensation((initialNotice.compensation as CompensationKey) || "negotiate");
-    setExperience((initialNotice.experience as ExperienceKey) || "entry");
-    setEligibility((initialNotice.eligibility as EligibilityKey) || "open");
-    setDescription(initialNotice.description ?? "");
-    setImage(initialNotice.image ?? "");
-    setAgreed(true);
-  }, [initialNotice?.id]);
 
   const lines = [
     isSeeker ? "[F&B Portal — 求職者]" : j.msgHeader,
@@ -317,24 +280,21 @@ function PostForm({
     rawMessage.length <= WA_MAX ? rawMessage : `${rawMessage.slice(0, WA_MAX - 20)}\n\n[…]`;
 
   const canSendBase = jobTitle.trim().length > 0 && description.trim().length > 0;
-  const canSend = canSendBase && (isEditing || agreed) && !posting;
+  const canSend = canSendBase && agreed && !posting;
 
   const handlePost = async () => {
-    if (!canSendBase || (!isEditing && !agreed)) return;
+    if (!canSendBase || !agreed) return;
     setPosting(true);
     setPostError(null);
     try {
       const sb = getSupabase();
-      if (sb) {
-        await sb.auth.refreshSession().catch(() => {});
-      }
       const session = sb ? (await sb.auth.getSession()).data.session : null;
       const headers: HeadersInit = { "Content-Type": "application/json" };
       if (session?.access_token) {
         (headers as Record<string, string>).Authorization = `Bearer ${session.access_token}`;
       }
-      const res = await fetch(isEditing ? `/api/job-notices?id=${encodeURIComponent(initialNotice!.id)}` : "/api/job-notices", {
-        method: isEditing ? "PATCH" : "POST",
+      const res = await fetch("/api/job-notices", {
+        method: "POST",
         headers,
         body: JSON.stringify({
           post_type: postType,
@@ -607,8 +567,7 @@ function PostForm({
         </div>
 
         <div className="flex flex-col gap-3 pt-1">
-          {!isEditing && (
-            <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+          <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
             <label className="flex items-start gap-3 cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -621,8 +580,7 @@ function PostForm({
               </span>
             </label>
             <p className="text-[11px] text-muted-foreground font-medium">{j.consentHint}</p>
-            </div>
-          )}
+          </div>
 
           {canSendBase ? (
             <Button
@@ -630,9 +588,7 @@ function PostForm({
               disabled={!canSend}
               className="w-full rounded-xl min-h-[44px] font-bold"
             >
-              {posting
-                ? (isEditing ? (lang === "ja" ? "更新中..." : "Updating...") : j.posting)
-                : (isEditing ? (j.myPostEdit ?? "Edit my post") : j.postAndSend)}
+              {posting ? j.posting : j.postAndSend}
             </Button>
           ) : (
             <div className="flex min-h-[44px] w-full items-center justify-center rounded-xl border border-dashed border-muted-foreground/35 bg-muted/30 px-4 text-sm text-muted-foreground text-center">
@@ -660,7 +616,6 @@ export default function JobVacancies() {
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState<PostType>("job");
   const [postSuccess, setPostSuccess] = useState(false);
-  const [editingNotice, setEditingNotice] = useState<JobNotice | null>(null);
   const toastTimerRef = useRef<number | null>(null);
 
   const [phoneDigits, setPhoneDigits] = useState(() =>
@@ -794,14 +749,7 @@ export default function JobVacancies() {
   }, [postSuccess]);
 
   const openForm = (type: PostType) => {
-    setEditingNotice(null);
     setFormType(type);
-    setShowForm(true);
-  };
-
-  const openEditForm = (notice: JobNotice) => {
-    setEditingNotice(notice);
-    setFormType((notice.post_type ?? "job") as PostType);
     setShowForm(true);
   };
 
@@ -917,7 +865,7 @@ export default function JobVacancies() {
       </div>
 
       {/* Form modal */}
-      <Dialog open={showForm} onOpenChange={(open) => { if (!open) { setShowForm(false); setEditingNotice(null); } }}>
+      <Dialog open={showForm} onOpenChange={(open) => { if (!open) setShowForm(false); }}>
         <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto p-0 rounded-2xl [&>button:last-child]:hidden">
           <DialogTitle className="sr-only">
             {formType === "seeker"
@@ -930,9 +878,8 @@ export default function JobVacancies() {
           <PostForm
             postType={formType}
             j={j}
-            initialNotice={editingNotice}
             onSuccess={() => { setPostSuccess(true); fetchListings(); }}
-            onClose={() => { setShowForm(false); setEditingNotice(null); }}
+            onClose={() => setShowForm(false)}
           />
         </DialogContent>
       </Dialog>
@@ -1010,7 +957,6 @@ export default function JobVacancies() {
                 );
                 // Admins see admin-delete on every post; regular users see owner-delete only on their own
                 const canOwnerDelete = !isAdmin && isOwner;
-                const canEdit = isOwner || isAdmin;
                 const showAdminDelete = Boolean(isAdmin);
                 return (
                   <JobListingCard
@@ -1019,10 +965,8 @@ export default function JobVacancies() {
                     j={j}
                     phoneDigits={phoneDigits}
                     canDelete={canOwnerDelete}
-                    canEdit={canEdit}
                     showAdminDelete={showAdminDelete}
                     onDelete={(id) => handleDeleteListing(id, "owner")}
-                    onEdit={openEditForm}
                     onAdminDelete={(id) => handleDeleteListing(id, "admin")}
                   />
                 );
