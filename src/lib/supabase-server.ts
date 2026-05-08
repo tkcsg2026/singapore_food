@@ -107,41 +107,6 @@ export async function requireAdmin(
 }
 
 /**
- * Admin **or** a user linked in `supplier_representatives` for the given supplier.
- * Used so supplier reps can manage their own product list (order, CRUD) without full admin.
- */
-export async function requireAdminOrSupplierRep(
-  req: NextRequest,
-  supplierId: string,
-): Promise<{ userId: string } | NextResponse> {
-  const adminTry = await requireAdmin(req);
-  if (!(adminTry instanceof NextResponse)) {
-    return { userId: adminTry.adminId };
-  }
-
-  const authTry = await requireAuth(req);
-  if (authTry instanceof NextResponse) return authTry;
-
-  const admin = createAdminSupabaseClient();
-  if (!admin) {
-    return NextResponse.json({ error: "Database not configured" }, { status: 503 });
-  }
-
-  const { data: rep } = await admin
-    .from("supplier_representatives")
-    .select("supplier_id")
-    .eq("user_id", authTry.userId)
-    .eq("supplier_id", supplierId)
-    .maybeSingle();
-
-  if (!rep?.supplier_id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  return { userId: authTry.userId };
-}
-
-/**
  * Appends a row to the audit_logs table.
  * Silently ignores errors so logging never blocks the main operation.
  */

@@ -49,6 +49,7 @@ export function BotAvatar({ size = "md" }: { size?: "sm" | "md" }) {
     </div>
   );
 }
+
 export function UserAvatar({
   url,
   name,
@@ -79,6 +80,7 @@ export function UserAvatar({
           dim,
         )}
       >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={url} alt={name ?? "User"} className="h-full w-full object-cover" />
       </div>
     );
