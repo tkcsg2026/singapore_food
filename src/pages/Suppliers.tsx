@@ -48,14 +48,17 @@ const Suppliers = () => {
   const { data: groupRows } = useFetch<CategoryRow[]>("/api/categories?type=supplier-group");
   const { data: tagCategories } = useFetch<(CategoryRow & { type: "tag"; label_ja?: string | null })[]>("/api/categories?type=tag");
 
+  // Surface every category value used by at least one supplier — including
+  // newly-added ones (e.g. "packaging") that haven't been added to the
+  // categories table yet — so they appear in the filter UI.
   const categoriesForUi = useMemo(
     () => augmentSupplierCategoriesFromRows(categories || [], suppliers || []),
-    [categories, suppliers],
+    [categories, suppliers]
   );
 
   const categoryGroups = useMemo(
     () => buildDynamicGroups(groupRows || [], categoriesForUi),
-    [groupRows, categoriesForUi],
+    [groupRows, categoriesForUi]
   );
   const tagDisplayMaps = useMemo(() => buildSupplierTagDisplayMaps(tagCategories || []), [tagCategories]);
 

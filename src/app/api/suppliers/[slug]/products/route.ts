@@ -1,22 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  createServerSupabaseClient,
-  createAdminSupabaseClient,
-  requireAdminOrSupplierRep,
-} from "@/lib/supabase-server";
+import { createServerSupabaseClient, createAdminSupabaseClient, requireAdmin } from "@/lib/supabase-server";
 import { getVideoTranscodeStateForUrl } from "@/lib/video";
 
 type AdminClient = NonNullable<ReturnType<typeof createAdminSupabaseClient>>;
 
 const OPTIONAL_PRODUCT_COLUMNS = [
   "country_of_origin_en",
-  "sort_order",
+  "price",
+  "description",
   "video_playback_url",
   "video_transcoded_url",
   "video_transcode_status",
   "video_transcode_error",
   "video_transcode_requested_at",
   "video_transcoded_at",
+  // sort_order may be missing on older schemas — strip & retry rather than
+  // 500-ing on insert so reordering is best-effort.
+  "sort_order",
 ] as const;
 
 function stripUnsupportedColumns(payload: Record<string, unknown>, errorMessage: string) {
@@ -100,28 +100,33 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
 
   if (!supplier) return NextResponse.json([]);
 
+  // Order by sort_order so admin reorder (up/down) is reflected on the public site,
+  // and so products don't appear in random order after each update. Fall back to id
+  // for stability when sort_order ties.
   const { data: products } = await client
     .from("supplier_products")
     .select("*")
-    .eq("supplier_id", supplier.id);
+    .eq("supplier_id", supplier.id)
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true });
 
-  const normalisedProducts = (products || [])
-    .map((p: Record<string, unknown>, idx: number) => ({
-      ...p,
-      sort_order: typeof p.sort_order === "number" ? p.sort_order : idx,
-      video_playback_url: (p.video_playback_url as string) || (p.video_transcoded_url as string) || (p.video_url as string) || "",
-      video_transcoded_url: (p.video_transcoded_url as string) || "",
-      video_transcode_status: (p.video_transcode_status as string) || ((p.video_url as string) ? "not_needed" : "none"),
-      video_transcode_error: (p.video_transcode_error as string) || "",
-      video_transcode_requested_at: (p.video_transcode_requested_at as string) || null,
-      video_transcoded_at: (p.video_transcoded_at as string) || null,
-    }))
-    .sort((a, b) => ((a.sort_order as number) ?? 0) - ((b.sort_order as number) ?? 0));
+  const normalisedProducts = (products || []).map((p: Record<string, unknown>) => ({
+    ...p,
+    video_playback_url: (p.video_playback_url as string) || (p.video_transcoded_url as string) || (p.video_url as string) || "",
+    video_transcoded_url: (p.video_transcoded_url as string) || "",
+    video_transcode_status: (p.video_transcode_status as string) || ((p.video_url as string) ? "not_needed" : "none"),
+    video_transcode_error: (p.video_transcode_error as string) || "",
+    video_transcode_requested_at: (p.video_transcode_requested_at as string) || null,
+    video_transcoded_at: (p.video_transcoded_at as string) || null,
+  }));
 
   return NextResponse.json(normalisedProducts);
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  const adminAuth = await requireAdmin(req);
+  if (adminAuth instanceof NextResponse) return adminAuth;
+
   const { slug: slugParam } = await params;
   const slug = decodeURIComponent(slugParam);
   const admin = createAdminSupabaseClient();
@@ -135,18 +140,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   if (!supplier) return NextResponse.json({ error: "Supplier not found" }, { status: 404 });
 
-  const authz = await requireAdminOrSupplierRep(req, supplier.id);
-  if (authz instanceof NextResponse) return authz;
-
   const body = await req.json();
   const str = (v: unknown) => (v != null ? String(v).trim() : "");
   const videoUrl = str(body.video_url);
 
-  // Determine the next sort_order by counting existing products
-  const { count: existingCount } = await admin
+  // Append new products at the end of the supplier's product list. Without this
+  // the column default (0) makes every new row tie with the existing first row,
+  // so the public list order would shuffle each time a product is added.
+  let nextSortOrder = 0;
+  const { data: maxRow } = await admin
     .from("supplier_products")
-    .select("id", { count: "exact", head: true })
-    .eq("supplier_id", supplier.id);
+    .select("sort_order")
+    .eq("supplier_id", supplier.id)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (maxRow && typeof maxRow.sort_order === "number") {
+    nextSortOrder = maxRow.sort_order + 1;
+  }
 
   const payload: Record<string, unknown> = {
     supplier_id: supplier.id,
@@ -167,7 +178,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     video_url:         videoUrl,
     price:             str(body.price),
     description:       str(body.description),
-    sort_order:        typeof body.sort_order === "number" ? body.sort_order : (existingCount ?? 0),
+    sort_order:        nextSortOrder,
   };
   const videoTranscode = getVideoTranscodeStateForUrl(videoUrl);
   payload.video_playback_url = videoTranscode.video_playback_url;
@@ -186,6 +197,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  const adminAuth = await requireAdmin(req);
+  if (adminAuth instanceof NextResponse) return adminAuth;
+
   const { slug: slugParam } = await params;
   const slug = decodeURIComponent(slugParam);
   const admin = createAdminSupabaseClient();
@@ -198,9 +212,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ slug
     .single();
 
   if (!supplier) return NextResponse.json({ error: "Supplier not found" }, { status: 404 });
-
-  const authz = await requireAdminOrSupplierRep(req, supplier.id);
-  if (authz instanceof NextResponse) return authz;
 
   const body = await req.json();
   const id = body.id;
@@ -227,7 +238,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ slug
     price:             str(body.price),
     description:       str(body.description),
   };
-  if (typeof body.sort_order === "number") payload.sort_order = body.sort_order;
   const videoTranscode = getVideoTranscodeStateForUrl(videoUrl);
   payload.video_playback_url = videoTranscode.video_playback_url;
   payload.video_transcoded_url = videoTranscode.video_transcoded_url;
@@ -244,83 +254,17 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ slug
   return NextResponse.json(data);
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
-  const { slug: slugParam } = await params;
-  const slug = decodeURIComponent(slugParam);
+export async function DELETE(req: NextRequest) {
+  const adminAuth = await requireAdmin(req);
+  if (adminAuth instanceof NextResponse) return adminAuth;
+
   const admin = createAdminSupabaseClient();
   if (!admin) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
-
-  const { data: supplier } = await admin
-    .from("suppliers")
-    .select("id")
-    .eq("slug", slug)
-    .single();
-  if (!supplier) return NextResponse.json({ error: "Supplier not found" }, { status: 404 });
-
-  const authz = await requireAdminOrSupplierRep(req, supplier.id);
-  if (authz instanceof NextResponse) return authz;
 
   const { id } = await req.json();
   if (!id) return NextResponse.json({ error: "Product id required" }, { status: 400 });
 
-  const { error } = await admin.from("supplier_products").delete().eq("id", id).eq("supplier_id", supplier.id);
+  const { error } = await admin.from("supplier_products").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
-
-/**
- * Batch reorder endpoint.
- * Body: { order: string[] }  — product ids in the desired display order.
- * Updates `sort_order` per product (0..n-1).
- */
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
-  const { slug: slugParam } = await params;
-  const slug = decodeURIComponent(slugParam);
-  const admin = createAdminSupabaseClient();
-  if (!admin) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
-
-  const { data: supplier } = await admin
-    .from("suppliers")
-    .select("id")
-    .eq("slug", slug)
-    .single();
-  if (!supplier) return NextResponse.json({ error: "Supplier not found" }, { status: 404 });
-
-  const authz = await requireAdminOrSupplierRep(req, supplier.id);
-  if (authz instanceof NextResponse) return authz;
-
-  const body = await req.json().catch(() => ({}));
-  const order: unknown = body?.order;
-  if (!Array.isArray(order) || order.some((v) => typeof v !== "string" || !v)) {
-    return NextResponse.json({ error: "Invalid order array" }, { status: 400 });
-  }
-
-  // Update sort_order one product at a time so this works even when the column
-  // was just added (no ON CONFLICT batch needed).
-  let lastError: { message: string } | null = null;
-  for (let i = 0; i < order.length; i++) {
-    const productId = order[i] as string;
-    const { error } = await admin
-      .from("supplier_products")
-      .update({ sort_order: i })
-      .eq("id", productId)
-      .eq("supplier_id", supplier.id);
-    if (error) {
-      // If sort_order column doesn't exist yet, surface a friendly error.
-      lastError = error;
-      if (/sort_order/.test(error.message)) {
-        return NextResponse.json(
-          {
-            error: "supplier_products.sort_order column is missing. Run the latest supabase-complete.sql to enable reordering.",
-          },
-          { status: 500 },
-        );
-      }
-    }
-  }
-
-  if (lastError) {
-    return NextResponse.json({ error: lastError.message }, { status: 500 });
-  }
-  return NextResponse.json({ success: true, count: order.length });
 }

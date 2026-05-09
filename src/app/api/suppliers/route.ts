@@ -68,18 +68,10 @@ export async function GET(req: NextRequest) {
   if (error || !data || data.length === 0) {
     let fallback = mockSuppliers.map(normaliseMock);
     if (!adminAllowed) fallback = fallback.filter((s: any) => !s.hidden);
-    if (category) {
-      fallback = fallback.filter(
-        (s) => s.category === category || (s as any).category_2 === category || (s as any).category_3 === category
-      );
-    }
+    if (category) fallback = fallback.filter((s) => s.category === category);
     if (area) fallback = fallback.filter((s) => s.area === area);
     if (q) fallback = fallback.filter((s) =>
-      s.name_ja.includes(q) ||
-      s.description_ja.includes(q) ||
-      s.category_ja.includes(q) ||
-      (s as any).category_2_ja?.includes(q) ||
-      (s as any).category_3_ja?.includes(q)
+      s.name_ja.includes(q) || s.description_ja.includes(q)
     );
     return NextResponse.json(fallback);
   }

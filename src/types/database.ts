@@ -66,7 +66,6 @@ export interface Profile {
 export interface JobNoticeRow {
   id: string;
   created_at: string;
-  created_by?: string | null;
   /** "job" = 求人, "seeker" = 求職者 */
   post_type?: "job" | "seeker";
   title: string;
@@ -116,7 +115,7 @@ export interface SupplierRow {
   featured: boolean;
   plan: "basic" | "standard" | "premium";
   plan_expires_at: string | null;
-  /** When true, the supplier is hidden from the public listings (admin only). */
+  /** When true, the supplier is hidden from public listings/detail (admin-only "Post" state). */
   hidden?: boolean;
   created_at: string;
 }
@@ -132,12 +131,12 @@ export interface SupplierProductRow {
   country_of_origin_en?: string;
   weight?: string;
   quantity?: string;
+  /** Free-text price (e.g. "S$10/kg") */
+  price?: string;
+  /** Short product description */
+  description?: string;
   storage_condition?: string;
   temperature?: string;
-  price?: string;
-  description?: string;
-  /** Display order — lower numbers appear first. */
-  sort_order?: number;
   /** Dimensions: width, depth, height */
   size_w?: string;
   size_d?: string;

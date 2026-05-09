@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { MessageCircle, X, Send, Loader2 } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
@@ -12,7 +11,9 @@ import { cn } from "@/lib/utils";
 import { ChatMessage, BotAvatar, UserAvatar } from "./ChatMessage";
 import { StarterPrompts } from "./StarterPrompts";
 import type { ChatbotApiResponse } from "@/types/chatbot";
+
 const SESSION_KEY = "fb-portal-chatbot-session";
+
 type Msg = { id: string; role: "user" | "assistant"; content: string };
 
 function getOrCreateSessionId(): string {

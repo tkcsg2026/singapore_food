@@ -17,4 +17,5 @@ export const metadata: Metadata = {
   },
 };
 
+
 export default About;

@@ -18,7 +18,25 @@ function normaliseMock(s: any) {
   };
 }
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+/** True when the request comes from an authenticated admin, so we can serve
+ *  hidden suppliers in the dashboard preview/edit flow. */
+async function callerIsAdmin(req: NextRequest): Promise<boolean> {
+  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (!token) return false;
+  const supabase = createServerSupabaseClient();
+  if (!supabase) return false;
+  try {
+    const { data: { user } } = await supabase.auth.getUser(token);
+    if (!user) return false;
+    const { data: profile } = await supabase
+      .from("profiles").select("role, banned").eq("id", user.id).single();
+    return Boolean(profile && profile.role === "admin" && !profile.banned);
+  } catch {
+    return false;
+  }
+}
+
+export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug: slugParam } = await params;
   const slug = decodeURIComponent(slugParam);
   const supabase = createServerSupabaseClient();
@@ -41,6 +59,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     return NextResponse.json(normaliseMock(mock));
   }
 
+  // Hidden suppliers are 404 to the public; admins can still preview/edit.
+  if (supplier.hidden) {
+    const adminAllowed = await callerIsAdmin(req);
+    if (!adminAllowed) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   // Increment view count and log a timestamped row for monthly stats
   const admin = createAdminSupabaseClient();
   if (admin) {
@@ -53,38 +77,37 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
   const { data: products } = await (admin ?? supabase)
     .from("supplier_products")
     .select("*")
-    .eq("supplier_id", supplier.id);
+    .eq("supplier_id", supplier.id)
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true });
 
-  const normalisedProducts = (products || [])
-    .map((p: Record<string, unknown>, idx: number) => ({
-      id: p.id,
-      supplier_id: p.supplier_id,
-      name: p.name ?? "",
-      name_en: p.name_en ?? "",
-      image: p.image ?? "",
-      moq: p.moq ?? "",
-      country_of_origin: p.country_of_origin ?? "",
-      country_of_origin_en: p.country_of_origin_en ?? "",
-      weight: p.weight ?? "",
-      quantity: p.quantity ?? "",
-      size_w: p.size_w ?? "",
-      size_d: p.size_d ?? "",
-      size_h: p.size_h ?? "",
-      size_unit: p.size_unit ?? "cm",
-      storage_condition: p.storage_condition ?? "",
-      temperature: p.temperature ?? "",
-      price: p.price ?? "",
-      description: p.description ?? "",
-      sort_order: typeof p.sort_order === "number" ? (p.sort_order as number) : idx,
-      video_url: p.video_url ?? "",
-      video_playback_url: p.video_playback_url ?? p.video_transcoded_url ?? p.video_url ?? "",
-      video_transcoded_url: p.video_transcoded_url ?? "",
-      video_transcode_status: p.video_transcode_status ?? (p.video_url ? "not_needed" : "none"),
-      video_transcode_error: p.video_transcode_error ?? "",
-      video_transcode_requested_at: p.video_transcode_requested_at ?? null,
-      video_transcoded_at: p.video_transcoded_at ?? null,
-    }))
-    .sort((a, b) => (a.sort_order as number) - (b.sort_order as number));
+  const normalisedProducts = (products || []).map((p: Record<string, unknown>) => ({
+    id: p.id,
+    supplier_id: p.supplier_id,
+    name: p.name ?? "",
+    name_en: p.name_en ?? "",
+    image: p.image ?? "",
+    moq: p.moq ?? "",
+    country_of_origin: p.country_of_origin ?? "",
+    country_of_origin_en: p.country_of_origin_en ?? "",
+    weight: p.weight ?? "",
+    quantity: p.quantity ?? "",
+    price: p.price ?? "",
+    description: p.description ?? "",
+    size_w: p.size_w ?? "",
+    size_d: p.size_d ?? "",
+    size_h: p.size_h ?? "",
+    size_unit: p.size_unit ?? "cm",
+    storage_condition: p.storage_condition ?? "",
+    temperature: p.temperature ?? "",
+    video_url: p.video_url ?? "",
+    video_playback_url: p.video_playback_url ?? p.video_transcoded_url ?? p.video_url ?? "",
+    video_transcoded_url: p.video_transcoded_url ?? "",
+    video_transcode_status: p.video_transcode_status ?? (p.video_url ? "not_needed" : "none"),
+    video_transcode_error: p.video_transcode_error ?? "",
+    video_transcode_requested_at: p.video_transcode_requested_at ?? null,
+    video_transcoded_at: p.video_transcoded_at ?? null,
+  }));
 
   return NextResponse.json({ ...supplier, products: normalisedProducts });
 }
