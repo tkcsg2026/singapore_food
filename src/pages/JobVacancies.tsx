@@ -205,7 +205,7 @@ function JobListingCard({
         </div>
       )}
 
-      {(phoneDigits.length >= 8 || canDelete || canEdit || showAdminDelete) && (
+      {(phoneDigits.length >= 8 || canDelete || showAdminDelete) && (
         <div className="mt-1 flex flex-wrap items-center gap-2">
           {phoneDigits.length >= 8 && (
             <a
