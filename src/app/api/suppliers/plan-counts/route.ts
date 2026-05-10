@@ -12,14 +12,17 @@ export async function GET() {
 
   const { count: total, error: errTotal } = await supabase
     .from("suppliers")
-    .select("*", { count: "exact", head: true });
+    .select("*", { count: "exact", head: true })
+    .neq("hidden", true);
   const { count: premium, error: errP } = await supabase
     .from("suppliers")
     .select("*", { count: "exact", head: true })
+    .neq("hidden", true)
     .eq("plan", "premium");
   const { count: standard, error: errS } = await supabase
     .from("suppliers")
     .select("*", { count: "exact", head: true })
+    .neq("hidden", true)
     .eq("plan", "standard");
 
   if (errTotal || errP || errS || total == null) {

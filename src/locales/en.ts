@@ -790,6 +790,7 @@ const en = {
     seekerLabel: "Job Seeker",
     contactSeekerWA: "Contact via WhatsApp",
     myPostDelete: "Delete my post",
+    myPostEdit: "Edit my post",
     postingAdminOnly:
       "Please log in to post a job listing or job seeker profile.",
     adminDeleteListing: "Remove listing (admin)",

@@ -69,6 +69,8 @@ ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS image_2         text DEFAU
 ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS image_3         text DEFAULT '';
 ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS whatsapp_contact_name text DEFAULT '';
 ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS about_ja             text DEFAULT '';
+-- Admin-only "Post" / hidden state — when true the supplier is excluded from public listings.
+ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS hidden                boolean DEFAULT false;
 
 -- Supplier Products
 CREATE TABLE IF NOT EXISTS public.supplier_products (
@@ -214,14 +216,17 @@ ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS quantity          
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS moq               text DEFAULT '';
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS storage_condition text DEFAULT '';
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS temperature       text DEFAULT '';
--- Product reorder support (Admin product list up/down)
+-- Product reorder support: drives Admin up/down ordering and the public site's
+-- product display order. Without this column the API's .order("sort_order") would
+-- error and product order falls back to whatever Postgres returns (random).
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS sort_order        integer DEFAULT 0;
 -- Video URL: direct MP4/WebM upload URL or YouTube / Vimeo embed URL
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS video_url         text DEFAULT '';
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS price             text DEFAULT '';
 ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS description       text DEFAULT '';
 
--- Backfill sort_order for existing rows per supplier (stable deterministic order)
+-- Backfill sort_order for any existing rows so per-supplier order is stable
+-- (rows previously inserted without sort_order all share the default 0).
 WITH ranked_products AS (
   SELECT
     id,
@@ -540,6 +545,15 @@ ON CONFLICT (type, value) DO NOTHING;
 
 INSERT INTO public.categories (type, value, label, label_ja, sort_order, parent_group) VALUES
   -- Food & Supplies (食材・供給品)
+  --
+  -- The following sub-categories / tags were intentionally removed from the
+  -- seed because the admin had deleted them via Category Management, and
+  -- re-running this script kept re-inserting them:
+  --   ('supplier', 'produce-dry-goods', 'Produce & Dry Goods', '青果・乾物', …)
+  --   ('tag',      'small-lot',         'Small Lot OK',         '少量対応',   …)
+  --   ('tag',      'japanese-ok',       'Japanese OK',          '日本語対応', …)
+  --   ('tag',      'bulk-order',        'Bulk Order OK',        '大量注文可', …)
+  -- They can still be re-added at any time from the admin Category Manager.
   ('supplier',     'meat-poultry',      'Meat & Poultry',   '肉類・家禽',      1, 'food-supplies'),
   ('supplier',     'seafood',           'Seafood',          '海鮮・鮮魚',      2, 'food-supplies'),
   ('supplier',     'beverages',         'Beverages',        '飲料・酒類',      4, 'food-supplies'),
@@ -570,7 +584,8 @@ INSERT INTO public.categories (type, value, label, label_ja, sort_order, parent_
   ('tag',          'maintenance',       'Maintenance Support','メンテナンス対応', 9, '')
 ON CONFLICT (type, value) DO NOTHING;
 
--- Backfill parent_group for existing supplier categories (safe to re-run)
+-- Backfill parent_group for existing supplier categories (safe to re-run).
+-- 'produce-dry-goods' is intentionally excluded — see comment above.
 UPDATE public.categories SET parent_group = 'food-supplies' WHERE type = 'supplier' AND value IN ('meat-poultry','seafood','beverages') AND (parent_group IS NULL OR parent_group = '');
 UPDATE public.categories SET parent_group = 'kitchen-hardware' WHERE type = 'supplier' AND value IN ('kitchen-equipment','furniture-interior') AND (parent_group IS NULL OR parent_group = '');
 UPDATE public.categories SET parent_group = 'tech-pos' WHERE type = 'supplier' AND value IN ('pos-systems','crm','inventory','online-ordering') AND (parent_group IS NULL OR parent_group = '');
@@ -589,7 +604,7 @@ VALUES
     'tokyo-seafood', 'Tokyo Seafood Co.', '東京シーフード株式会社',
     'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=200&h=200&fit=crop',
     'seafood', '海鮮・鮮魚',
-    ARRAY['ハラール'],
+    ARRAY['少量対応','日本語対応','ハラール'],
     'central', '中央エリア',
     'Premium seafood supplier with daily fresh catches',
     '毎日新鮮な魚介類を提供する高品質シーフードサプライヤー。築地から直送。',
@@ -598,11 +613,24 @@ VALUES
     true, 'premium'
   ),
   (
+    'a1000000-0000-0000-0000-000000000002',
+    'green-harvest', 'Green Harvest Pte Ltd', 'グリーンハーベスト',
+    'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=200&h=200&fit=crop',
+    'produce-dry-goods', '青果・乾物',
+    ARRAY['少量対応','オーガニック'],
+    'north', '北部エリア',
+    'Organic vegetables and herbs supplier',
+    'オーガニック野菜とハーブの専門サプライヤー。地元農園から新鮮直送。',
+    '6523456789', 980, ARRAY['有機JAS','GlobalGAP'],
+    'シンガポール北部の自社農園で栽培したオーガニック野菜を、レストランやカフェに直接お届けしています。',
+    false, 'standard'
+  ),
+  (
     'a1000000-0000-0000-0000-000000000003',
     'asia-meat-supply', 'Asia Meat Supply', 'アジアミートサプライ',
     'https://images.unsplash.com/photo-1588347818036-558601350947?w=200&h=200&fit=crop',
     'meat-poultry', '肉類・家禽',
-    ARRAY['ハラール','翌日配送'],
+    ARRAY['ハラール','大量注文可','翌日配送'],
     'west', '西部エリア',
     'Halal certified meat supplier',
     'ハラール認証済み。和牛からチキンまで幅広い肉類を取り扱い。',
@@ -615,13 +643,26 @@ VALUES
     'sakura-beverages', 'Sakura Beverages', 'さくらビバレッジ',
     'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?w=200&h=200&fit=crop',
     'beverages', '飲料・酒類',
-    ARRAY['日本酒専門'],
+    ARRAY['日本語対応','少量対応','日本酒専門'],
     'central', '中央エリア',
     'Japanese sake and beverages specialist',
     '日本酒・焼酎を中心とした飲料の専門卸。蔵元直送の希少銘柄も取扱。',
     '6545678901', 870, ARRAY['酒類販売免許'],
     '日本全国の蔵元と直接取引し、シンガポールの日本料理店に最高品質の日本酒をお届けしています。',
     false, 'standard'
+  ),
+  (
+    'a1000000-0000-0000-0000-000000000005',
+    'pacific-dry-goods', 'Pacific Dry Goods', 'パシフィック乾物',
+    'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=200&h=200&fit=crop',
+    'produce-dry-goods', '青果・乾物',
+    ARRAY['少量対応','日本語対応'],
+    'east', '東部エリア',
+    'Japanese condiments and dry goods',
+    '味噌、醤油、だし等の和食調味料と乾物を幅広く取り扱い。',
+    '6556789012', 720, ARRAY['食品衛生管理者'],
+    '日本の伝統的な調味料と乾物を専門に取り扱う卸売業者です。シンガポール在住の日本人シェフに愛用されています。',
+    false, 'basic'
   ),
   (
     'a1000000-0000-0000-0000-000000000006',

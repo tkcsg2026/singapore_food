@@ -10,7 +10,7 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { sortSuppliersByPlan } from "@/lib/plans";
 import type { PlanCounts } from "@/lib/plans";
 import { buildSupplierTagDisplayMaps, getCategoryDisplayName } from "@/lib/category-display";
-import { buildDynamicGroups, LEGACY_CATEGORY_MAP, getGroupLabel } from "@/lib/category-groups";
+import { buildDynamicGroups, LEGACY_CATEGORY_MAP, getGroupLabel, augmentSupplierCategoriesFromRows } from "@/lib/category-groups";
 import type { SupplierRow, CategoryRow } from "@/types/database";
 
 const Suppliers = () => {
@@ -48,9 +48,17 @@ const Suppliers = () => {
   const { data: groupRows } = useFetch<CategoryRow[]>("/api/categories?type=supplier-group");
   const { data: tagCategories } = useFetch<(CategoryRow & { type: "tag"; label_ja?: string | null })[]>("/api/categories?type=tag");
 
+  // Surface every category value used by at least one supplier — including
+  // newly-added ones (e.g. "packaging") that haven't been added to the
+  // categories table yet — so they appear in the filter UI.
+  const categoriesForUi = useMemo(
+    () => augmentSupplierCategoriesFromRows(categories || [], suppliers || []),
+    [categories, suppliers]
+  );
+
   const categoryGroups = useMemo(
-    () => buildDynamicGroups(groupRows || [], categories || []),
-    [groupRows, categories]
+    () => buildDynamicGroups(groupRows || [], categoriesForUi),
+    [groupRows, categoriesForUi]
   );
   const tagDisplayMaps = useMemo(() => buildSupplierTagDisplayMaps(tagCategories || []), [tagCategories]);
 
@@ -69,10 +77,39 @@ const Suppliers = () => {
   const toggleTag = (val: string) =>
     setSelectedTags((prev) => prev.includes(val) ? prev.filter((t) => t !== val) : [...prev, val]);
 
+  // Pull every category-like value the supplier has (EN + JA slots) and
+  // legacy-map it. Including the *_ja columns is what makes a "Packaging"
+  // filter match a supplier tagged only as "包装", and it ensures any future
+  // category added by the admin works without code changes.
   const supplierCategories = (s: SupplierRow) =>
-    [s.category, s.category_2, s.category_3]
+    [s.category, s.category_2, s.category_3, s.category_ja, s.category_2_ja, s.category_3_ja]
       .filter(Boolean)
       .map((c) => LEGACY_CATEGORY_MAP[c!] ?? c!);
+
+  /** Aggressive normalisation so "Packaging", "packaging", " Packaging "
+   *  and even "packaging-supplies" fingerprint the same way. */
+  const normalizeCat = (s: string) =>
+    (s || "").trim().toLowerCase().replace(/[\s\-_./]+/g, "");
+
+  /** All accepted aliases for a selected filter value (its value, label, label_ja
+   *  in lowercase / normalised form). A supplier matches when *any* of its
+   *  stored category strings normalises into this set. */
+  const categoryMatchSet = (filterValue: string): Set<string> => {
+    const out = new Set<string>();
+    const push = (v?: string | null) => {
+      const n = normalizeCat(v ?? "");
+      if (n) out.add(n);
+    };
+    push(filterValue);
+    push(LEGACY_CATEGORY_MAP[filterValue]);
+    const row = categoriesForUi.find((c) => c.value === filterValue);
+    if (row) {
+      push(row.value);
+      push(row.label);
+      push(row.label_ja || "");
+    }
+    return out;
+  };
   const sortedTagCategories = useMemo(
     () => [...(tagCategories || [])].sort((a, b) => a.sort_order - b.sort_order),
     [tagCategories]
@@ -101,7 +138,14 @@ const Suppliers = () => {
         const matchCat = [s.category_ja, s.category_2_ja, s.category_3_ja, s.category, s.category_2, s.category_3].some((c) => c && (String(c).includes(query) || String(c).toLowerCase().includes(q)));
         if (!matchName && !matchDesc && !matchCat) return false;
       }
-      if (selectedCategories.length && !selectedCategories.some((c) => supplierCategories(s).includes(c))) return false;
+      if (selectedCategories.length) {
+        const supplierCats = supplierCategories(s).map(normalizeCat);
+        const anyMatch = selectedCategories.some((sel) => {
+          const set = categoryMatchSet(sel);
+          return supplierCats.some((sc) => set.has(sc));
+        });
+        if (!anyMatch) return false;
+      }
       if (selectedAreas.length && !selectedAreas.includes(s.area)) return false;
       if (selectedTags.length && !selectedTags.every((tagValue) => matchSelectedTag(s, tagValue))) return false;
       return true;
@@ -133,7 +177,7 @@ const Suppliers = () => {
         <div className="space-y-4">
           {categoryGroups.map((group) => {
             const groupCats = group.children
-              .map((val) => (categories || []).find((c) => c.value === val))
+              .map((val) => categoriesForUi.find((c) => c.value === val))
               .filter(Boolean) as CategoryRow[];
             if (groupCats.length === 0) return null;
             return (

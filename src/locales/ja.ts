@@ -791,6 +791,7 @@ const ja: Translations = {
     seekerLabel: "求職者",
     contactSeekerWA: "WhatsApp で連絡する",
     myPostDelete: "自分の投稿を削除",
+    myPostEdit: "自分の投稿を編集",
     postingAdminOnly:
       "求人情報や求職者プロフィールを投稿するにはログインしてください。",
     adminDeleteListing: "管理者として削除",

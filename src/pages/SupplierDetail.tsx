@@ -11,6 +11,7 @@ import { useLoginPrompt } from "@/components/LoginPromptModal";
 import type { CategoryRow } from "@/types/database";
 import { buildSupplierTagDisplayMaps } from "@/lib/category-display";
 import { getPreferredPlaybackUrl, VIDEO_EXTENSIONS, getFileExtension } from "@/lib/video";
+import { displayCountryOfOrigin } from "@/lib/country";
 
 function isYouTube(url: string) {
   return url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/) ||
@@ -191,10 +192,28 @@ function getVideoThumbnail(url?: string): string | null {
 }
 
 /** Show only the language matching the current UI language; fall back to the other side
- *  if that translation is missing. Never displays both simultaneously. */
+ *  if that translation is missing. Never displays both simultaneously.
+ *
+ *  Also defensive against legacy product rows where both names were saved into
+ *  a single `name` field separated by a line break ("English\n日本語"). In that
+ *  case we extract the language-matched line so the display still shows just one. */
 function productDisplayNames(p: { name?: string; name_en?: string }, lang: "en" | "ja") {
-  const ja = (p.name || "").trim();
-  const en = (p.name_en || "").trim();
+  const hasJa = (s: string) => /[぀-ゟ゠-ヿ一-龯]/.test(s);
+  const splitMixed = (s: string): { ja: string; en: string } => {
+    if (!s) return { ja: "", en: "" };
+    const lines = s.split(/[\r\n]+/).map((l) => l.trim()).filter(Boolean);
+    if (lines.length < 2) return { ja: hasJa(s) ? s : "", en: hasJa(s) ? "" : s };
+    const jaLines = lines.filter(hasJa).join(" ");
+    const enLines = lines.filter((l) => !hasJa(l)).join(" ");
+    return { ja: jaLines, en: enLines };
+  };
+
+  const rawJa = (p.name || "").trim();
+  const rawEn = (p.name_en || "").trim();
+  const splitJa = splitMixed(rawJa);
+  const splitEn = splitMixed(rawEn);
+  const ja = splitJa.ja || splitEn.ja || rawJa;
+  const en = splitEn.en || splitJa.en || rawEn;
   const primary = lang === "ja" ? (ja || en) : (en || ja);
   return { primary, secondary: "" };
 }
@@ -311,15 +330,19 @@ const SupplierDetail = () => {
   const slug = typeof params?.slug === "string" ? params.slug : "";
   const { data: supplier, loading } = useFetch<any>(`/api/suppliers/${slug}`, [slug]);
   const { data: tagCategories } = useFetch<(CategoryRow & { type: "tag"; label_ja?: string | null })[]>("/api/categories?type=tag");
-  const [activeTab, setActiveTab] = useState("about");
+  // Default to "products" — owners want their catalog visible first when a
+  // visitor lands on the supplier page (request from 5/9 client review).
+  const [activeTab, setActiveTab] = useState("products");
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const { t, lang } = useTranslation();
   const { requireLogin, loginPromptModal, isLoggedIn } = useLoginPrompt();
 
+  // Products first so the catalog is the landing tab. About / Certifications /
+  // Contact follow.
   const tabs = [
-    { id: "about",          label: t.supplierDetail.tabAbout },
     { id: "products",       label: t.supplierDetail.tabProducts },
+    { id: "about",          label: t.supplierDetail.tabAbout },
     { id: "certifications", label: t.supplierDetail.tabCertifications },
     { id: "contact",        label: t.supplierDetail.tabContact },
   ];
@@ -440,7 +463,10 @@ const SupplierDetail = () => {
             )}
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl font-black tracking-tight">{displayName}</h1>
-              <p className="text-sm text-muted-foreground mt-1">{lang === "ja" ? supplier.name : supplier.name_ja}</p>
+              {/* Subtitle in the opposite language was removed: when the user
+                  is browsing in EN, only the EN name should be shown (and vice
+                  versa). Showing both creates the cluttered bilingual stack
+                  the user explicitly asked us to avoid. */}
               <div className="flex flex-wrap gap-2 mt-3 items-center">
                 <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                   <MapPin className="h-3 w-3" /> {displayArea}
@@ -452,11 +478,30 @@ const SupplierDetail = () => {
                 ))}
               </div>
               <div className="flex flex-wrap gap-1.5 mt-3">
-                {(supplier.tags || []).map((tag: string) => (
-                  <span key={tag} className="tag-badge">
-                    {translateTag(tag)}
-                  </span>
-                ))}
+                {(() => {
+                  // Same dedup approach as SupplierCard: collapse legacy aliases
+                  // ("Japanese Support" vs "Japanese support" vs "japanese-ok"
+                  // vs "日本語対応") so a single tag never renders twice.
+                  const normalize = (s: string) =>
+                    (s || "").trim().toLowerCase().replace(/[\s\-_./]+/g, "");
+                  const seen = new Set<string>();
+                  const out: { raw: string; label: string }[] = [];
+                  for (const raw of supplier.tags || []) {
+                    const label = translateTag(raw);
+                    const fps = new Set<string>();
+                    [label, raw, tagDisplayMaps.toEn[raw], tagDisplayMaps.toJa[raw], tagMap[raw]]
+                      .forEach((v) => { const n = normalize(v || ""); if (n) fps.add(n); });
+                    if (fps.size === 0) continue;
+                    let isDup = false;
+                    fps.forEach((fp) => { if (seen.has(fp)) isDup = true; });
+                    if (isDup) continue;
+                    fps.forEach((fp) => seen.add(fp));
+                    out.push({ raw, label });
+                  }
+                  return out.map(({ raw, label }) => (
+                    <span key={raw} className="tag-badge">{label}</span>
+                  ));
+                })()}
               </div>
               {contactName && <p className="text-xs text-muted-foreground mt-2">{t.supplierDetail.contactLabel}{contactName}</p>}
               {/* About text preview — fills blank space on desktop */}
@@ -564,11 +609,15 @@ const SupplierDetail = () => {
                       })()}
                       {p.temperature && <div className="text-xs text-primary font-medium mt-0.5">{displayProductStorageOrTemp(p.temperature)}</div>}
                       {p.price && <div className="text-xs font-semibold text-primary mt-0.5">{labels.price}: {p.price}</div>}
-                      {(lang === "ja" ? p.country_of_origin : (p.country_of_origin_en || p.country_of_origin)) && (
-                        <div className="text-xs text-muted-foreground">
-                          {labels.origin}: {lang === "ja" ? p.country_of_origin : (p.country_of_origin_en || p.country_of_origin)}
-                        </div>
-                      )}
+                      {(() => {
+                        const origin = displayCountryOfOrigin(p.country_of_origin, p.country_of_origin_en, lang);
+                        if (!origin) return null;
+                        return (
+                          <div className="text-xs text-muted-foreground">
+                            {labels.origin}: {origin}
+                          </div>
+                        );
+                      })()}
                       {p.weight && <div className="text-xs text-muted-foreground">{labels.weight}: {p.weight}</div>}
                       {p.quantity && <div className="text-xs text-muted-foreground">{labels.quantity}: {p.quantity}</div>}
                       {p.moq && <div className="text-xs text-muted-foreground">{labels.moq}: {p.moq}</div>}
@@ -639,7 +688,7 @@ const SupplierDetail = () => {
                     <span className="inline-block bg-primary/10 text-primary text-xs font-semibold px-2 py-1 rounded-md">{displayProductStorageOrTemp(product.temperature)}</span>
                   )}
                   <dl className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2">
-                    <div><dt className="text-xs text-muted-foreground">{labels.origin}</dt><dd className="text-sm font-medium">{lang === "ja" ? (product.country_of_origin || "—") : (product.country_of_origin_en || product.country_of_origin || "—")}</dd></div>
+                    <div><dt className="text-xs text-muted-foreground">{labels.origin}</dt><dd className="text-sm font-medium">{displayCountryOfOrigin(product.country_of_origin, product.country_of_origin_en, lang) || "—"}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">{labels.price}</dt><dd className="text-sm font-medium">{product.price || "—"}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">{labels.weight}</dt><dd className="text-sm font-medium">{product.weight || "—"}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">{labels.quantity}</dt><dd className="text-sm font-medium">{product.quantity || "—"}</dd></div>

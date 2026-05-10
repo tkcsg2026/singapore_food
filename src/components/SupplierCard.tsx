@@ -153,13 +153,31 @@ export function SupplierCard({ supplier, variant = "grid", rank, tagDisplayMaps,
         <p className="text-xs text-muted-foreground line-clamp-2 mb-2 leading-relaxed flex-shrink-0" title={description}>{description}</p>
       )}
       {(() => {
+        // Aggressive normalisation so legacy spellings ("Japanese Support" vs
+        // "Japanese support" vs "japanese-ok" vs "japanese support") fingerprint
+        // identically and collapse to a single chip.
+        const normalize = (s: string) =>
+          (s || "").trim().toLowerCase().replace(/[\s\-_./]+/g, "");
+        // Build a Set of every fingerprint a raw value can map to (display label,
+        // raw, EN/JA aliases via tagDisplayMaps, locale tagMap fallback). Two raws
+        // that share *any* fingerprint are treated as the same logical tag.
+        const fingerprintsFor = (raw: string, label: string): string[] => {
+          const out = new Set<string>();
+          const push = (v?: string) => { const n = normalize(v || ""); if (n) out.add(n); };
+          push(label);
+          push(raw);
+          if (tagDisplayMaps) { push(tagDisplayMaps.toEn[raw]); push(tagDisplayMaps.toJa[raw]); }
+          if (tagMap[raw]) push(tagMap[raw]);
+          return Array.from(out);
+        };
         const seen = new Set<string>();
         const uniqueTags: { raw: string; label: string }[] = [];
         for (const raw of supplier.tags ?? []) {
           const label = translateTag(raw);
-          const key = label.trim().toLowerCase();
-          if (!key || seen.has(key)) continue;
-          seen.add(key);
+          const fps = fingerprintsFor(raw, label);
+          if (fps.length === 0) continue;
+          if (fps.some((fp) => seen.has(fp))) continue;
+          fps.forEach((fp) => seen.add(fp));
           uniqueTags.push({ raw, label });
         }
         return (

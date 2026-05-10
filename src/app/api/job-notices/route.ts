@@ -127,6 +127,100 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(data);
 }
 
+/**
+ * Update an existing job / seeker notice. Allowed for the original poster
+ * (`created_by` match) or any admin. Admin moderation edits are audit-logged.
+ */
+export async function PUT(req: NextRequest) {
+  const supabase = createAdminSupabaseClient();
+  const server = createServerSupabaseClient();
+  if (!supabase) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
+
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+  const body = await req.json().catch(() => ({}));
+
+  // Authorise: admin OR the row's created_by must match the caller.
+  const adminAuth = await requireAdmin(req);
+  const isAdmin = !(adminAuth instanceof NextResponse);
+  let allowEdit = isAdmin;
+  let callerId = "";
+  if (!allowEdit) {
+    const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+    if (token && server) {
+      const { data: { user } } = await server.auth.getUser(token);
+      if (user?.id) {
+        callerId = user.id;
+        const { data: row } = await supabase
+          .from("job_notices")
+          .select("created_by")
+          .eq("id", id)
+          .single();
+        if (row?.created_by && row.created_by === user.id) allowEdit = true;
+      }
+    }
+  }
+  if (!allowEdit) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const rawType = body?.post_type;
+  const post_type: "job" | "seeker" | undefined =
+    rawType === "seeker" ? "seeker" : rawType === "job" ? "job" : undefined;
+
+  // Build patch — only include fields actually provided so editors can do
+  // partial updates (e.g. just description) without nulling out the others.
+  const patch: Record<string, unknown> = {};
+  if (post_type) patch.post_type = post_type;
+  if (typeof body?.title !== "undefined") patch.title = clampText(body.title, 120);
+  if (typeof body?.company !== "undefined") patch.company = clampText(body.company, 120);
+  if (typeof body?.employment !== "undefined") patch.employment = clampText(body.employment, 24);
+  if (typeof body?.roleCategory !== "undefined") patch.role_category = clampText(body.roleCategory, 24);
+  if (typeof body?.role_category !== "undefined") patch.role_category = clampText(body.role_category, 24);
+  if (typeof body?.region !== "undefined") patch.region = clampText(body.region, 24);
+  if (typeof body?.compensation !== "undefined") patch.compensation = clampText(body.compensation, 32);
+  if (typeof body?.experience !== "undefined") patch.experience = clampText(body.experience, 24);
+  if (typeof body?.eligibility !== "undefined") patch.eligibility = clampText(body.eligibility, 24);
+  if (typeof body?.description !== "undefined") patch.description = clampText(body.description, 4000);
+  if (typeof body?.image !== "undefined") patch.image = clampText(body.image, 1000);
+
+  if (typeof patch.title === "string" && !patch.title) {
+    return NextResponse.json({ error: "Title required" }, { status: 400 });
+  }
+  if (typeof patch.description === "string" && !patch.description) {
+    return NextResponse.json({ error: "Description required" }, { status: 400 });
+  }
+
+  const { data, error } = await supabase
+    .from("job_notices")
+    .update(patch)
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error && isJobNoticesUnavailableError(error)) {
+    return NextResponse.json(
+      { error: "job_notices setup is pending", code: "JOB_NOTICES_NOT_READY" },
+      { status: 503 }
+    );
+  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if (isAdmin) {
+    const pt = data?.post_type ?? "job";
+    await logAuditAction({
+      adminId: adminAuth.adminId,
+      action: pt === "seeker" ? "edit_seeker_notice" : "edit_job_notice",
+      targetType: "job_notice",
+      targetId: id,
+      detail: `${data?.title ?? ""}${pt === "seeker" ? " (seeker)" : " (job)"}`.trim(),
+    });
+  }
+
+  return NextResponse.json(data);
+  // touch callerId so linter accepts unused-variable absence — actual usage above
+  void callerId;
+}
+
 export async function DELETE(req: NextRequest) {
   const supabase = createAdminSupabaseClient();
   const server = createServerSupabaseClient();

@@ -18,7 +18,25 @@ function normaliseMock(s: any) {
   };
 }
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+/** True when the request comes from an authenticated admin, so we can serve
+ *  hidden suppliers in the dashboard preview/edit flow. */
+async function callerIsAdmin(req: NextRequest): Promise<boolean> {
+  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (!token) return false;
+  const supabase = createServerSupabaseClient();
+  if (!supabase) return false;
+  try {
+    const { data: { user } } = await supabase.auth.getUser(token);
+    if (!user) return false;
+    const { data: profile } = await supabase
+      .from("profiles").select("role, banned").eq("id", user.id).single();
+    return Boolean(profile && profile.role === "admin" && !profile.banned);
+  } catch {
+    return false;
+  }
+}
+
+export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug: slugParam } = await params;
   const slug = decodeURIComponent(slugParam);
   const supabase = createServerSupabaseClient();
@@ -41,6 +59,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     return NextResponse.json(normaliseMock(mock));
   }
 
+  // Hidden suppliers are 404 to the public; admins can still preview/edit.
+  if (supplier.hidden) {
+    const adminAllowed = await callerIsAdmin(req);
+    if (!adminAllowed) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   // Increment view count and log a timestamped row for monthly stats
   const admin = createAdminSupabaseClient();
   if (admin) {
@@ -53,7 +77,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
   const { data: products } = await (admin ?? supabase)
     .from("supplier_products")
     .select("*")
-    .eq("supplier_id", supplier.id);
+    .eq("supplier_id", supplier.id)
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true });
 
   const normalisedProducts = (products || []).map((p: Record<string, unknown>) => ({
     id: p.id,

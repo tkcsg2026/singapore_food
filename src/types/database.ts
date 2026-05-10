@@ -115,6 +115,8 @@ export interface SupplierRow {
   featured: boolean;
   plan: "basic" | "standard" | "premium";
   plan_expires_at: string | null;
+  /** When true, the supplier is hidden from public listings/detail (admin-only "Post" state). */
+  hidden?: boolean;
   created_at: string;
 }
 

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Briefcase, CheckCircle2, ChevronDown, ChevronUp, ClipboardList,
-  ListOrdered, MapPin, MessageCircle, RefreshCw, Plus, Trash2, User, X,
+  ListOrdered, MapPin, MessageCircle, RefreshCw, Plus, Trash2, User, X, Edit2,
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -95,16 +95,20 @@ function JobListingCard({
   j,
   phoneDigits,
   canDelete,
+  canEdit,
   showAdminDelete,
   onDelete,
+  onEdit,
   onAdminDelete,
 }: {
   notice: JobNotice;
   j: ReturnType<typeof useTranslation>["t"]["jobs"];
   phoneDigits: string;
   canDelete: boolean;
+  canEdit: boolean;
   showAdminDelete: boolean;
   onDelete: (id: string) => void;
+  onEdit: (notice: JobNotice) => void;
   onAdminDelete: (id: string) => void;
 }) {
   const deletePostBtnClass =
@@ -138,6 +142,16 @@ function JobListingCard({
 
   return (
     <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col gap-3 transition-shadow hover:shadow-md">
+      {notice.image && !isSeeker && (
+        <div className="w-full rounded-xl overflow-hidden">
+          <img
+            src={notice.image}
+            alt={notice.company || notice.title}
+            className="w-full h-40 object-cover"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
         <div className="min-w-0">
           {isSeeker && (
@@ -191,16 +205,8 @@ function JobListingCard({
         </div>
       )}
 
-      {(notice.image || phoneDigits.length >= 8 || canDelete || showAdminDelete) && (
+      {(phoneDigits.length >= 8 || canDelete || canEdit || showAdminDelete) && (
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          {notice.image && !isSeeker && (
-            <img
-              src={notice.image}
-              alt={notice.company || notice.title}
-              className="w-9 h-9 rounded-md border object-cover flex-shrink-0"
-              referrerPolicy="no-referrer"
-            />
-          )}
           {phoneDigits.length >= 8 && (
             <a
               href={`https://wa.me/${phoneDigits}?text=${encodeURIComponent(waText)}`}
@@ -211,6 +217,16 @@ function JobListingCard({
               <MessageCircle className="h-3.5 w-3.5" />
               {isSeeker ? (j.contactSeekerWA ?? "WhatsApp で連絡") : j.applyViaWA}
             </a>
+          )}
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => onEdit(notice)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+            >
+              <Edit2 className="h-3.5 w-3.5 shrink-0" />
+              {j.myPostEdit ?? "Edit my post"}
+            </button>
           )}
           {canDelete && (
             <button type="button" onClick={() => onDelete(notice.id)} className={deletePostBtnClass}>
@@ -234,29 +250,58 @@ function JobListingCard({
 function PostForm({
   postType,
   j,
+  initial,
   onSuccess,
   onClose,
 }: {
   postType: PostType;
   j: ReturnType<typeof useTranslation>["t"]["jobs"];
+  /** When provided, the form starts in *edit* mode and updates the row. */
+  initial?: JobNotice | null;
   onSuccess: () => void;
   onClose: () => void;
 }) {
   const { lang } = useTranslation();
   const isSeeker = postType === "seeker";
+  const isEdit = Boolean(initial?.id);
 
-  const [jobTitle, setJobTitle] = useState("");
-  const [company, setCompany] = useState("");
-  const [employment, setEmployment] = useState<EmploymentKey>("fullTime");
-  const [roleCategory, setRoleCategory] = useState<RoleKey>("kitchen");
-  const [region, setRegion] = useState<RegionKey>("islandwide");
-  const [compensation, setCompensation] = useState<CompensationKey>("negotiate");
-  const [experience, setExperience] = useState<ExperienceKey>("entry");
-  const [eligibility, setEligibility] = useState<EligibilityKey>("open");
-  const [description, setDescription] = useState("");
-  const [image, setImage] = useState("");
+  // Pre-fill from `initial` when editing. Falls back to sensible defaults so
+  // legacy rows missing one of the enum fields don't crash <Select>.
+  const empOpts = j.employmentOpts as Record<string, string>;
+  const roleOptsAll = j.roleOpts as Record<string, string>;
+  const regionOpts = j.regionOpts as Record<string, string>;
+  const compOpts = j.compensationOpts as Record<string, string>;
+  const expOpts = j.experienceOpts as Record<string, string>;
+  const eligOpts = j.eligibilityOpts as Record<string, string>;
+  const safeKey = <T extends string>(value: string | undefined, opts: Record<string, string>, fallback: T): T =>
+    (value && opts[value] ? value : fallback) as T;
+
+  const [jobTitle, setJobTitle] = useState(initial?.title ?? "");
+  const [company, setCompany] = useState(initial?.company ?? "");
+  const [employment, setEmployment] = useState<EmploymentKey>(
+    safeKey<EmploymentKey>(initial?.employment, empOpts, "fullTime"),
+  );
+  const [roleCategory, setRoleCategory] = useState<RoleKey>(
+    safeKey<RoleKey>(initial?.role_category, roleOptsAll, "kitchen"),
+  );
+  const [region, setRegion] = useState<RegionKey>(
+    safeKey<RegionKey>(initial?.region, regionOpts, "islandwide"),
+  );
+  const [compensation, setCompensation] = useState<CompensationKey>(
+    safeKey<CompensationKey>(initial?.compensation, compOpts, "negotiate"),
+  );
+  const [experience, setExperience] = useState<ExperienceKey>(
+    safeKey<ExperienceKey>(initial?.experience, expOpts, "entry"),
+  );
+  const [eligibility, setEligibility] = useState<EligibilityKey>(
+    safeKey<EligibilityKey>(initial?.eligibility, eligOpts, "open"),
+  );
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [image, setImage] = useState(initial?.image ?? "");
   const [imageUploading, setImageUploading] = useState(false);
-  const [agreed, setAgreed] = useState(false);
+  // In edit mode the user has already consented at original post time — skip
+  // the checkbox so they can fix a typo without re-confirming consent.
+  const [agreed, setAgreed] = useState(isEdit);
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
 
@@ -293,23 +338,27 @@ function PostForm({
       if (session?.access_token) {
         (headers as Record<string, string>).Authorization = `Bearer ${session.access_token}`;
       }
-      const res = await fetch("/api/job-notices", {
-        method: "POST",
+      const url = isEdit && initial?.id
+        ? `/api/job-notices?id=${encodeURIComponent(initial.id)}`
+        : "/api/job-notices";
+      const payload: Record<string, unknown> = {
+        post_type: postType,
+        title: jobTitle,
+        company,
+        employment,
+        roleCategory,
+        region,
+        compensation,
+        experience,
+        eligibility,
+        description,
+        image: isSeeker ? "" : image,
+      };
+      if (!isEdit) payload.agreed = true;
+      const res = await fetch(url, {
+        method: isEdit ? "PUT" : "POST",
         headers,
-        body: JSON.stringify({
-          post_type: postType,
-          title: jobTitle,
-          company,
-          employment,
-          roleCategory,
-          region,
-          compensation,
-          experience,
-          eligibility,
-          description,
-          image: isSeeker ? "" : image,
-          agreed: true,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -351,9 +400,13 @@ function PostForm({
         ? "経験、語学力、希望勤務時間・エリア、ビザ種別など"
         : "Experience, languages, preferred hours/area, visa type, etc.")
     : j.descriptionPh;
-  const cardTitle = isSeeker
-    ? (lang === "ja" ? "求職者情報フォーム" : "Job seeker form")
-    : j.formCardTitle;
+  const cardTitle = isEdit
+    ? (lang === "ja"
+        ? (isSeeker ? "求職者情報を編集" : "投稿を編集")
+        : (isSeeker ? "Edit seeker post" : "Edit posting"))
+    : isSeeker
+      ? (lang === "ja" ? "求職者情報フォーム" : "Job seeker form")
+      : j.formCardTitle;
 
   return (
     <Card className="rounded-2xl border-border shadow-sm overflow-hidden">
@@ -567,20 +620,22 @@ function PostForm({
         </div>
 
         <div className="flex flex-col gap-3 pt-1">
-          <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
-            <label className="flex items-start gap-3 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={agreed}
-                onChange={(e) => setAgreed(e.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-border"
-              />
-              <span className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
-                {j.consentText}
-              </span>
-            </label>
-            <p className="text-[11px] text-muted-foreground font-medium">{j.consentHint}</p>
-          </div>
+          {!isEdit && (
+            <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-border"
+                />
+                <span className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
+                  {j.consentText}
+                </span>
+              </label>
+              <p className="text-[11px] text-muted-foreground font-medium">{j.consentHint}</p>
+            </div>
+          )}
 
           {canSendBase ? (
             <Button
@@ -588,7 +643,9 @@ function PostForm({
               disabled={!canSend}
               className="w-full rounded-xl min-h-[44px] font-bold"
             >
-              {posting ? j.posting : j.postAndSend}
+              {posting
+                ? (isEdit ? (lang === "ja" ? "更新中…" : "Updating…") : j.posting)
+                : (isEdit ? (lang === "ja" ? "更新する" : "Save changes") : j.postAndSend)}
             </Button>
           ) : (
             <div className="flex min-h-[44px] w-full items-center justify-center rounded-xl border border-dashed border-muted-foreground/35 bg-muted/30 px-4 text-sm text-muted-foreground text-center">
@@ -615,6 +672,8 @@ export default function JobVacancies() {
   const [activeTab, setActiveTab] = useState<PostType>("job");
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState<PostType>("job");
+  /** When set, the form opens in *edit* mode for this notice. */
+  const [editingNotice, setEditingNotice] = useState<JobNotice | null>(null);
   const [postSuccess, setPostSuccess] = useState(false);
   const toastTimerRef = useRef<number | null>(null);
 
@@ -749,6 +808,14 @@ export default function JobVacancies() {
   }, [postSuccess]);
 
   const openForm = (type: PostType) => {
+    setEditingNotice(null);
+    setFormType(type);
+    setShowForm(true);
+  };
+
+  const openEditForm = (notice: JobNotice) => {
+    const type: PostType = notice.post_type === "seeker" ? "seeker" : "job";
+    setEditingNotice(notice);
     setFormType(type);
     setShowForm(true);
   };
@@ -865,12 +932,22 @@ export default function JobVacancies() {
       </div>
 
       {/* Form modal */}
-      <Dialog open={showForm} onOpenChange={(open) => { if (!open) setShowForm(false); }}>
+      <Dialog
+        open={showForm}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowForm(false);
+            setEditingNotice(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto p-0 rounded-2xl [&>button:last-child]:hidden">
           <DialogTitle className="sr-only">
-            {formType === "seeker"
-              ? (lang === "ja" ? "求職者情報フォーム" : "Job seeker form")
-              : (lang === "ja" ? "求人投稿フォーム" : "Post a Job")}
+            {editingNotice
+              ? (lang === "ja" ? "投稿を編集" : "Edit posting")
+              : formType === "seeker"
+                ? (lang === "ja" ? "求職者情報フォーム" : "Job seeker form")
+                : (lang === "ja" ? "求人投稿フォーム" : "Post a Job")}
           </DialogTitle>
           <DialogDescription className="sr-only">
             {lang === "ja" ? "必要情報を入力して投稿してください" : "Fill in the required information and submit"}
@@ -878,8 +955,15 @@ export default function JobVacancies() {
           <PostForm
             postType={formType}
             j={j}
-            onSuccess={() => { setPostSuccess(true); fetchListings(); }}
-            onClose={() => setShowForm(false)}
+            initial={editingNotice}
+            onSuccess={() => {
+              if (!editingNotice) setPostSuccess(true);
+              fetchListings();
+            }}
+            onClose={() => {
+              setShowForm(false);
+              setEditingNotice(null);
+            }}
           />
         </DialogContent>
       </Dialog>
@@ -958,6 +1042,9 @@ export default function JobVacancies() {
                 // Admins see admin-delete on every post; regular users see owner-delete only on their own
                 const canOwnerDelete = !isAdmin && isOwner;
                 const showAdminDelete = Boolean(isAdmin);
+                // Edit is allowed for the owner (regular user) and for admins
+                // moderating any post.
+                const canEdit = Boolean(isOwner || isAdmin);
                 return (
                   <JobListingCard
                     key={notice.id}
@@ -965,8 +1052,10 @@ export default function JobVacancies() {
                     j={j}
                     phoneDigits={phoneDigits}
                     canDelete={canOwnerDelete}
+                    canEdit={canEdit}
                     showAdminDelete={showAdminDelete}
                     onDelete={(id) => handleDeleteListing(id, "owner")}
+                    onEdit={openEditForm}
                     onAdminDelete={(id) => handleDeleteListing(id, "admin")}
                   />
                 );
