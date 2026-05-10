@@ -11,7 +11,7 @@ import { useLoginPrompt } from "@/components/LoginPromptModal";
 import type { CategoryRow } from "@/types/database";
 import { buildSupplierTagDisplayMaps } from "@/lib/category-display";
 import { getPreferredPlaybackUrl, VIDEO_EXTENSIONS, getFileExtension } from "@/lib/video";
-import { displayCountryOfOrigin } from "@/lib/country";
+import { resolveCountryLabel } from "@/lib/country-map";
 
 function isYouTube(url: string) {
   return url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/) ||
@@ -610,7 +610,7 @@ const SupplierDetail = () => {
                       {p.temperature && <div className="text-xs text-primary font-medium mt-0.5">{displayProductStorageOrTemp(p.temperature)}</div>}
                       {p.price && <div className="text-xs font-semibold text-primary mt-0.5">{labels.price}: {p.price}</div>}
                       {(() => {
-                        const origin = displayCountryOfOrigin(p.country_of_origin, p.country_of_origin_en, lang);
+                        const origin = resolveCountryLabel({ ja: p.country_of_origin, en: p.country_of_origin_en, lang });
                         if (!origin) return null;
                         return (
                           <div className="text-xs text-muted-foreground">
@@ -688,7 +688,7 @@ const SupplierDetail = () => {
                     <span className="inline-block bg-primary/10 text-primary text-xs font-semibold px-2 py-1 rounded-md">{displayProductStorageOrTemp(product.temperature)}</span>
                   )}
                   <dl className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2">
-                    <div><dt className="text-xs text-muted-foreground">{labels.origin}</dt><dd className="text-sm font-medium">{displayCountryOfOrigin(product.country_of_origin, product.country_of_origin_en, lang) || "—"}</dd></div>
+                    <div><dt className="text-xs text-muted-foreground">{labels.origin}</dt><dd className="text-sm font-medium">{resolveCountryLabel({ ja: product.country_of_origin, en: product.country_of_origin_en, lang }) || "—"}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">{labels.price}</dt><dd className="text-sm font-medium">{product.price || "—"}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">{labels.weight}</dt><dd className="text-sm font-medium">{product.weight || "—"}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">{labels.quantity}</dt><dd className="text-sm font-medium">{product.quantity || "—"}</dd></div>

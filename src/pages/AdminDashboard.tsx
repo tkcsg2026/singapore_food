@@ -21,7 +21,7 @@ import { inferVideoMimeType, VIDEO_EXTENSIONS, getFileExtension } from "@/lib/vi
 import { resolveCategoryDisplayLabels } from "@/lib/category-display";
 import { buildDynamicGroups, getGroupLabel } from "@/lib/category-groups";
 import type { CategoryGroup } from "@/lib/category-groups";
-import { displayCountryOfOrigin } from "@/lib/country";
+import { resolveCountryLabel } from "@/lib/country-map";
 
 /** Returns true when a URL clearly points to a video file (by extension). */
 function isVideoFileUrl(url: string): boolean {
@@ -1536,7 +1536,7 @@ function ProductManager({ slug }: { slug: string }) {
                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
                   {p.temperature && <span className="text-xs font-medium text-primary">{formatProductListStorageTemp(p.temperature)}</span>}
                   {(() => {
-                    const origin = displayCountryOfOrigin(p.country_of_origin, p.country_of_origin_en, lang);
+                    const origin = resolveCountryLabel({ ja: p.country_of_origin, en: p.country_of_origin_en, lang });
                     return origin ? <span className="text-xs text-muted-foreground">{origin}</span> : null;
                   })()}
                   {p.weight && <span className="text-xs text-muted-foreground">{p.weight}</span>}
