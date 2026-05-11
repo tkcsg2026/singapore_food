@@ -106,7 +106,6 @@ const ja: Translations = {
     popularPlanFull: "フルプロフィール",
     popularPlanStandard: "スタンダードプロフィール",
     popularPlanQuick: "クイックプロフィール",
-    popularPlanSimplified: "簡易プロフィール",
     /** Home chips: appended after count (e.g. 9社) */
     popularPlanCompaniesSuffix: "社",
   },

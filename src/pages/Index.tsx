@@ -13,7 +13,8 @@ import { useFetch } from "@/hooks/useSupabaseData";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { AnimatedGridItem } from "@/components/AnimatedGridItem";
-import { takeHomeSuppliers, HOME_SUPPLIERS_PER_TIER } from "@/lib/plans";
+import { takeHomeSuppliers } from "@/lib/plans";
+import type { PlanCounts } from "@/lib/plans";
 import { buildSupplierTagDisplayMaps, getCategoryDisplayName } from "@/lib/category-display";
 import type { SupplierRow, MarketplaceItemRow, CategoryRow, NewsArticleRow, JobNoticeRow } from "@/types/database";
 
@@ -62,6 +63,8 @@ const Index = () => {
   }, []);
 
   const { data: suppliers, loading: suppliersLoading } = useFetch<SupplierRow[]>("/api/suppliers");
+  const { data: planCountsData } = useFetch<PlanCounts>("/api/suppliers/plan-counts");
+  const planCounts: PlanCounts = planCountsData ?? { premium: 0, standard: 0, basic: 0 };
   const { data: marketplaceItems } = useFetch<MarketplaceItemRow[]>("/api/marketplace");
   const { data: categories } = useFetch<CategoryRow[]>("/api/categories?type=supplier");
   const { data: tagCategories } = useFetch<CategoryRow[]>("/api/categories?type=tag");
@@ -331,36 +334,36 @@ const Index = () => {
                 <span className="text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200/90 font-semibold tabular-nums">
                   {lang === "ja" ? (
                     <>
-                      {t.home.popularPlanFull}-{HOME_SUPPLIERS_PER_TIER.premium}
+                      {t.home.popularPlanFull}-{planCounts.premium}
                       {t.home.popularPlanCompaniesSuffix}
                     </>
                   ) : (
                     <>
-                      {t.home.popularPlanFull} - {HOME_SUPPLIERS_PER_TIER.premium} {t.home.popularPlanCompaniesSuffix}
+                      {t.home.popularPlanFull} - {planCounts.premium} {t.home.popularPlanCompaniesSuffix}
                     </>
                   )}
                 </span>
                 <span className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/35 font-semibold tabular-nums">
                   {lang === "ja" ? (
                     <>
-                      {t.home.popularPlanStandard}-{HOME_SUPPLIERS_PER_TIER.standard}
+                      {t.home.popularPlanStandard}-{planCounts.standard}
                       {t.home.popularPlanCompaniesSuffix}
                     </>
                   ) : (
                     <>
-                      {t.home.popularPlanStandard} - {HOME_SUPPLIERS_PER_TIER.standard} {t.home.popularPlanCompaniesSuffix}
+                      {t.home.popularPlanStandard} - {planCounts.standard} {t.home.popularPlanCompaniesSuffix}
                     </>
                   )}
                 </span>
                 <span className="text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground border border-border font-semibold tabular-nums">
                   {lang === "ja" ? (
                     <>
-                      {t.home.popularPlanSimplified}-{HOME_SUPPLIERS_PER_TIER.basic}
+                      {t.home.popularPlanQuick}-{planCounts.basic}
                       {t.home.popularPlanCompaniesSuffix}
                     </>
                   ) : (
                     <>
-                      {t.home.popularPlanSimplified} - {HOME_SUPPLIERS_PER_TIER.basic} {t.home.popularPlanCompaniesSuffix}
+                      {t.home.popularPlanQuick} - {planCounts.basic} {t.home.popularPlanCompaniesSuffix}
                     </>
                   )}
                 </span>
